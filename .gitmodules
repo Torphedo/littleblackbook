@@ -1,0 +1,12 @@
+[submodule "lib/nfde"]
+	path = lib/nfde
+	url = https://github.com/btzy/nativefiledialog-extended
+[submodule "lib/bobtail"]
+	path = lib/bobtail
+	url = https://github.com/Torphedo/bobtail
+[submodule "lib/raudio"]
+	path = lib/raudio
+	url = https://github.com/raysan5/raudio
+[submodule "lib/sqlite"]
+	path = lib/sqlite
+	url = https://github.com/rhuijben/sqlite-amalgamation
