@@ -1,12 +1,14 @@
 #pragma once
+#include "id3.hxx"
 #include <common/int.h>
 #include <sqlite3.h>
 
 typedef struct {
-    const c16* title; // Song title
-    const c16* album;
-    const c16* artist;
-    u32 release_year;
+    id3::text title; // Song title
+    id3::text album;
+    id3::text artist;
+
+    u32 release_year = 0;
 }song_record;
 
 u32 crc32file(const char* path);

@@ -38,13 +38,18 @@ int main(int argc, char** argv) {
                 continue;
             }
 
+            import_single_file(argv[i], db, "..");
+            /*
             u8* buf = file_load(argv[i]);
             if (buf == nullptr) {
                 continue;
             }
+            LOG_MSG(info, "%s:\n", argv[i]);
             song_record song = mp3_load_metadata(buf, file_size(argv[i]));
             print_song(song);
+            printf("\n");
             free(buf);
+             */
         }
     }
 

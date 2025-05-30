@@ -39,7 +39,7 @@ u32 crc32file(const char* path) {
 
 song_record mp3_load_metadata(u8* mp3, u32 size) {
     assert(size >= sizeof(id3::header) && "MP3 file is too small!");
-    song_record out = {0};
+    song_record out;
     vfile id3 = vfile_open(mp3, size);
     const id3::header header = VFILE_READ(id3::header, &id3);
     assert(header.size() <= size && "Metadata claims to be larger than the MP3!");
@@ -53,29 +53,33 @@ song_record mp3_load_metadata(u8* mp3, u32 size) {
         const u32 next_pos = id3.pos + frame.size;
         switch (frame.id) {
         case id3::FRAME_YEAR: {
-            const auto text_encoding = VFILE_READ(u8, &id3);
+            auto encoding = VFILE_READ(u8, &id3); // We read this just to skip it
             out.release_year = strtol((char*)vfile_cur(id3), nullptr, 10);
             assert(out.release_year <= 9999 && "Year should only be 4 characters!");
             break;
         }
-        case id3::FRAME_ALBUM: {
-            const auto text_encoding = VFILE_READ(u8, &id3);
-            assert(text_encoding == id3::TEXT_UCS2 && "Only UCS2 text metadata is supported for now!");
-            out.album = (c16*)vfile_cur(id3);
+
+        // The union member we assign to doesn't matter since it's just a pointer.
+        // The seeking
+        // TODO: See if we can reduce this repetition
+        case id3::FRAME_ALBUM:
+            out.album.encoding = VFILE_READ(id3::text_encoding, &id3);
+            vfile_seek(&id3, sizeof(u16));
+            out.album.ascii = (char*)vfile_cur(id3);
+            out.album.length = (frame.size - 3) / (1 + out.album.encoding);
             break;
-        }
-        case id3::FRAME_ARTIST: {
-            const auto text_encoding = VFILE_READ(u8, &id3);
-            assert(text_encoding == id3::TEXT_UCS2 && "Only UCS2 text metadata is supported for now!");
-            out.artist = (c16*)vfile_cur(id3);
+        case id3::FRAME_ARTIST:
+            out.artist.encoding = VFILE_READ(id3::text_encoding, &id3);
+            vfile_seek(&id3, sizeof(u16));
+            out.artist.ascii = (char*)vfile_cur(id3);
+            out.artist.length = (frame.size - 3) / (1 + out.artist.encoding);
             break;
-        }
-        case id3::FRAME_TITLE: {
-            const auto text_encoding = VFILE_READ(u8, &id3);
-            assert(text_encoding == id3::TEXT_UCS2 && "Only UCS2 text metadata is supported for now!");
-            out.title = (c16*)vfile_cur(id3);
+        case id3::FRAME_TITLE:
+            out.title.encoding = VFILE_READ(id3::text_encoding, &id3);
+            vfile_seek(&id3, sizeof(u16));
+            out.title.ascii = (char*)vfile_cur(id3);
+            out.title.length = (frame.size - 3) / (1 + out.title.encoding);
             break;
-        }
         }
 
         // Skip to next frame
@@ -87,44 +91,75 @@ song_record mp3_load_metadata(u8* mp3, u32 size) {
 
 void print_song(const song_record& song) {
     LOG_MSG(info, "Title: ");
-    print_c16s(song.title);
+    song.title.print();
     printf("\n");
 
     LOG_MSG(info, "Artist: ");
-    print_c16s(song.artist);
+    song.artist.print();
     printf("\n");
 
     LOG_MSG(info, "Album: ");
-    print_c16s(song.album);
+    song.album.print();
     printf("\n");
 
     LOG_MSG(info, "Released in: %d\n", song.release_year);
 }
 
 bool import_single_file(const char* path, sqlite3* db, const char* files_dir) {
-    const u32 crc = crc32file(path);
+    assert(path_has_extension(path, ".mp3") && "Non-MP3 files aren't supported yet");
+
+    if (!file_exists(path)) {
+        return false;
+    }
+
+    const u32 size = file_size(path);
+    u8* mp3 = file_load(path);
+    if (mp3 == nullptr) {
+        LOG_MSG(error, "Failed to load \"%s\"\n", path);
+        return false;
+    }
+
+    const u32 crc = crc32buf(mp3, size);
     if (crc == 0) {
         LOG_MSG(error, "Failed to hash file \"%s\" for import", path);
         return false;
     }
 
-    // TODO: Update bobtail with a function to grab the file extension, and only
-    // use this when there's no file extension.
-    const char* extension = ".mp3";
-    assert(path_has_extension(path, ".mp3") && "Non-MP3 files aren't supported yet");
-
     // [path] -> [files_dir]/[hash].mp3
-    char buf[512] = {0};
+    char pathbuf[512] = {0};
 
     // Make sure the path will fit in our static sized buffer.
     // hash -> [up to] 10 chars, extension -> 4 chars, dirsep -> 1 char
-    assert(ARRAY_SIZE(buf) > strlen(files_dir) + 10 + 4 + 1 && "Path is too long to fit!");
+    assert(ARRAY_SIZE(pathbuf) > (strlen(files_dir) + 10 + 4 + 1) && "Path is too long to fit!");
 
-    snprintf(buf, ARRAY_SIZE(buf), "%s%c%d%s", files_dir, PLATFORM_DIRSEP, crc, extension);
+    // TODO: Update bobtail with a function to grab the file extension, and only
+    // use this when there's no file extension.
+    const char* extension = ".mp3";
+    snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s%c%d%s", files_dir, PLATFORM_DIRSEP, crc, extension);
 
     std::filesystem::copy(path, files_dir);
 
-    // Collect metadata to fill out the record
+    // Collect metadata to fill out the record.
+    // This structure has pointers into the MP3, so we can't free it yet
+    const song_record song = mp3_load_metadata(mp3, size);
 
     // Insert the record using the metadata
+    char sqlbuf[512] = {0};
+
+    // SQLite only wants UTF8 strings
+    const std::string title = song.title.to_utf8();
+    const std::string artist = song.artist.to_utf8();
+    const std::string album = song.album.to_utf8();
+    snprintf(sqlbuf, ARRAY_SIZE(sqlbuf),
+             "INSERT INTO songs (title, artist, album, year) VALUES ('%s', '%s', '%s', %d)",
+             title.c_str(), artist.c_str(), album.c_str(), song.release_year);
+    char* errmsg = nullptr;
+    if (sqlite3_exec(db, sqlbuf, nullptr, nullptr, &errmsg) != SQLITE_OK) {
+        if (errmsg) {
+            printf("SQLite error: %s\n", errmsg);
+        }
+    }
+
+    free(mp3);
+    return true;
 }
