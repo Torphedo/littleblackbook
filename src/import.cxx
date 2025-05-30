@@ -15,6 +15,24 @@
 #include <common/platform.h>
 #include <common/path.h>
 
+void song_record::print() const noexcept {
+    // We can't print the text fields directly because they may be UCS2
+    printf("\tTitle: ");
+    title.print();
+    printf("\n");
+
+    printf("\tArtist: ");
+    artist.print();
+    printf("\n");
+
+    printf("\tAlbum: ");
+    album.print();
+    printf("\n");
+
+    printf("\tReleased in: %d\n", release_year);
+    printf("\tCRC32 Hash: %d\n", crc32);
+}
+
 song_record mp3_load_metadata(u8* mp3, u32 size) {
     assert(size >= sizeof(id3::header) && "MP3 file is too small!");
     song_record out = {
@@ -42,24 +60,14 @@ song_record mp3_load_metadata(u8* mp3, u32 size) {
 
         // The union member we assign to doesn't matter since it's just a pointer.
         // The seeking
-        // TODO: See if we can reduce this repetition
         case id3::FRAME_ALBUM:
-            out.album.encoding = VFILE_READ(id3::text_encoding, &id3);
-            vfile_seek(&id3, sizeof(u16));
-            out.album.ascii = (char*)vfile_cur(id3);
-            out.album.length = (frame.size - 3) / (1 + out.album.encoding);
+            out.album = id3::text((u8*)vfile_cur(id3), frame.size);
             break;
         case id3::FRAME_ARTIST:
-            out.artist.encoding = VFILE_READ(id3::text_encoding, &id3);
-            vfile_seek(&id3, sizeof(u16));
-            out.artist.ascii = (char*)vfile_cur(id3);
-            out.artist.length = (frame.size - 3) / (1 + out.artist.encoding);
+            out.artist = id3::text((u8*)vfile_cur(id3), frame.size);
             break;
         case id3::FRAME_TITLE:
-            out.title.encoding = VFILE_READ(id3::text_encoding, &id3);
-            vfile_seek(&id3, sizeof(u16));
-            out.title.ascii = (char*)vfile_cur(id3);
-            out.title.length = (frame.size - 3) / (1 + out.title.encoding);
+            out.title = id3::text((u8*)vfile_cur(id3), frame.size);
             break;
         }
 
@@ -68,22 +76,6 @@ song_record mp3_load_metadata(u8* mp3, u32 size) {
     }
 
     return out;
-}
-
-void print_song(const song_record& song) {
-    LOG_MSG(info, "Title: ");
-    song.title.print();
-    printf("\n");
-
-    LOG_MSG(info, "Artist: ");
-    song.artist.print();
-    printf("\n");
-
-    LOG_MSG(info, "Album: ");
-    song.album.print();
-    printf("\n");
-
-    LOG_MSG(info, "Released in: %d\n", song.release_year);
 }
 
 bool import_single_file(const char* path, sqlite3* db, const char* files_dir) {
@@ -136,6 +128,8 @@ bool import_single_file(const char* path, sqlite3* db, const char* files_dir) {
         }
     }
 
+    song.print();
+    printf("\n");
     free(mp3);
     return true;
 }

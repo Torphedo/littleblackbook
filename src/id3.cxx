@@ -1,5 +1,6 @@
 #include "id3.hxx"
 #include <common/utf8.h>
+#include <common/vfile.h>
 #include <cstdio>
 #include <cstring>
 #include <locale>
@@ -9,6 +10,17 @@
 #include "common/int.h"
 
 namespace id3 {
+
+text::text(u8* frame_data, u32 frame_size) {
+    vfile vf = vfile_open(frame_data, frame_size);
+
+    encoding = VFILE_READ(id3::text_encoding, &vf);
+    vfile_seek(&vf, sizeof(u16)); // Skip byte order marker
+    ascii = (char*)vfile_cur(vf);
+    const u32 remaining_size = vf.size - vf.pos;
+    const u8 char_size = (encoding == TEXT_ASCII) ? 1 : 2;
+    length = remaining_size / char_size;
+}
 
 void text::print() const noexcept {
     if (encoding == TEXT_ASCII) {

@@ -41,6 +41,9 @@ struct text {
         c16* ucs2;
     };
 
+    text() = default;
+    text(u8* frame_data, u32 frame_size);
+
     // Print the contained text to stdout (no newline)
     void print() const noexcept;
     std::string to_utf8() const noexcept;
