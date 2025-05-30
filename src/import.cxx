@@ -137,7 +137,7 @@ bool import_single_file(const char* path, sqlite3* db, const char* files_dir) {
     const char* extension = ".mp3";
     snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s%c%d%s", files_dir, PLATFORM_DIRSEP, crc, extension);
 
-    std::filesystem::copy(path, files_dir);
+    std::filesystem::copy_file(path, pathbuf);
 
     // Collect metadata to fill out the record.
     // This structure has pointers into the MP3, so we can't free it yet
