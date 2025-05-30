@@ -37,7 +37,6 @@ song_record mp3_load_metadata(u8* mp3, u32 size) {
     assert(size >= sizeof(id3::header) && "MP3 file is too small!");
     song_record out = {
         .crc32 = crc32buf(mp3, size),
-        .import_timestamp = time(nullptr),
     };
     vfile id3 = vfile_open(mp3, size);
     const id3::header header = VFILE_READ(id3::header, &id3);
@@ -58,8 +57,6 @@ song_record mp3_load_metadata(u8* mp3, u32 size) {
             break;
         }
 
-        // The union member we assign to doesn't matter since it's just a pointer.
-        // The seeking
         case id3::FRAME_ALBUM:
             out.album = id3::text((u8*)vfile_cur(id3), frame.size);
             break;
