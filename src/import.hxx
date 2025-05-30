@@ -3,13 +3,15 @@
 #include <common/int.h>
 #include <sqlite3.h>
 
-typedef struct {
+struct song_record {
     id3::text title; // Song title
     id3::text album;
     id3::text artist;
 
     u32 release_year = 0;
-}song_record;
+    u32 crc32 = 0;
+    time_t import_timestamp = 0;
+};
 
 u32 crc32file(const char* path);
 song_record mp3_load_metadata(u8* mp3, u32 size);

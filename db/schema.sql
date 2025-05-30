@@ -4,6 +4,9 @@ CREATE TABLE IF NOT EXISTS "songs" (
     "album"     TEXT NOT NULL DEFAULT 'single',
     "year"      INTEGER NOT NULL,
     "lyrics"    TEXT,
-    -- e.g. 1.5 = 1 minute 30 seconds
-    "duration_mins"    REAL NOT NULL
+    -- TODO: Make NOT NULL once we can get this data from the MP3
+    "duration_secs"    INTEGER,
+    "hash"      INTEGER NOT NULL,
+    -- Unix timestamp
+    "import_timestamp" INTEGER NOT NULL
 ) STRICT;
