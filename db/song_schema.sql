@@ -1,3 +1,4 @@
+-- Schema for the table of songs
 CREATE TABLE IF NOT EXISTS "songs" (
     "title"     TEXT NOT NULL,
     "artist"    TEXT NOT NULL,
@@ -6,7 +7,7 @@ CREATE TABLE IF NOT EXISTS "songs" (
     "lyrics"    TEXT,
     -- TODO: Make NOT NULL once we can get this data from the MP3
     "duration_secs"    INTEGER,
-    "hash"      INTEGER NOT NULL,
+    "hash"      INTEGER NOT NULL UNIQUE,
     -- Unix timestamp
     "import_timestamp" INTEGER NOT NULL
 ) STRICT;
