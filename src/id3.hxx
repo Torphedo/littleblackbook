@@ -46,7 +46,7 @@ struct text {
 
     // Print the contained text to stdout (no newline)
     void print() const noexcept;
-    std::string to_utf8() const noexcept;
+    std::string to_utf8(bool sql_sanitize = true) const noexcept;
 };
 
 // All relevant metadata frame types

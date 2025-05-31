@@ -75,7 +75,7 @@ song_record mp3_load_metadata(u8* mp3, u32 size) {
     return out;
 }
 
-bool import_single_file(const char* path, sqlite3* db, const char* files_dir) {
+bool import_single_file(const char* path, sqlite3* db, const char* files_dir, std::string& sql_out) {
     assert(path_has_extension(path, ".mp3") && "Non-MP3 files aren't supported yet");
 
     if (!file_exists(path)) {
@@ -105,7 +105,7 @@ bool import_single_file(const char* path, sqlite3* db, const char* files_dir) {
     const char* extension = ".mp3";
     snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s%c%d%s", files_dir, PLATFORM_DIRSEP, song.crc32, extension);
 
-    std::filesystem::copy_file(path, pathbuf);
+    // std::filesystem::copy_file(path, pathbuf);
 
     // Insert the record using the metadata
     char sqlbuf[512] = {0};
@@ -115,18 +115,12 @@ bool import_single_file(const char* path, sqlite3* db, const char* files_dir) {
     const std::string artist = song.artist.to_utf8();
     const std::string album = song.album.to_utf8();
     snprintf(sqlbuf, ARRAY_SIZE(sqlbuf),
-             "INSERT INTO songs (title, artist, album, year, hash, import_timestamp) \
-             VALUES ('%s', '%s', '%s', %d, %d, %lu)",
+             "INSERT INTO songs (title, artist, album, year, hash, import_timestamp) VALUES ('%s', '%s', '%s', %u, %u, %lu);\n",
              title.c_str(), artist.c_str(), album.c_str(), song.release_year, song.crc32, song.import_timestamp);
-    char* errmsg = nullptr;
-    if (sqlite3_exec(db, sqlbuf, nullptr, nullptr, &errmsg) != SQLITE_OK) {
-        if (errmsg) {
-            printf("SQLite error: %s\n", errmsg);
-        }
-    }
+    sql_out.append(sqlbuf);
 
-    song.print();
-    printf("\n");
+    // song.print();
+    // printf("\n");
     free(mp3);
     return true;
 }

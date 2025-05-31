@@ -30,8 +30,8 @@ void text::print() const noexcept {
     }
 }
 
-std::string text::to_utf8() const noexcept {
-    std::string output;
+::std::string text::to_utf8(bool sql_sanitize) const noexcept {
+    ::std::string output;
     for (u16 i = 0; i < length; i++) {
         const char16_t c = ucs2[i];
         // UTF8 struct isn't null-terminated, so we need to copy it...
@@ -42,6 +42,10 @@ std::string text::to_utf8() const noexcept {
         strncpy(converted, u.data, sizeof(u));
 
         // Actually copy the UTF-8 data into the string
+        if (strcmp(converted, "'") == 0) {
+            // Escape the quote with another quote
+            output.append("'");
+        }
         output.append(converted);
     }
 

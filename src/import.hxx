@@ -1,6 +1,7 @@
 #pragma once
 #include "id3.hxx"
 #include <ctime>
+#include <string>
 #include <common/int.h>
 #include <sqlite3.h>
 
@@ -19,4 +20,4 @@ struct song_record {
 
 // Get a song's metadata
 song_record mp3_load_metadata(u8* mp3, u32 size);
-bool import_single_file(const char* path, sqlite3* db, const char* files_dir);
+bool import_single_file(const char* path, sqlite3* db, const char* files_dir, std::string& sql_out);

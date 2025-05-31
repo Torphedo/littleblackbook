@@ -30,27 +30,36 @@ int main(int argc, char** argv) {
     }
     LOG_MSG(info, "Opened database \"%s\"\n", db_path);
 
-    if (args.first_non_flag < argc) {
-        // There's more args that aren't settings flags...
-        // Treat them as filenames.
+    // There's more args that aren't settings flags...
+    // Treat them as filenames.
+    std::string sql = "BEGIN TRANSACTION;\n";
+    u32 num_songs = 0;
+    {
         for (u32 i = args.first_non_flag; i < argc; i++) {
-            if (!file_exists(argv[i]) || !path_has_extension(argv[i], ".mp3")) {
+            if (!file_exists(argv[i])) {
+                LOG_MSG(debug, "Skipping \"%s\" (it doesn't exist)\n", argv[i]);
+                continue;
+            }
+            if (!path_has_extension(argv[i], ".mp3")) {
+                LOG_MSG(debug, "Skipping \"%s\" (not an MP3)\n", argv[i]);
                 continue;
             }
 
-            import_single_file(argv[i], db, "..");
-            /*
-            u8* buf = file_load(argv[i]);
-            if (buf == nullptr) {
-                continue;
-            }
-            LOG_MSG(info, "%s:\n", argv[i]);
-            song_record song = mp3_load_metadata(buf, file_size(argv[i]));
-            print_song(song);
-            printf("\n");
-            free(buf);
-             */
+            import_single_file(argv[i], db, "..", sql);
+            num_songs++;
         }
+        sql.append("\nCOMMIT;\n");
+    }
+
+    if (num_songs > 0) {
+        char* errmsg = nullptr;
+        if (sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg) != SQLITE_OK) {
+            if (errmsg) {
+                LOG_MSG(error, "SQLite error: %s\n", errmsg);
+            }
+        }
+    } else {
+        LOG_MSG(info, "It doesn't seem like you provided any MP3 files.\n");
     }
 
     sqlite3_close(db);
