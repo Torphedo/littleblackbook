@@ -8,6 +8,7 @@
 #include "common/int.h"
 #include "common/path.h"
 #include "import.hxx"
+#include "scope_timer.hxx"
 
 int main(int argc, char** argv) {
     arguments args(argc, argv);
@@ -34,7 +35,9 @@ int main(int argc, char** argv) {
     // Treat them as filenames.
     std::string sql = "BEGIN TRANSACTION;\n";
     u32 num_songs = 0;
+    float sqlgen_time = 0.0f;
     {
+        const scope_timer generator_timer(sqlgen_time);
         for (u32 i = args.first_non_flag; i < argc; i++) {
             if (!file_exists(argv[i])) {
                 LOG_MSG(debug, "Skipping \"%s\" (it doesn't exist)\n", argv[i]);
@@ -51,13 +54,23 @@ int main(int argc, char** argv) {
         sql.append("\nCOMMIT;\n");
     }
 
+    float sqlexec_time = 0.0f;
     if (num_songs > 0) {
+        LOG_MSG(info, "Finished generating SQL code (%d inserts) in %.3fms!\n", num_songs, sqlgen_time);
+
         char* errmsg = nullptr;
-        if (sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg) != SQLITE_OK) {
+        int result = SQLITE_OK;
+        { // Scope to control the timer
+            const scope_timer sql_timer(sqlexec_time);
+            result = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
+        }
+        if (result != SQLITE_OK) {
             if (errmsg) {
                 LOG_MSG(error, "SQLite error: %s\n", errmsg);
             }
         }
+
+        LOG_MSG(debug, "SQL compile/execute finished in %.3fms\n", sqlexec_time);
     } else {
         LOG_MSG(info, "It doesn't seem like you provided any MP3 files.\n");
     }

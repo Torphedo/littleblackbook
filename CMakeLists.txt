@@ -45,6 +45,7 @@ add_executable(blackbook
     src/id3.cxx
     src/import.cxx
     src/arguments.cxx
+    src/scope_timer.cxx
 )
 
 target_link_libraries(blackbook PRIVATE bobtail nfd raudio sqlite3-static)
