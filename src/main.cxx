@@ -1,13 +1,16 @@
 #include <cstdio>
 #include <cstdlib>
+#include <vector>
+
 #include <sqlite3.h>
 
 #include <common/logging.h>
+#include <common/int.h>
+#include <common/file.h>
+#include <common/path.h>
+
 #include "arguments.hxx"
-#include "common/file.h"
-#include "common/int.h"
-#include "common/path.h"
-#include "import.hxx"
+#include "database.hxx"
 #include "scope_timer.hxx"
 
 int main(int argc, char** argv) {
@@ -38,6 +41,7 @@ int main(int argc, char** argv) {
     float sqlgen_time = 0.0f;
     {
         const scope_timer generator_timer(sqlgen_time);
+        std::vector<u8> mp3_buf(5 * 1024 * 1024);
         for (u32 i = args.first_non_flag; i < argc; i++) {
             if (!file_exists(argv[i])) {
                 LOG_MSG(debug, "Skipping \"%s\" (it doesn't exist)\n", argv[i]);
@@ -48,7 +52,13 @@ int main(int argc, char** argv) {
                 continue;
             }
 
-            import_single_file(argv[i], db, "..", sql);
+            const u32 size = file_size(argv[i]);
+            if (size > mp3_buf.capacity()) {
+                mp3_buf.reserve(size + 1);
+            }
+            file_load_existing(argv[i], mp3_buf.data(), size);
+
+            import_single_file("..", mp3_buf.data(), size, sql);
             num_songs++;
         }
     }

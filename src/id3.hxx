@@ -22,6 +22,10 @@ struct header {
 
     // Decodes the strangely formatted 28-bit size to a normal integer format
     u32 size() const noexcept;
+
+    bool correct_magic() const noexcept {
+        return magic[0] == 'I' && magic[1] == 'D' && magic[2] == '3';
+    }
 };
 static_assert(sizeof(header) == 10);
 
