@@ -43,7 +43,7 @@ add_subdirectory(lib/sqlite)
 add_executable(blackbook
     src/main.cxx
     src/id3.cxx
-    src/import.cxx
+    src/database.cxx
     src/arguments.cxx
     src/scope_timer.cxx
 )

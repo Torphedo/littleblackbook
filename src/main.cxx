@@ -51,8 +51,8 @@ int main(int argc, char** argv) {
             import_single_file(argv[i], db, "..", sql);
             num_songs++;
         }
-        sql.append("\nCOMMIT;\n");
     }
+    sql.append("\nCOMMIT;\n");
 
     float sqlexec_time = 0.0f;
     if (num_songs > 0) {
