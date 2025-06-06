@@ -18,9 +18,9 @@ int main(int argc, char** argv) {
 
     // Default DB path
     const char* db_path = "../db/blackbook.db3";
-    if (args.seen_flags[ARG_DB_PATH]) {
+    if (args.seen_values[VALUE_ARG_DB_PATH]) {
         // Get DB path from user
-        db_path = args.flag_values[ARG_DB_PATH];
+        db_path = args.values[VALUE_ARG_DB_PATH];
         LOG_MSG(debug, "Got database path \"%s\"\n", db_path);
     }
 
