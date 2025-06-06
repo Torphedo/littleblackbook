@@ -33,7 +33,7 @@ struct song_record : schema {
     virtual void insert_sql(std::string& out) const noexcept;
 };
 
-bool import_single_file(const char* files_dir, u8* mp3, u32 size, std::string& sql_out);
-bool import_single_file(const char* path, const char* files_dir, std::string& sql_out);
+// Add a tag to a song
+void add_tag_sql(const char* tag, u32 song_hash, std::string& sql_out);
 
 bool import_many_files(const char** paths, u32 num_paths, const char* files_dir, sqlite3* db);

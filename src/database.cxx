@@ -18,6 +18,7 @@
 
 #include "id3.hxx"
 #include "scope_timer.hxx"
+#include "sql.hxx"
 
 void song_record::print() const noexcept {
     // We can't print the text fields directly because they may be UCS2
@@ -79,18 +80,15 @@ song_record::song_record(u8* mp3, u32 size) {
 }
 
 void song_record::insert_sql(std::string& out) const noexcept {
-    // Insert the record using the metadata
-    char sqlbuf[512] = {0};
-
     // SQLite only wants UTF8 strings
     const std::string title_str = title.to_utf8();
     const std::string artist_str = artist.to_utf8();
     const std::string album_str = album.to_utf8();
-    snprintf(sqlbuf, ARRAY_SIZE(sqlbuf),
-        "INSERT INTO songs (title, artist, album, year, hash, import_timestamp) VALUES ('%s', '%s', '%s', %u, %u, %lu);\n",
-        title_str.c_str(), artist_str.c_str(), album_str.c_str(), release_year, crc32, import_timestamp);
 
-    out.append(sqlbuf);
+    sqlgen(out,
+        "INSERT INTO songs (title, artist, album, year, hash, import_timestamp) VALUES ('%s', '%s', '%s', %u, %u, %lu);\n",
+        title_str.c_str(), artist_str.c_str(), album_str.c_str(), release_year, crc32, import_timestamp
+    );
 }
 
 bool import_many_files(const char** paths, u32 num_paths, const char* files_dir, sqlite3* db) {
@@ -168,7 +166,7 @@ bool import_many_files(const char** paths, u32 num_paths, const char* files_dir,
     int sql_result = SQLITE_OK;
     { // Scope to control the timer
         const scope_timer sql_timer(sqlexec_time);
-        result = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
+        sql_result = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
     }
     if (sql_result != SQLITE_OK) {
         result = false;
@@ -182,8 +180,17 @@ bool import_many_files(const char** paths, u32 num_paths, const char* files_dir,
     return result;
 }
 
-void song_record::add_tag_sql(const char* tag, std::string& sql_out) const noexcept {
-    const u32 hash = crc32buf((const u8*)tag, strlen(tag));
+void add_tag_sql(const char* tag, u32 song_hash, std::string& sql_out) {
+    const u32 tag_hash = crc32buf((const u8*)tag, strlen(tag));
+
+    // We need to create the tag if it doesn't exist. The table already has a
+    // constraint to ignore INSERTs that violate tag uniqueness.
+    sqlgen(sql_out, "INSERT INTO tags (tag, hash) VALUES ('%s', %d);\n", tag, tag_hash);
+
+    // Actually add the tag association
+    sqlgen(sql_out, "INSERT INTO tagmap (song_hash, tag_hash) VALUES (%d, %d);\n", song_hash, tag_hash);
+}
+
 
     char sqlbuf[512] = {0};
     snprintf(sqlbuf, ARRAY_SIZE(sqlbuf),
