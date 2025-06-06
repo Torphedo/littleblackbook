@@ -36,53 +36,12 @@ int main(int argc, char** argv) {
 
     // There's more args that aren't settings flags...
     // Treat them as filenames.
-    std::string sql = "BEGIN TRANSACTION;\n";
-    u32 num_songs = 0;
-    float sqlgen_time = 0.0f;
-    {
-        const scope_timer generator_timer(sqlgen_time);
-        std::vector<u8> mp3_buf(5 * 1024 * 1024);
-        for (u32 i = args.first_non_flag; i < argc; i++) {
-            if (!file_exists(argv[i])) {
-                LOG_MSG(debug, "Skipping \"%s\" (it doesn't exist)\n", argv[i]);
-                continue;
-            }
-            if (!path_has_extension(argv[i], ".mp3")) {
-                LOG_MSG(debug, "Skipping \"%s\" (not an MP3)\n", argv[i]);
-                continue;
-            }
 
-            const u32 size = file_size(argv[i]);
-            if (size > mp3_buf.capacity()) {
-                mp3_buf.reserve(size + 1);
-            }
-            file_load_existing(argv[i], mp3_buf.data(), size);
-
-            import_single_file("..", mp3_buf.data(), size, sql);
-            num_songs++;
-        }
-    }
-    sql.append("\nCOMMIT;\n");
-
-    float sqlexec_time = 0.0f;
-    if (num_songs > 0) {
-        LOG_MSG(info, "Finished generating SQL code (%d inserts) in %.3fms!\n", num_songs, sqlgen_time);
-
-        char* errmsg = nullptr;
-        int result = SQLITE_OK;
-        { // Scope to control the timer
-            const scope_timer sql_timer(sqlexec_time);
-            result = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
-        }
-        if (result != SQLITE_OK) {
-            if (errmsg) {
-                LOG_MSG(error, "SQLite error: %s\n", errmsg);
-            }
-        }
-
-        LOG_MSG(debug, "SQL compile/execute finished in %.3fms\n", sqlexec_time);
-    } else {
-        LOG_MSG(info, "It doesn't seem like you provided any MP3 files.\n");
+    if (args.settings[SETTING_ARG_IMPORT]) {
+        const u32 num_files = argc - args.first_non_flag;
+        // Why do we need a cast to get a const * from a non-const *??
+        const char** files = (const char**)&argv[args.first_non_flag];
+        import_many_files(files, num_files, "..", db);
     }
 
     sqlite3_close(db);

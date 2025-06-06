@@ -1,11 +1,12 @@
 #include "database.hxx"
-#include "id3.hxx"
 #include <cstdio>
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+
 #include <filesystem>
+#include <vector>
 
 #include <common/file.h>
 #include <common/endian.h>
@@ -14,6 +15,9 @@
 #include <common/logging.h>
 #include <common/platform.h>
 #include <common/path.h>
+
+#include "id3.hxx"
+#include "scope_timer.hxx"
 
 void song_record::print() const noexcept {
     // We can't print the text fields directly because they may be UCS2
@@ -136,4 +140,69 @@ bool import_single_file(const char* path, const char* files_dir, std::string& sq
     free(mp3);
 
     return result;
+}
+
+bool import_many_files(const char** paths, u32 num_paths, const char* files_dir, sqlite3* db) {
+    bool result = true;
+    std::string sql = "BEGIN TRANSACTION;\n";
+    u32 num_songs = 0;
+    float sqlgen_time = 0.0f;
+    {
+        const scope_timer generator_timer(sqlgen_time);
+        std::vector<u8> mp3_buf(5 * 1024 * 1024);
+        for (u32 i = 0; i < num_paths; i++) {
+            if (!file_exists(paths[i])) {
+                LOG_MSG(debug, "Skipping \"%s\" (it doesn't exist)\n", paths[i]);
+                continue;
+            }
+            if (!path_has_extension(paths[i], ".mp3")) {
+                LOG_MSG(debug, "Skipping \"%s\" (not an MP3)\n", paths[i]);
+                continue;
+            }
+
+            const u32 size = file_size(paths[i]);
+            if (size > mp3_buf.capacity()) {
+                mp3_buf.reserve(size + 1);
+            }
+            file_load_existing(paths[i], mp3_buf.data(), size);
+
+            import_single_file(files_dir, mp3_buf.data(), size, sql);
+            num_songs++;
+        }
+    }
+    sql.append("\nCOMMIT;\n");
+
+    float sqlexec_time = 0.0f;
+    if (num_songs > 0) {
+        LOG_MSG(info, "Finished generating SQL code (%d inserts) in %.3fms!\n", num_songs, sqlgen_time);
+
+        char* errmsg = nullptr;
+        int result = SQLITE_OK;
+        { // Scope to control the timer
+            const scope_timer sql_timer(sqlexec_time);
+            result = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
+        }
+        if (result != SQLITE_OK) {
+            result = false;
+            if (errmsg) {
+                LOG_MSG(error, "SQLite error: %s\n", errmsg);
+            }
+        }
+
+        LOG_MSG(debug, "SQL compile/execute finished in %.3fms\n", sqlexec_time);
+    } else {
+        LOG_MSG(info, "It doesn't seem like you provided any MP3 files.\n");
+        result = false;
+    }
+
+    return result;
+}
+
+void song_record::add_tag_sql(const char* tag, std::string& sql_out) const noexcept {
+    const u32 hash = crc32buf((const u8*)tag, strlen(tag));
+
+    char sqlbuf[512] = {0};
+    snprintf(sqlbuf, ARRAY_SIZE(sqlbuf),
+             "INSERT INTO tags (tag, hash) VALUES ('%s', %d);\n", tag, hash);
+    sql_out.append(sqlbuf);
 }
