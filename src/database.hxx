@@ -33,8 +33,6 @@ struct song_record : schema {
     virtual void insert_sql(std::string& out) const noexcept;
 };
 
-song_record mp3_load_metadata(u8* mp3, u32 size);
-
 bool import_single_file(const char* files_dir, u8* mp3, u32 size, std::string& sql_out);
 bool import_single_file(const char* path, const char* files_dir, std::string& sql_out);
 
