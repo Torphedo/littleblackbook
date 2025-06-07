@@ -12,6 +12,8 @@
 #include "arguments.hxx"
 #include "database.hxx"
 #include "scope_timer.hxx"
+#include "search.hxx"
+#include "sql.hxx"
 
 int main(int argc, char** argv) {
     arguments args(argc, argv);
@@ -39,9 +41,27 @@ int main(int argc, char** argv) {
 
     if (args.settings[SETTING_ARG_IMPORT]) {
         const u32 num_files = argc - args.first_non_flag;
-        // Why do we need a cast to get a const * from a non-const *??
-        const char** files = (const char**)&argv[args.first_non_flag];
+        const char* const* files = &argv[args.first_non_flag];
         import_many_files(files, num_files, "..", db);
+    }
+
+    if (args.settings[SETTING_ARG_SEARCH]) {
+        std::string sqlbuf;
+        const u32 num_tags = argc - args.first_non_flag;
+        const char* const* tags = &argv[args.first_non_flag];
+        search_many_tags_and(tags, num_tags, sqlbuf);
+
+        // Dump generated SQL to a file
+        const char* sqlpath = "query.sql";
+        FILE* f = fopen(sqlpath, "wb");
+        if (f) {
+            fprintf(f, "%s\n", sqlbuf.c_str());
+            fclose(f);
+            LOG_MSG(info, "Saved search query to \"%s\"\n", sqlpath);
+            LOG_MSG(info, "You can get the results by piping the file into the \"sqlite3\" utility [e.g. 'cat query.sql | sqlite3 file.db']\n", sqlpath);
+        } else {
+            LOG_MSG(error, "Failed to save search query to \"%s\"\n", sqlpath);
+        }
     }
 
     sqlite3_close(db);

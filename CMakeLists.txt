@@ -45,6 +45,7 @@ add_executable(blackbook
     src/id3.cxx
     src/database.cxx
     src/sql.cxx
+    src/search.cxx
     src/arguments.cxx
     src/scope_timer.cxx
 )

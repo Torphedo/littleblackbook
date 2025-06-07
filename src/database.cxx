@@ -91,7 +91,7 @@ void song_record::insert_sql(std::string& out) const noexcept {
     );
 }
 
-bool import_many_files(const char** paths, u32 num_paths, const char* files_dir, sqlite3* db) {
+bool import_many_files(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db) {
     bool result = true;
     std::string sql = "BEGIN TRANSACTION;\n";
     u32 imported_songs = 0;
