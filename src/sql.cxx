@@ -14,12 +14,9 @@ enum {
 };
 
 // snprintf wrapper that reports errors and gives a simple bool return code
-bool sqlgen_snprintf(char* sqlbuf, u32 sqlbuf_size, const char* fmt, ...) {
+bool sqlgen_snprintf(char* sqlbuf, u32 sqlbuf_size, const char* fmt, va_list arg_list) {
     // We use helpers from stdarg.h to handle the variadic (...) arguments.
-    va_list arg_list = {};
-    va_start(arg_list, fmt);
-    const int return_code = vsnprintf(sqlbuf, sqlbuf_size, fmt, arg_list);
-    va_end(arg_list);
+    const int return_code = vsnprintf(sqlbuf, sqlbuf_size - 1, fmt, arg_list);
 
     if (return_code < 0) {
         // Error occured

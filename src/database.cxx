@@ -190,10 +190,3 @@ void add_tag_sql(const char* tag, u32 song_hash, std::string& sql_out) {
     // Actually add the tag association
     sqlgen(sql_out, "INSERT INTO tagmap (song_hash, tag_hash) VALUES (%d, %d);\n", song_hash, tag_hash);
 }
-
-
-    char sqlbuf[512] = {0};
-    snprintf(sqlbuf, ARRAY_SIZE(sqlbuf),
-             "INSERT INTO tags (tag, hash) VALUES ('%s', %d);\n", tag, hash);
-    sql_out.append(sqlbuf);
-}
