@@ -4,13 +4,14 @@
 #include <common/int.h>
 #include <common/crc32.h>
 #include "sql.hxx"
+#include "schema.hxx"
 
 void search_tag(const char* tag, std::string& sql_out, bool standalone_query) {
     const u32 tag_hash = crc32buf((u8*)tag, strlen(tag));
 
     // Generate the SQL
     sqlgen(sql_out,
-        "SELECT hash FROM songs s JOIN tagmap junction ON s.hash = junction.song_hash WHERE (junction.tag_hash = %u)",
+        "SELECT hash FROM songs s JOIN " TAG_SONG_TABLE " junction ON s.hash = junction.song_hash WHERE (junction.tag_hash = %u)",
         tag_hash);
 
     if (standalone_query) {

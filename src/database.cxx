@@ -1,9 +1,4 @@
 #include "database.hxx"
-#include <cstdio>
-#include <cassert>
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
 
 #include <filesystem>
 #include <vector>
@@ -19,6 +14,7 @@
 #include "id3.hxx"
 #include "scope_timer.hxx"
 #include "sql.hxx"
+#include "schema.hxx"
 
 void song_record::print() const noexcept {
     // We can't print the text fields directly because they may be UCS2
@@ -185,8 +181,8 @@ void add_tag_sql(const char* tag, u32 song_hash, std::string& sql_out) {
 
     // We need to create the tag if it doesn't exist. The table already has a
     // constraint to ignore INSERTs that violate tag uniqueness.
-    sqlgen(sql_out, "INSERT INTO tags (tag, hash) VALUES ('%s', %d);\n", tag, tag_hash);
+    sqlgen(sql_out, "INSERT INTO tags (tag, hash) VALUES ('%s', %u);\n", tag, tag_hash);
 
     // Actually add the tag association
-    sqlgen(sql_out, "INSERT INTO tagmap (song_hash, tag_hash) VALUES (%d, %d);\n", song_hash, tag_hash);
+    sqlgen(sql_out, "INSERT INTO " TAG_SONG_TABLE " (song_hash, tag_hash) VALUES (%u, %u);\n", song_hash, tag_hash);
 }

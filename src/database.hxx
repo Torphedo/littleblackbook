@@ -5,9 +5,8 @@
 #include <sqlite3.h>
 
 #include <common/int.h>
-#include "schema.hxx"
 
-struct song_record : schema {
+struct song_record {
     id3::text title; // Song title
     id3::text album;
     id3::text artist;
@@ -30,7 +29,7 @@ struct song_record : schema {
     // Unimplemented for now
     static const char* table_sql() noexcept;
 
-    virtual void insert_sql(std::string& out) const noexcept;
+    void insert_sql(std::string& out) const noexcept;
 };
 
 // Add a tag to a song

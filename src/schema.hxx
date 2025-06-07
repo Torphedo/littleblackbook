@@ -1,12 +1,14 @@
 #pragma once
-#include <string>
 
-// Interface for a struct that maps to a SQL database table
-class schema {
-public:
-    // Get a CREATE TABLE IF NOT EXISTS SQL statement for this structure
-    static const char* table_sql() noexcept;
+// String constants for table/column names that might change
 
-    // Generate INSERT statement for this instance
-    virtual void insert_sql(std::string& out) const noexcept = 0;
-};
+// C allows you to combine multiple string literals by placing them next to each
+// other. e.g. INSERT INTO songs" == "INSERT INTO " "songs".
+// So, constant format strings for SQL queries can be constructed if you use a
+// bit of strange syntax like:
+//     "INSERT INTO " SONG_TABLE " (" SONG_NAME ", " SONG_ARTIST ", " ...
+//
+
+// Name of the many-to-many table that associates tags with songs via hash
+#define TAG_SONG_TABLE "tagmap"
+
