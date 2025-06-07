@@ -176,7 +176,7 @@ bool import_many_files(const char* const* paths, u32 num_paths, const char* file
     return result;
 }
 
-u32 create_tag_sql(const char* tag, std::string& sql_out, u32 hash = 0) {
+u32 create_tag_sql(const char* tag, std::string& sql_out, u32 hash) {
     if (hash == 0) {
         // No hash provided, calculate it
         hash = crc32buf((u8*)tag, strlen(tag));

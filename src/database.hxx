@@ -53,4 +53,17 @@ void add_tag_sql(const char* tag, u32 song_hash, std::string& sql_out);
 // a pair in the parent table will instantly apply the change to the next search.
 void link_tags_sql(const char* parent, const char* child, std::string& sql_out);
 
+/// @brief Import a set of audio files into the database
+///
+/// At the moment, this only supports MP3 files (and will crash via assert if you
+/// give it another type). Metadata is scraped from the files and used to fill in
+/// database records for each song. Most of the time (~90%) is spent hashing the
+/// audio file and copying it to the database folder.
+///
+/// @param paths An array of filepaths to import from
+/// @param num_paths The number of filepaths in the array
+/// @param files_dir The relative or absolute path of the database directory.
+///        All imported files will be copied to this folder, renamed to
+///        their hash.
+/// @param db The SQLite database connection to use for the import
 bool import_many_files(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db);

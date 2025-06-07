@@ -39,7 +39,8 @@ struct text {
     // Spec says ASCII is default: https://id3.org/id3v2.3.0#ID3v2_frame_overview
     text_encoding encoding = TEXT_ASCII;
     u16 length = 0;
-    // This causes a ridiculous amount of padding, but it's not a big deal since this structure is short-lived.
+    // This causes a ridiculous amount of padding, but it's not a big deal since
+    // this structure is short-lived and in-memory only.
     union {
         char* ascii;
         c16* ucs2;
@@ -50,17 +51,21 @@ struct text {
 
     // Print the contained text to stdout (no newline)
     void print() const noexcept;
+
+    /// @brief Convert UCS-2 text to UTF-8 if needed
+    /// @param sql_sanitize Whether to escape quote characters for SQL, since
+    ///        we're already processing the entire string
     std::string to_utf8(bool sql_sanitize = true) const noexcept;
 };
 
 // All relevant metadata frame types
 enum frame_id : u32 {
-    FRAME_TITLE = MAGIC('T', 'I', 'T', '2'),
-    FRAME_PICTURE = MAGIC('A', 'P', 'I', 'C'),
-    FRAME_COMMENT = MAGIC('C', 'O', 'M', 'M'),
-    FRAME_ALBUM = MAGIC('T', 'A', 'L', 'B'),
-    FRAME_ARTIST = MAGIC('T', 'P', 'E', '1'),
-    FRAME_YEAR = MAGIC('T', 'Y', 'E', 'R'),
+    FRAME_TITLE =   MAGIC('T','I','T','2'),
+    FRAME_PICTURE = MAGIC('A','P','I','C'),
+    FRAME_COMMENT = MAGIC('C','O','M','M'),
+    FRAME_ALBUM =   MAGIC('T','A','L','B'),
+    FRAME_ARTIST =  MAGIC('T','P','E','1'),
+    FRAME_YEAR =    MAGIC('T','Y','E','R'),
 };
 
 // Struct packing will make this header the wrong size
