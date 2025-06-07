@@ -32,7 +32,25 @@ struct song_record {
     void insert_sql(std::string& out) const noexcept;
 };
 
-// Add a tag to a song
+/// Create a tag, but don't add it to any songs
+///
+/// @param tag The name of the tag to add
+/// @param sql_out The buffer to store the generated SQL code
+/// @param hash If you already know the tag's hash, you can provide it to prevent a redundant calculation
+/// @return The newly calculated hash, or the hash you provided
+u32 create_tag_sql(const char* tag, std::string& sql_out, u32 hash = 0);
+
+// Add a tag to a song, adding it to the tag table if needed
 void add_tag_sql(const char* tag, u32 song_hash, std::string& sql_out);
+
+/// @brief Add a parent-child relationship between 2 tags
+///
+/// If the child tag is added to a song, the parent will appear to be
+/// automatically added too. It'll also appear to be automatically removed if the
+/// relationship is deleted.
+///
+/// Internally this behaviour is implemented with table joins, so adding/removing
+// a pair in the parent table will instantly apply the change to the next search.
+void link_tags_sql(const char* parent, const char* child, std::string& sql_out);
 
 bool import_many_files(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db);

@@ -5,11 +5,15 @@
 
 static const char* const value_flags[VALUE_ARG_ENUM_MAX] = {
     "--db",
+    "--new-tag",
+    "--parent",
+    "--child",
 };
 
 static const char* const setting_flags[SETTING_ARG_ENUM_MAX] = {
     "--import",
     "--search",
+    "--link-tags",
 };
 
 // Shortcut to check that the provided index isn't the last command-line flag

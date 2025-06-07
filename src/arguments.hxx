@@ -4,6 +4,9 @@
 // Arguments that involve a flag and value passed on command line
 typedef enum {
     VALUE_ARG_DB_PATH,
+    VALUE_ARG_NEW_TAG,
+    VALUE_ARG_PARENT,
+    VALUE_ARG_CHILD,
     VALUE_ARG_ENUM_MAX,
 }value_arg_idx;
 
@@ -11,6 +14,7 @@ typedef enum {
 typedef enum {
     SETTING_ARG_IMPORT,
     SETTING_ARG_SEARCH,
+    SETTING_ARG_LINK_TAGS,
     SETTING_ARG_ENUM_MAX,
 }setting_arg_idx;
 

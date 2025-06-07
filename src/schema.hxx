@@ -12,3 +12,5 @@
 // Name of the many-to-many table that associates tags with songs via hash
 #define TAG_SONG_TABLE "tagmap"
 
+// Name of the many-to-many table that lets tags automatically "imply" other tags
+#define TAG_PARENT_TABLE "tags_parents"

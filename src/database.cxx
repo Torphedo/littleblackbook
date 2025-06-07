@@ -176,13 +176,29 @@ bool import_many_files(const char* const* paths, u32 num_paths, const char* file
     return result;
 }
 
-void add_tag_sql(const char* tag, u32 song_hash, std::string& sql_out) {
-    const u32 tag_hash = crc32buf((const u8*)tag, strlen(tag));
+u32 create_tag_sql(const char* tag, std::string& sql_out, u32 hash = 0) {
+    if (hash == 0) {
+        // No hash provided, calculate it
+        hash = crc32buf((u8*)tag, strlen(tag));
+    }
 
-    // We need to create the tag if it doesn't exist. The table already has a
-    // constraint to ignore INSERTs that violate tag uniqueness.
-    sqlgen(sql_out, "INSERT INTO tags (tag, hash) VALUES ('%s', %u);\n", tag, tag_hash);
+    sqlgen(sql_out, "INSERT INTO tags (tag, hash) VALUES ('%s', %u);\n", tag, hash);
+    return hash;
+}
+
+void add_tag_sql(const char* tag, u32 song_hash, std::string& sql_out) {
+    // We need to create the tag if it doesn't exist
+    const u32 tag_hash = create_tag_sql(tag, sql_out);
 
     // Actually add the tag association
     sqlgen(sql_out, "INSERT INTO " TAG_SONG_TABLE " (song_hash, tag_hash) VALUES (%u, %u);\n", song_hash, tag_hash);
+}
+
+void link_tags_sql(const char* parent, const char* child, std::string& sql_out) {
+    // We need to create the tags if they don't exist
+    const u32 child_hash = create_tag_sql(child, sql_out);
+    const u32 parent_hash = create_tag_sql(parent, sql_out);
+
+    // Add the tag association
+    sqlgen(sql_out, "INSERT INTO " TAG_PARENT_TABLE " (child_hash, parent_hash) VALUES (%u, %u);\n", child_hash, parent_hash);
 }

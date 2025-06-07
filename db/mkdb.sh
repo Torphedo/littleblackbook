@@ -16,4 +16,5 @@ fi
 cat song_schema.sql | sqlite3 $DB_FILE
 cat tag_schema.sql | sqlite3 $DB_FILE
 cat tagmap_schema.sql | sqlite3 $DB_FILE
+cat tag_parents_schema.sql | sqlite3 $DB_FILE
 
