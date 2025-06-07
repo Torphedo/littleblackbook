@@ -9,10 +9,11 @@ static const char* const value_flags[VALUE_ARG_ENUM_MAX] = {
 
 static const char* const setting_flags[SETTING_ARG_ENUM_MAX] = {
     "--import",
+    "--search",
 };
 
 // Shortcut to check that the provided index isn't the last command-line flag
-#define NOT_FINAL_FLAG(i, argc) (((i) + 1) < ((argc) - 1))
+#define NOT_FINAL_FLAG(i, argc) ((i) < ((argc) - 1))
 
 arguments::arguments(int argc, char** argv) {
     for (u32 i = 0; i < argc; i++) {

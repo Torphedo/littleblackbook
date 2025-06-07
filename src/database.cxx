@@ -31,7 +31,7 @@ void song_record::print() const noexcept {
     printf("\n");
 
     printf("\tReleased in: %d\n", release_year);
-    printf("\tCRC32 Hash: %d\n", crc32);
+    printf("\tCRC32 Hash: %u\n", crc32);
 }
 
 song_record::song_record(u8* mp3, u32 size) {
@@ -131,7 +131,7 @@ bool import_many_files(const char* const* paths, u32 num_paths, const char* file
             // TODO: Update bobtail with a function to grab the file extension, and only
             // use this default when there's no file extension.
             const char* extension = ".mp3";
-            snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s%c%d%s", files_dir, PLATFORM_DIRSEP, song.crc32, extension);
+            snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s%c%u%s", files_dir, PLATFORM_DIRSEP, song.crc32, extension);
 
             if (file_exists(pathbuf)) {
                 // File with this hash already exists in the database. Either a

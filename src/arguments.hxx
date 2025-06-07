@@ -10,6 +10,7 @@ typedef enum {
 // Arguments that involve only a flag
 typedef enum {
     SETTING_ARG_IMPORT,
+    SETTING_ARG_SEARCH,
     SETTING_ARG_ENUM_MAX,
 }setting_arg_idx;
 

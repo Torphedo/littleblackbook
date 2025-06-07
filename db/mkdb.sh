@@ -1,8 +1,8 @@
 #!/bin/sh
 
-# Accept a custom database filename
 export DB_FILE="blackbook.db3"
 
+# Accept a custom database filename
 if [ $# -eq 1 ]
 then
     export DB_FILE=$1;
