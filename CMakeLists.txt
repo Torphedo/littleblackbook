@@ -43,9 +43,10 @@ add_subdirectory(lib/sqlite)
 add_executable(blackbook
     src/main.cxx
     src/id3.cxx
-    src/database.cxx
-    src/sqlgen.cxx
+    src/song.cxx
     src/tags.cxx
+    src/sqlgen.cxx
+
     src/arguments.cxx
     src/scope_timer.cxx
 )

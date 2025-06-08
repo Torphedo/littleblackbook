@@ -1,4 +1,4 @@
-#include "database.hxx"
+#include "song.hxx"
 
 #include <filesystem>
 #include <vector>
@@ -14,7 +14,6 @@
 #include "id3.hxx"
 #include "scope_timer.hxx"
 #include "sqlgen.hxx"
-#include "schema.hxx"
 
 void song_record::print() const noexcept {
     // We can't print the text fields directly because they may be UCS2

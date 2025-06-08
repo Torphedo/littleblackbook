@@ -7,10 +7,10 @@
 #include <common/file.h>
 #include <common/path.h>
 
-#include "arguments.hxx"
-#include "database.hxx"
+#include "song.hxx"
 #include "tags.hxx"
 #include "sqlgen.hxx"
+#include "arguments.hxx"
 
 int main(int argc, char** argv) {
     const arguments args(argc, argv);
