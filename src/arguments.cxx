@@ -19,7 +19,7 @@ static const char* const setting_flags[SETTING_ARG_ENUM_MAX] = {
 // Shortcut to check that the provided index isn't the last command-line flag
 #define NOT_FINAL_FLAG(i, argc) ((i) < ((argc) - 1))
 
-arguments::arguments(int argc, char** argv) {
+arguments::arguments(int argc, const char* const* const argv) {
     for (u32 i = 0; i < argc; i++) {
         // Check every argument against every known value flag
         for (u32 j = 0; j < VALUE_ARG_ENUM_MAX; j++) {

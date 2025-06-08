@@ -16,7 +16,7 @@
 #include "sql.hxx"
 
 int main(int argc, char** argv) {
-    arguments args(argc, argv);
+    const arguments args(argc, argv);
 
     // Default DB path
     const char* db_path = "../db/blackbook.db3";
@@ -25,6 +25,9 @@ int main(int argc, char** argv) {
         db_path = args.values[VALUE_ARG_DB_PATH];
         LOG_MSG(debug, "Got database path \"%s\"\n", db_path);
     }
+
+    // TODO: Get database file dir (next to database file) and use it instead of the hardcoded ".."
+    // TODO: Add a bobtail path helper to get the containing directory of a filepath as a new string
 
     sqlite3* db = nullptr;
     const int res = sqlite3_open(db_path, &db);
@@ -61,6 +64,36 @@ int main(int argc, char** argv) {
             LOG_MSG(info, "You can get the results by piping the file into the \"sqlite3\" utility [e.g. 'cat query.sql | sqlite3 file.db']\n", sqlpath);
         } else {
             LOG_MSG(error, "Failed to save search query to \"%s\"\n", sqlpath);
+        }
+    }
+
+    if (args.seen_values[VALUE_ARG_NEW_TAG]) {
+        const char* tag = args.values[VALUE_ARG_NEW_TAG];
+        // Temporary hardcoded value, eventually should take this on command-line
+        const u32 song_hash = 347807049;
+        std::string sqlbuf;
+        add_tag_sql(tag, song_hash, sqlbuf);
+        sqlgen_exec(db, sqlbuf.data());
+    }
+
+    // User wants to create a parent-child relationship between 2 tags
+    if (args.settings[SETTING_ARG_LINK_TAGS]) {
+        bool can_proceed = true;
+        if (args.seen_values[VALUE_ARG_PARENT]) {
+            LOG_MSG(error, "You didn't provide a parent tag, so I don't know what to attach to the child.\n");
+            can_proceed = false;
+        }
+        if (args.seen_values[VALUE_ARG_CHILD]) {
+            LOG_MSG(error, "You didn't provide a child tag, so I don't know what to assign the parent to.\n");
+            can_proceed = false;
+        }
+
+        if (can_proceed) {
+            std::string sqlbuf;
+            const char* parent = args.values[VALUE_ARG_PARENT];
+            const char* child = args.values[VALUE_ARG_CHILD];
+            link_tags_sql(parent, child, sqlbuf);
+            sqlgen_exec(db, sqlbuf.data());
         }
     }
 

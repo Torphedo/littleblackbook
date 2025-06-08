@@ -24,7 +24,7 @@ struct arguments {
     bool seen_values[VALUE_ARG_ENUM_MAX] = {0};
     // If the corresponding bool is true, this array will have the string set as
     // the value. e.g. for a path flag, this would have the actual path string
-    char* values[VALUE_ARG_ENUM_MAX] = {0};
+    const char* values[VALUE_ARG_ENUM_MAX] = {0};
 
     // Whether the user provided the specified setting flag
     bool settings[VALUE_ARG_ENUM_MAX] = {0};
@@ -33,5 +33,6 @@ struct arguments {
     // All arguments from this index on should be filenames or other non-flag strings
     u32 first_non_flag = 1;
 
-    arguments(int argc, char** argv);
+    // Honestly, I just wanted to use 3 consts in some real code for fun - torph
+    arguments(int argc, const char* const* const argv);
 };
