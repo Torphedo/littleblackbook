@@ -13,7 +13,7 @@
 
 #include "id3.hxx"
 #include "scope_timer.hxx"
-#include "sql.hxx"
+#include "sqlgen.hxx"
 #include "schema.hxx"
 
 void song_record::print() const noexcept {
@@ -174,31 +174,4 @@ bool import_many_files(const char* const* paths, u32 num_paths, const char* file
     LOG_MSG(debug, "SQL compile/execute finished in %.3fms\n", sqlexec_time);
 
     return result;
-}
-
-u32 create_tag_sql(const char* tag, std::string& sql_out, u32 hash) {
-    if (hash == 0) {
-        // No hash provided, calculate it
-        hash = crc32buf((u8*)tag, strlen(tag));
-    }
-
-    sqlgen(sql_out, "INSERT INTO tags (tag, hash) VALUES ('%s', %u);\n", tag, hash);
-    return hash;
-}
-
-void add_tag_sql(const char* tag, u32 song_hash, std::string& sql_out) {
-    // We need to create the tag if it doesn't exist
-    const u32 tag_hash = create_tag_sql(tag, sql_out);
-
-    // Actually add the tag association
-    sqlgen(sql_out, "INSERT INTO " TAG_SONG_TABLE " (song_hash, tag_hash) VALUES (%u, %u);\n", song_hash, tag_hash);
-}
-
-void link_tags_sql(const char* parent, const char* child, std::string& sql_out) {
-    // We need to create the tags if they don't exist
-    const u32 child_hash = create_tag_sql(child, sql_out);
-    const u32 parent_hash = create_tag_sql(parent, sql_out);
-
-    // Add the tag association
-    sqlgen(sql_out, "INSERT INTO " TAG_PARENT_TABLE " (child_hash, parent_hash) VALUES (%u, %u);\n", child_hash, parent_hash);
 }

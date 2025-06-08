@@ -1,6 +1,4 @@
 #include <cstdio>
-#include <cstdlib>
-#include <vector>
 
 #include <sqlite3.h>
 
@@ -11,9 +9,8 @@
 
 #include "arguments.hxx"
 #include "database.hxx"
-#include "scope_timer.hxx"
-#include "search.hxx"
-#include "sql.hxx"
+#include "tags.hxx"
+#include "sqlgen.hxx"
 
 int main(int argc, char** argv) {
     const arguments args(argc, argv);
