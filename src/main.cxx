@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
 
     // User wants to create a parent-child relationship between 2 tags
     if (args.settings[SETTING_ARG_LINK_TAGS]) {
-        bool can_proceed = true;
+        bool can_proceed = args.seen_values[VALUE_ARG_PARENT] && args.seen_values[VALUE_ARG_CHILD];
         if (args.seen_values[VALUE_ARG_PARENT]) {
             LOG_MSG(error, "You didn't provide a parent tag, so I don't know what to attach to the child.\n");
             can_proceed = false;
