@@ -87,9 +87,20 @@ void song_record::insert_sql(std::string& out) const noexcept {
 }
 
 bool import_many_files(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db) {
+    printf("Phase 1:\n");
+    printf("\t- Extracting metadata\n");
+    printf("\t- Generating SQL code\n");
+    printf("\t- Hashing your files\n");
+    printf("\t- Copying your files\n");
+    if (num_paths > 100) {
+        printf("You're importing a lot of files, this might take a while.\n");
+    }
+    printf("\n");
+
     bool result = true;
     std::string sql = "BEGIN TRANSACTION;\n";
     u32 imported_songs = 0;
+    u32 skipped_songs = 0;
     float sqlgen_time = 0.0f; // Elapsed runtime for importing and generating SQL INSERTs
     {
         const scope_timer generator_timer(sqlgen_time);
@@ -136,6 +147,7 @@ bool import_many_files(const char* const* paths, u32 num_paths, const char* file
                 // File with this hash already exists in the database. Either a
                 // duplicate (very likely) or a hash conflict.
                 import_conflicts.push_back(i);
+                skipped_songs++;
             } else {
                 // Copy file into the database folder for import
                 std::filesystem::copy_file(paths[i], pathbuf);
@@ -149,14 +161,22 @@ bool import_many_files(const char* const* paths, u32 num_paths, const char* file
     sql.append("\nCOMMIT;\n");
 
     // TODO: Try to figure out if any of the failed imports are real hash conflicts (not duplicates)
+    // printf("Phase 2: Checking for duplicates & 'remastered' / 'deluxe' copies");
+
+    if (skipped_songs > 0) {
+        LOG_MSG(info, "I found %u new songs, and skipped %u that were already in the database.\n", imported_songs, skipped_songs);
+    } else {
+        LOG_MSG(info, "Found %u new songs for import.\n", imported_songs, skipped_songs);
+    }
 
     float sqlexec_time = 0.0f;
     if (imported_songs == 0) {
-        LOG_MSG(info, "It doesn't seem like you provided any MP3 files.\n");
+        LOG_MSG(info, "I couldn't find any songs to import.\n");
         return false;
     }
-    LOG_MSG(info, "Finished generating SQL code (%d inserts) in %.3fms!\n", imported_songs, sqlgen_time);
+    LOG_MSG(info, "Finished generating SQL (%u INSERTs) in %.3fms\n", imported_songs, sqlgen_time);
 
+    printf("Phase 2: Updating SQLite database\n\n");
     char* errmsg = nullptr;
     int sql_result = SQLITE_OK;
     { // Scope to control the timer
@@ -170,7 +190,7 @@ bool import_many_files(const char* const* paths, u32 num_paths, const char* file
         }
     }
 
-    LOG_MSG(debug, "SQL compile/execute finished in %.3fms\n", sqlexec_time);
+    LOG_MSG(debug, "SQLite compile/execute finished in %.3fms\n", sqlexec_time);
 
     return result;
 }
