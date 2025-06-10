@@ -13,4 +13,4 @@
 #define TAG_SONG_TABLE "tagmap"
 
 // Name of the many-to-many table that lets tags automatically "imply" other tags
-#define TAG_PARENT_TABLE "tags_parents"
+#define TAG_PARENT_TABLE "tag_parents"

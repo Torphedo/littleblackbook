@@ -8,7 +8,7 @@
 -- "90s" tag. But since this is a separate table that will be used during
 -- search, new parents can be added/removed and appear to immediately propagate
 -- through the entire database.
-CREATE TABLE IF NOT EXISTS "tags_parents" (
+CREATE TABLE IF NOT EXISTS "tag_parents" (
     child_hash INTEGER NOT NULL,
     parent_hash INTEGER NOT NULL
 )STRICT;
