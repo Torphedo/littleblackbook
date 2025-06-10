@@ -10,3 +10,13 @@
 [submodule "lib/sqlite"]
 	path = lib/sqlite
 	url = https://github.com/rhuijben/sqlite-amalgamation
+[submodule "lib/imgui"]
+	path = lib/imgui
+	url = https://github.com/ocornut/imgui
+	branch = docking
+[submodule "lib/glfw"]
+	path = lib/glfw
+	url = https://github.com/glfw/glfw
+[submodule "lib/cglm"]
+	path = lib/cglm
+	url = https://github.com/recp/cglm

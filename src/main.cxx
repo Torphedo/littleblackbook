@@ -7,6 +7,8 @@
 #include <common/file.h>
 #include <common/path.h>
 
+#include "nativegui/gui.hxx"
+#include "nativegui/gui_loop.hxx"
 #include "song.hxx"
 #include "tags.hxx"
 #include "sqlgen.hxx"
@@ -118,6 +120,8 @@ int main(int argc, char** argv) {
             sqlgen_exec(db, sqlbuf.data());
         }
     }
+
+    gui_loop(gui_main, nullptr);
 
     sqlite3_close(db);
 }
