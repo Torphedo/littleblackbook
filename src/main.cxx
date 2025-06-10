@@ -34,9 +34,10 @@ int main(int argc, char** argv) {
 
     if (args.cli_mode) {
         return cli_main(args, db, db_path);
+    } else {
+        // We invert the return value since exit code 0 == false == EXIT_SUCCESS
+        return !gui_loop(gui_main, nullptr);
     }
-
-    gui_loop(gui_main, nullptr);
 
     sqlite3_close(db);
 }
