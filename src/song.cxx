@@ -87,6 +87,10 @@ void song_record::insert_sql(std::string& out) const noexcept {
 }
 
 bool import_many_files(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db) {
+    if (!file_exists(files_dir)) {
+        std::filesystem::create_directory(files_dir);
+    }
+
     printf("Phase 1:\n");
     printf("\t- Extracting metadata\n");
     printf("\t- Generating SQL code\n");
@@ -138,9 +142,7 @@ bool import_many_files(const char* const* paths, u32 num_paths, const char* file
             // hash -> [up to] 10 chars, extension -> 4 chars, dirsep -> 1 char
             assert(ARRAY_SIZE(pathbuf) > (strlen(files_dir) + 10 + 4 + 1) && "Path is too long to fit!");
 
-            // TODO: Update bobtail with a function to grab the file extension, and only
-            // use this default when there's no file extension.
-            const char* extension = ".mp3";
+            const char* extension = path_get_extension(paths[i]);
             snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s%c%u%s", files_dir, PLATFORM_DIRSEP, song.crc32, extension);
 
             if (file_exists(pathbuf)) {

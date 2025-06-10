@@ -23,8 +23,17 @@ int main(int argc, char** argv) {
         LOG_MSG(debug, "Got database path \"%s\"\n", db_path);
     }
 
-    // TODO: Get database file dir (next to database file) and use it instead of the hardcoded ".."
-    // TODO: Add a bobtail path helper to get the containing directory of a filepath as a new string
+    std::string db_files_folder;
+    {
+        // Move the C-allocated path to a dynamic string we can append to.
+        // I don't know if .c_str() returns the actual backing string ptr. So
+        // just to be safe, we truncate a clone before turning to a C++ string.
+        char* db_folder_ptr = (char*)path_truncate_clone(db_path);
+        db_files_folder = db_folder_ptr;
+        db_files_folder += "files";
+        free(db_folder_ptr);
+    }
+    LOG_MSG(debug, "DB files folder: %s\n", db_files_folder.c_str());
 
     sqlite3* db = nullptr;
     const int res = sqlite3_open(db_path, &db);
@@ -42,7 +51,7 @@ int main(int argc, char** argv) {
     if (args.settings[SETTING_ARG_IMPORT]) {
         const u32 num_files = argc - args.first_non_flag;
         const char* const* files = &argv[args.first_non_flag];
-        import_many_files(files, num_files, "..", db);
+        import_many_files(files, num_files, db_files_folder.c_str(), db);
     }
 
     if (args.settings[SETTING_ARG_SEARCH]) {
