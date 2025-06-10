@@ -41,7 +41,7 @@ void search_tag(const char* tag, std::string& sql_out, bool standalone_query) {
 SELECT hash FROM songs s
 JOIN %s junction ON s.hash = junction.song_hash
 WHERE (junction.tag_hash = %u OR junction.tag_hash IN (SELECT child_hash FROM %s p WHERE p.parent_hash = %u)))",
-        TAG_PARENT_TABLE, TAG_SONG_TABLE, tag_hash, tag_hash);
+        TAG_SONG_TABLE, tag_hash, TAG_PARENT_TABLE, tag_hash);
 
     if (standalone_query) {
         // Terminate the statement
