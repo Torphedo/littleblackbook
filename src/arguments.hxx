@@ -21,9 +21,16 @@ typedef enum {
 }setting_arg_idx;
 
 struct arguments {
+    int argc = 0;
+    const char* const* const argv = nullptr;
+
+    // Whether the flags passed warrant the program being run in headless (CLI) mode
+    bool cli_mode = false;
+
     // Whether each argument was found on the command-line with a corresponding value
     // e.g. whether the user provided a specific type of path
     bool seen_values[VALUE_ARG_ENUM_MAX] = {0};
+
     // If the corresponding bool is true, this array will have the string set as
     // the value. e.g. for a path flag, this would have the actual path string
     const char* values[VALUE_ARG_ENUM_MAX] = {0};

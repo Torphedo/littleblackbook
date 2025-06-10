@@ -21,7 +21,7 @@ static const char* const setting_flags[SETTING_ARG_ENUM_MAX] = {
 // Shortcut to check that the provided index isn't the last command-line flag
 #define NOT_FINAL_FLAG(i, argc) ((i) < ((argc) - 1))
 
-arguments::arguments(int argc, const char* const* const argv) {
+arguments::arguments(int argc, const char* const* const argv) : argc(argc), argv(argv) {
     for (u32 i = 0; i < argc; i++) {
         // Check every argument against every known value flag
         for (u32 j = 0; j < VALUE_ARG_ENUM_MAX; j++) {
@@ -34,6 +34,11 @@ arguments::arguments(int argc, const char* const* const argv) {
                 values[j] = argv[i + 1];
                 i++;
                 first_non_flag = i;
+
+                // DB path might be wanted even in GUI mode
+                if (j != VALUE_ARG_DB_PATH) {
+                    cli_mode = true;
+                }
             }
         }
 
@@ -41,6 +46,7 @@ arguments::arguments(int argc, const char* const* const argv) {
         for (u32 j = 0; j < SETTING_ARG_ENUM_MAX; j++) {
             if (strcmp(argv[i], setting_flags[j]) == 0) {
                 settings[j] = true;
+                cli_mode = true;
                 if (NOT_FINAL_FLAG(i, argc)) {
                     first_non_flag = i + 1;
                 }

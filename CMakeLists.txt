@@ -59,6 +59,8 @@ add_executable(blackbook
     src/arguments.cxx
     src/scope_timer.cxx
 
+    src/cli/cli_main.cxx
+
     src/nativegui/gui_loop.cxx
     src/nativegui/imgui_utils.cxx
     src/nativegui/gui.cxx
