@@ -37,9 +37,11 @@ void search_tag(const char* tag, std::string& sql_out, bool standalone_query) {
     const u32 tag_hash = crc32buf((u8*)tag, strlen(tag));
 
     // Generate the SQL
-    sqlgen(sql_out,
-        "SELECT hash FROM songs s JOIN " TAG_SONG_TABLE " junction ON s.hash = junction.song_hash WHERE (junction.tag_hash = %u)",
-        tag_hash);
+    sqlgen(sql_out, R"(
+SELECT hash FROM songs s
+JOIN %s junction ON s.hash = junction.song_hash
+WHERE (junction.tag_hash = %u OR junction.tag_hash IN (SELECT child_hash FROM tags_parents p WHERE p.parent_hash = %u)))",
+        TAG_SONG_TABLE, tag_hash, tag_hash);
 
     if (standalone_query) {
         // Terminate the statement
@@ -55,7 +57,7 @@ void search_many_tags_and(const char* const* tags, u32 num_tags, std::string& sq
         search_tag(tags[i], sql_out, false);
         // Add intersection between each SELECT, but not after the last one
         if (i < num_tags - 1) {
-            sql_out.append(" INTERSECT ");
+            sql_out.append("\nINTERSECT ");
         }
     }
 
