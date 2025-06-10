@@ -11,6 +11,8 @@ static const char* const value_flags[VALUE_ARG_ENUM_MAX] = {
 };
 
 static const char* const setting_flags[SETTING_ARG_ENUM_MAX] = {
+    "--help",
+    "--version",
     "--import",
     "--search",
     "--link-tags",

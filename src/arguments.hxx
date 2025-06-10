@@ -12,6 +12,8 @@ typedef enum {
 
 // Arguments that involve only a flag
 typedef enum {
+    SETTING_ARG_HELP,
+    SETTING_ARG_VERSION,
     SETTING_ARG_IMPORT,
     SETTING_ARG_SEARCH,
     SETTING_ARG_LINK_TAGS,

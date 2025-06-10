@@ -12,8 +12,24 @@
 #include "sqlgen.hxx"
 #include "arguments.hxx"
 
+static const char* version_string = "1.0.0";
+static const char* url = "https://github.com/Torphedo";
+
 int main(int argc, char** argv) {
+    // Enable ANSI escape codes (for printing in color) on Windows
+    enable_win_ansi();
+
     const arguments args(argc, argv);
+
+    // Parse arguments
+    const char* flag = argv[1];
+
+    if (args.settings[SETTING_ARG_HELP]) {
+        printf("[help message not written yet]\n");
+    } else if (args.settings[SETTING_ARG_VERSION]) {
+        printf("%s v%s [Open source @ %s]", argv[0], version_string, url);
+        printf("Written by Torphedo\n");
+    }
 
     // Default DB path
     const char* db_path = "../db/blackbook.db3";
