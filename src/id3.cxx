@@ -30,23 +30,19 @@ void text::print() const noexcept {
     }
 }
 
-::std::string text::to_utf8(bool sql_sanitize) const noexcept {
-    ::std::string output;
+// TODO: Maybe have this take an output buffer? Could we reasonably make this re-use buffers?
+std::string text::to_utf8(bool sql_sanitize) const noexcept {
+    std::string output;
     for (u16 i = 0; i < length; i++) {
         const char16_t c = ucs2[i];
-        // UTF8 struct isn't null-terminated, so we need to copy it...
-        // TODO: Fix bobtail so that the UTF-8 struct is null-terminated
-        char converted[5] = {0};
         // Sorry for 1-letter variable, I couldn't think of a name.
         const utf8 u = codepoint_to_utf8(c);
-        strncpy(converted, u.data, sizeof(u));
 
-        // Actually copy the UTF-8 data into the string
-        if (strcmp(converted, "'") == 0) {
+        if (sql_sanitize && strcmp(u.data, "'") == 0) {
             // Escape the quote with another quote
             output.append("'");
         }
-        output.append(converted);
+        output.append(u.data);
     }
 
     return output;
