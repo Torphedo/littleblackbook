@@ -61,9 +61,9 @@ add_executable(blackbook
 
     src/cli/cli_main.cxx
 
-    src/nativegui/gui_loop.cxx
+    src/nativegui/gui_bootstrap.cxx
     src/nativegui/imgui_utils.cxx
-    src/nativegui/gui.cxx
+    src/nativegui/nativegui.cxx
 
     lib/glad/src/glad.c
 )

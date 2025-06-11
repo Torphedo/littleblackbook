@@ -6,6 +6,7 @@
 
 #include <common/int.h>
 
+// C++ representation of a row in the song table
 struct song_record {
     id3::text title; // Song title
     id3::text album;
@@ -24,6 +25,9 @@ struct song_record {
     // Print song fields in human-readable form to stdout
     void print() const noexcept;
 
+    /// @brief Generate an INSERT statement that will add the song to the database
+    ///
+    /// @param out A text buffer where the generated SQL should be stored
     void insert_sql(std::string& out) const noexcept;
 };
 
@@ -31,8 +35,8 @@ struct song_record {
 ///
 /// At the moment, this only supports MP3 files (and will crash via assert if you
 /// give it another type). Metadata is scraped from the files and used to fill in
-/// database records for each song. Most of the time (~90%) is spent hashing the
-/// audio file and copying it to the database folder.
+/// database records for each song. Most of the time (~90%) is spent hashing
+/// audio files and copying them to the database folder.
 ///
 /// @param paths An array of filepaths to import from
 /// @param num_paths The number of filepaths in the array

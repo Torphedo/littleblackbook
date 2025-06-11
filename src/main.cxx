@@ -1,9 +1,10 @@
+#include <cstdlib>
 #include <sqlite3.h>
 
 #include <common/logging.h>
 
-#include "nativegui/gui.hxx"
-#include "nativegui/gui_loop.hxx"
+#include "nativegui/nativegui.hxx"
+#include "nativegui/gui_bootstrap.hxx"
 #include "cli/cli_main.hxx"
 #include "arguments.hxx"
 
@@ -35,8 +36,14 @@ int main(int argc, char** argv) {
     if (args.cli_mode) {
         return cli_main(args, db, db_path);
     } else {
+        nativegui gui(db);
+        if (!gui.initialized) {
+            LOG_MSG(error, "Failed to start up the GUI!\n");
+            return EXIT_FAILURE;
+        }
+
         // We invert the return value since exit code 0 == false == EXIT_SUCCESS
-        return !gui_loop(gui_main, nullptr);
+        return !gui_loop(gui_main, &gui);
     }
 
     sqlite3_close(db);

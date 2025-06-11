@@ -1,14 +1,13 @@
+#include <glad/glad.h> // glad has to go first to avoid double-including GL header
+#include "gui_bootstrap.hxx"
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 #include <nfd.h>
-#include <glad/glad.h>
 
 #include <common/logging.h>
 #include <common/gl/gl_setup.h>
 #include <GLFW/glfw3.h>
-
-#include "gui_loop.hxx"
 
 bool gui_loop(gui_callback callback, void* ctx) {
     // Create window with graphics context
