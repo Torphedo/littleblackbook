@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <set>
 
 #include <common/int.h>
 
@@ -17,5 +18,5 @@ struct runtime_song {
     // These are "pre-calculated", in that implied tags (parents) in the database
     // are included.
     // This is intended for immediate display.
-    std::vector<u32> tags;
+    std::set<u32> tags;
 };
