@@ -32,9 +32,13 @@ int main(int argc, char** argv) {
     }
     LOG_MSG(info, "Opened database \"%s\"\n", db_path);
 
+    // Always enable extended result codes for more detailed errors
+    sqlite3_extended_result_codes(db, true);
 
+
+    int result = EXIT_SUCCESS;
     if (args.cli_mode) {
-        return cli_main(args, db, db_path);
+        result = cli_main(args, db, db_path);
     } else {
         nativegui gui(db);
         if (!gui.initialized) {
@@ -43,8 +47,9 @@ int main(int argc, char** argv) {
         }
 
         // We invert the return value since exit code 0 == false == EXIT_SUCCESS
-        return !gui_loop(gui_main, &gui);
+        result = !gui_loop(gui_main, &gui);
     }
 
     sqlite3_close(db);
+    return result;
 }
