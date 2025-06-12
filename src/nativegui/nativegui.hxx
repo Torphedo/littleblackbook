@@ -26,6 +26,17 @@ struct nativegui {
     // Maybe also add a "lazy" version that only loads new songs whose hash we
     // don't recognize
 
+    /* ======================================================================= */
+    /*                   ImGui Drawing Functions & UI State                    */
+    /* ======================================================================= */
+
+    // All song hashes that need their editing window drawn
+    std::set<u32> song_editors;
+
+    bool draw_song_editor(runtime_song& song);
+
+    void draw_song_list() noexcept;
+
     /// @brief Load everything needed to start the GUI from the database
     nativegui(sqlite3* db);
 };

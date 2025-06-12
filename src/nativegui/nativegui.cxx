@@ -4,14 +4,10 @@
 #include <common/logging.h>
 #include <common/vfile.h>
 
-#include "../schema.hxx"
-#include "../scope_timer.hxx"
+#include <schema.hxx>
+#include <scope_timer.hxx>
 
-// We don't bother getting album and artists, since those will only be searched
-// via namespaced tags.
-static const char fetchsongs_sql[] =
-"SELECT title, year, lyrics, hash, import_timestamp, duration_secs FROM songs;";
-
+// Compile SQL and print detailed error messages on failure
 sqlite3_stmt* compile_sql(const char* sql, s32 sql_len, sqlite3* db) {
     sqlite3_stmt* stmt = nullptr;
     int songres = sqlite3_prepare_v2(db, sql, sql_len, &stmt, nullptr);
@@ -31,10 +27,13 @@ sqlite3_stmt* compile_sql(const char* sql, s32 sql_len, sqlite3* db) {
 }
 
 bool nativegui::load_from_db(sqlite3* db) {
+    // We don't bother getting album/artist, since those are stored as tags.
+    static const char fetchsongs_sql[] = "SELECT title, year, lyrics, hash, import_timestamp, duration_secs FROM songs";
     const char tags_sql[] = "SELECT tag, hash FROM tags";
     const char tagmap_sql[] = "SELECT tag_hash, song_hash FROM " TAG_SONG_TABLE;
     const char tagparents_sql[] = "SELECT parent_hash, child_hash FROM " TAG_PARENT_TABLE;
 
+    // Compile all of our basic SQL queries
     sqlite3_stmt* fetchsongs = compile_sql(fetchsongs_sql, ARRAY_SIZE(fetchsongs_sql) + 1, db);
     sqlite3_stmt* fetchtags = compile_sql(tags_sql, ARRAY_SIZE(tags_sql) + 1, db);
     sqlite3_stmt* fetchtagmap = compile_sql(tagmap_sql, ARRAY_SIZE(tagmap_sql) + 1, db);
@@ -47,6 +46,9 @@ bool nativegui::load_from_db(sqlite3* db) {
         return false; // Error already printed for us
     }
 
+    // TODO: Check for errors after each sqlite3_step() loop so we can get detailed error messages
+
+    // Load songs
     int exec_result = 0;
     while ((exec_result = sqlite3_step(fetchsongs)) == SQLITE_ROW) {
         const unsigned char* title = sqlite3_column_text(fetchsongs, 0);
@@ -63,6 +65,7 @@ bool nativegui::load_from_db(sqlite3* db) {
         };
     }
 
+    // Load tags
     while ((exec_result = sqlite3_step(fetchtags)) == SQLITE_ROW) {
         const unsigned char* tag = sqlite3_column_text(fetchtags, 0);
         const u32 hash = sqlite3_column_int(fetchtags, 1);
@@ -71,6 +74,7 @@ bool nativegui::load_from_db(sqlite3* db) {
         tags[hash] = (char*)tag;
     }
 
+    // Attach tags to their corresponding songs
     while ((exec_result = sqlite3_step(fetchtagmap)) == SQLITE_ROW) {
         const u32 tag_hash = sqlite3_column_int(fetchtagmap, 0);
         const u32 song_hash = sqlite3_column_int(fetchtagmap, 1);
@@ -81,15 +85,15 @@ bool nativegui::load_from_db(sqlite3* db) {
         }
     }
 
+    // Add parented tags to songs as needed
     while ((exec_result = sqlite3_step(fetchtagparents)) == SQLITE_ROW) {
         const u32 parent_hash = sqlite3_column_int(fetchtagparents, 0);
         const u32 child_hash = sqlite3_column_int(fetchtagparents, 1);
 
         // Very inefficiently, add all tag parents.
-        // We probably can just do a more complex query to get the dataset to do
-        // this efficiently:
+        // We probably can just do a more complex query to do this more efficiently:
         // SELECT song_hash FROM tagmap WHERE tag_hash IN (SELECT child_hash FROM tag_parents)
-        // This should filter out songs that don't need parent tags added.
+        // That should filter out songs that don't need parent tags added.
         for (auto& pair : songs) {
             auto& song = pair.second;
             for (u32 tag_hash : song.tags) {
@@ -100,6 +104,7 @@ bool nativegui::load_from_db(sqlite3* db) {
         }
     }
 
+    // Free our compiled SQL queries
     sqlite3_finalize(fetchsongs);
     sqlite3_finalize(fetchtags);
     sqlite3_finalize(fetchtagmap);
@@ -117,16 +122,66 @@ nativegui::nativegui(sqlite3* db) {
     }
     LOG_MSG(info, "Finished loading from database in %.3fms\n", elapsed_loading);
 
-    for (const auto& pair : songs) {
-        const runtime_song& s = pair.second;
-        // LOG_MSG(debug, "Got a song named \"%s\" (released %u)\n", s.name.c_str(), s.release_year);
-    }
-
     initialized = result;
 }
 
+bool nativegui::draw_song_editor(runtime_song& song) {
+    char win_title_buf[512] = {0};
+    snprintf(win_title_buf, sizeof(win_title_buf), "Song editor [%u]", song.hash);
+    bool open = true;
+    open &= ImGui::Begin(win_title_buf, &open);
+    if (!open) {
+        // User closed the window or it's not visible
+        ImGui::End();
+        return false;
+    }
+
+    ImGui::Text("Title: %s", song.name.c_str());
+    ImGui::Text("Released: %u", song.release_year);
+
+    if (song.tags.size() > 0) {
+        ImGui::Text("Tags:");
+        for (u32 hash : song.tags) {
+            const std::string& tag = tags[hash];
+            ImGui::Text("%s", tag.c_str());
+        }
+        ImGui::Text("\n");
+    }
+
+    ImGui::Text("Hash: %u", song.hash);
+    ImGui::Text("Imported @ %lu", song.import_timestamp);
+
+    ImGui::End();
+    return true;
+}
+
+void nativegui::draw_song_list() noexcept {
+    ImGui::Begin("Song List");
+    for (const auto& pair : songs) {
+        const runtime_song& s = pair.second;
+        if (ImGui::Selectable(s.name.c_str())) {
+            song_editors.insert(s.hash);
+        }
+    }
+
+    ImGui::End();
+}
+
 bool gui_main(void* ctx, GLFWwindow* window) {
-    nativegui* gui = (nativegui*) ctx;
+    nativegui* gui = (nativegui*)ctx;
+    gui->draw_song_list();
+
+    std::vector<u32> editors_to_close(0);
+    for (u32 song_hash : gui->song_editors) {
+        if (!gui->draw_song_editor(gui->songs[song_hash])) {
+            editors_to_close.push_back(song_hash);
+        }
+    }
+
+    // We can't edit the set while iterating over it
+    for (u32 hash : editors_to_close) {
+        gui->song_editors.erase(hash);
+    }
 
     ImGui::ShowDemoWindow();
 
