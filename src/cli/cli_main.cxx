@@ -41,7 +41,7 @@ int cli_main(const arguments& args, sqlite3* db, const char* db_path) {
     if (args.settings[SETTING_ARG_IMPORT]) {
         const u32 num_files = args.argc - args.first_non_flag;
         const char* const* files = &args.argv[args.first_non_flag];
-        import_many_files(files, num_files, db_files_folder.c_str(), db);
+        import_many_files_many_threads(files, num_files, db_files_folder.c_str(), db);
     }
 
     if (args.settings[SETTING_ARG_SEARCH]) {

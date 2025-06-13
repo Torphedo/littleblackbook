@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <vector>
+#include <threads.h>
 
 #include <common/file.h>
 #include <common/endian.h>
@@ -86,28 +87,19 @@ void song_record::insert_sql(std::string& out) const noexcept {
     );
 }
 
-bool import_many_files(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db) {
+void parse_artists(const char* artists, std::string& sql_out) {
+    // TODO Implement artist parsing
+    // strtok
+}
+
+import_result import_many_files(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db) {
     if (!file_exists(files_dir)) {
         std::filesystem::create_directory(files_dir);
     }
 
-    printf("Phase 1:\n");
-    printf("\t- Extracting metadata\n");
-    printf("\t- Generating SQL code\n");
-    printf("\t- Hashing your files\n");
-    printf("\t- Copying your files\n");
-    if (num_paths > 100) {
-        printf("You're importing a lot of files, this might take a while.\n");
-    }
-    printf("\n");
-
-    bool result = true;
-    std::string sql = "BEGIN TRANSACTION;\n";
-    u32 imported_songs = 0;
-    u32 skipped_songs = 0;
-    float sqlgen_time = 0.0f; // Elapsed runtime for importing and generating SQL INSERTs
-    {
-        const scope_timer generator_timer(sqlgen_time);
+    import_result out;
+    { // Scope to control timer
+        const scope_timer generator_timer(out.sqlgen_time);
         std::vector<u8> mp3_buf(5 * 1024 * 1024);
         // Indices of all paths that were found to already be in the database
         std::vector<u32> import_conflicts;
@@ -149,41 +141,106 @@ bool import_many_files(const char* const* paths, u32 num_paths, const char* file
                 // File with this hash already exists in the database. Either a
                 // duplicate (very likely) or a hash conflict.
                 import_conflicts.push_back(i);
-                skipped_songs++;
+                out.num_skipped++;
             } else {
                 // Copy file into the database folder for import
                 std::filesystem::copy_file(paths[i], pathbuf);
 
                 // Generate INSERT statement
-                song.insert_sql(sql);
-                imported_songs++;
+                song.insert_sql(out.sql);
+                out.num_imported++;
             }
         }
     }
-    sql.append("\nCOMMIT;\n");
 
     // TODO: Try to figure out if any of the failed imports are real hash conflicts (not duplicates)
-    // printf("Phase 2: Checking for duplicates & 'remastered' / 'deluxe' copies");
 
-    if (skipped_songs > 0) {
-        LOG_MSG(info, "I found %u new songs, and skipped %u that were already in the database.\n", imported_songs, skipped_songs);
+    return out;
+}
+
+typedef struct {
+    const char* const* paths;
+    u32 num_paths;
+    const char* files_dir;
+    sqlite3* db;
+    import_result result;
+}import_args;
+
+int import_many_files_thread_wrapper(import_args* args) {
+    args->result = import_many_files(args->paths, args->num_paths, args->files_dir, args->db);
+    return 0;
+}
+
+bool import_many_files_many_threads(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db) {
+    static const u32 max_threads = 256;
+    const u32 num_threads = 16;
+
+    import_args thread_args[max_threads] = {};
+    thrd_t threads[max_threads] = {};
+
+    const u32 paths_per_thread = num_paths / num_threads;
+
+    // Assign an even amount to each thread
+    for (u32 i = 0; i < num_threads; i++) {
+        thread_args[i] = {
+            &paths[paths_per_thread * i],
+            paths_per_thread,
+            files_dir, db,
+        };
+    }
+
+    printf("Phase 1:\n");
+    printf("\t- Extracting metadata\n");
+    printf("\t- Generating SQL code\n");
+    printf("\t- Hashing your files\n");
+    printf("\t- Copying your files\n");
+    if (num_paths > 100) {
+        printf("You're importing a lot of files, this might take a while.\n");
+    }
+    printf("\n");
+
+    // Dispatch a bunch of threads
+    for (u32 i = 0; i < num_threads; i++) {
+        thrd_create(&threads[i], (thrd_start_t)import_many_files_thread_wrapper, &thread_args[i]);
+    }
+
+    for (u32 i = 0; i < num_threads; i++) {
+        int res = 0;
+        thrd_join(threads[i], &res);
+    }
+
+    // Do the remainder sequentially
+    const u32 remainder = num_paths % num_threads;
+    import_result total = {
+        .sql = "BEGIN TRANSACTION;\n",
+    };
+    total += import_many_files(&paths[num_threads * paths_per_thread], remainder, files_dir, db);
+
+    // Accumulate results
+    for (u32 i = 0; i < num_threads; i++) {
+        const import_result& result = thread_args[i].result;
+        total += result;
+    }
+    total.sql.append("\nCOMMIT;\n");
+
+    LOG_MSG(info, "Finished Phase 1 in %.3fms\n", total.sqlgen_time);
+
+    if (total.num_skipped > 0) {
+        LOG_MSG(info, "I found %u new songs to import, but skipped %u that were already in the database.\n",
+                total.num_imported, total.num_skipped);
     } else {
-        LOG_MSG(info, "Found %u new songs for import.\n", imported_songs, skipped_songs);
+        LOG_MSG(info, "Importing %u new songs.\n", total.num_imported);
     }
 
-    float sqlexec_time = 0.0f;
-    if (imported_songs == 0) {
-        LOG_MSG(info, "I couldn't find any songs to import.\n");
-        return false;
-    }
-    LOG_MSG(info, "Finished generating SQL (%u INSERTs) in %.3fms\n", imported_songs, sqlgen_time);
+    printf("Phase 2: Importing data to SQLite\n");
 
-    printf("Phase 2: Updating SQLite database\n\n");
+    bool result = true;
     char* errmsg = nullptr;
+    float sqlexec_time = 0.0f;
     int sql_result = SQLITE_OK;
-    { // Scope to control the timer
-        const scope_timer sql_timer(sqlexec_time);
-        sql_result = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
+    {
+        scope_timer exectimer(sqlexec_time);
+        sql_result = sqlite3_exec(db, total.sql.c_str(), nullptr, nullptr, &errmsg);
     }
     if (sql_result != SQLITE_OK) {
         result = false;
@@ -191,8 +248,7 @@ bool import_many_files(const char* const* paths, u32 num_paths, const char* file
             LOG_MSG(error, "SQLite error: %s\n", errmsg);
         }
     }
-
-    LOG_MSG(debug, "SQLite compile/execute finished in %.3fms\n", sqlexec_time);
+    LOG_MSG(info, "Finished Phase 2 in %.3fms\n", sqlexec_time);
 
     return result;
 }

@@ -31,6 +31,21 @@ struct song_record {
     void insert_sql(std::string& out) const noexcept;
 };
 
+struct import_result {
+    u32 num_imported = 0;
+    u32 num_skipped = 0;
+    float sqlgen_time = 0.0f;
+    std::string sql;
+
+    import_result& operator+=(const import_result& other) {
+        sql.append(other.sql);
+        num_imported += other.num_imported;
+        num_skipped += other.num_skipped;
+        sqlgen_time += other.sqlgen_time;
+        return *this;
+    }
+};
+
 /// @brief Import a set of audio files into the database
 ///
 /// At the moment, this only supports MP3 files (and will crash via assert if you
@@ -44,4 +59,6 @@ struct song_record {
 ///        All imported files will be copied to this folder, renamed to
 ///        their hash.
 /// @param db The SQLite database connection to use for the import
-bool import_many_files(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db);
+import_result import_many_files(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db);
+
+bool import_many_files_many_threads(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db);
