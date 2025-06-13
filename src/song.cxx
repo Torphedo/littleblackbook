@@ -92,6 +92,23 @@ void parse_artists(const char* artists, std::string& sql_out) {
     // strtok
 }
 
+// Container for results of a single import thread
+struct import_result {
+    u32 num_imported = 0;
+    u32 num_skipped = 0;
+    float sqlgen_time = 0.0f;
+    std::string sql;
+
+    import_result& operator+=(const import_result& other) {
+        sql.append(other.sql);
+        num_imported += other.num_imported;
+        num_skipped += other.num_skipped;
+        sqlgen_time += other.sqlgen_time;
+        return *this;
+    }
+};
+
+// Generate SQL and gather some basic stats about the import process
 import_result import_many_files(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db) {
     if (!file_exists(files_dir)) {
         std::filesystem::create_directory(files_dir);
@@ -99,59 +116,61 @@ import_result import_many_files(const char* const* paths, u32 num_paths, const c
 
     import_result out;
     { // Scope to control timer
-        const scope_timer generator_timer(out.sqlgen_time);
-        std::vector<u8> mp3_buf(5 * 1024 * 1024);
-        // Indices of all paths that were found to already be in the database
-        std::vector<u32> import_conflicts;
-        for (u32 i = 0; i < num_paths; i++) {
-            // Early exit for simple errors
-            if (!path_has_extension(paths[i], ".mp3")) {
-                LOG_MSG(debug, "Skipping \"%s\" (not an MP3)\n", paths[i]);
-                continue;
-            }
-            if (!file_exists(paths[i])) {
-                LOG_MSG(debug, "Skipping \"%s\" (it doesn't exist)\n", paths[i]);
-                continue;
-            }
+    const scope_timer generator_timer(out.sqlgen_time);
 
-            // Load the file
-            const u32 size = file_size(paths[i]);
-            if (size > mp3_buf.capacity()) {
-                mp3_buf.reserve(size + 1);
-            }
-            file_load_existing(paths[i], mp3_buf.data(), size);
+    std::vector<u8> mp3_buf(5 * 1024 * 1024);
+    // Indices of all paths that were found to already be in the database
+    std::vector<u32> import_conflicts;
+    for (u32 i = 0; i < num_paths; i++) {
+        // Early exit for simple errors
+        if (!path_has_extension(paths[i], ".mp3")) {
+            LOG_MSG(debug, "Skipping \"%s\" (not an MP3)\n", paths[i]);
+            continue;
+        }
+        if (!file_exists(paths[i])) {
+            LOG_MSG(debug, "Skipping \"%s\" (it doesn't exist)\n", paths[i]);
+            continue;
+        }
 
-            // Extract metadata & hash the file
-            const song_record song(mp3_buf.data(), size);
+        // Load the file
+        const u32 size = file_size(paths[i]);
+        if (size > mp3_buf.capacity()) {
+            mp3_buf.reserve(size + 1);
+        }
+        file_load_existing(paths[i], mp3_buf.data(), size);
 
-            // Copy file into database folder with hash for its name
+        // Extract metadata & hash the file
+        const song_record song(mp3_buf.data(), size);
 
-            // Buffer for the path where the file will be copied to
-            // [files_dir]/[hash].mp3
-            char pathbuf[512] = {0};
+        // Copy file into database folder with hash for its name
 
-            // Make sure the path will fit in our static sized buffer.
-            // hash -> [up to] 10 chars, extension -> 4 chars, dirsep -> 1 char
-            assert(ARRAY_SIZE(pathbuf) > (strlen(files_dir) + 10 + 4 + 1) && "Path is too long to fit!");
+        // Buffer for the path where the file will be copied to
+        // [files_dir]/[hash].mp3
+        char pathbuf[512] = {0};
 
-            const char* extension = path_get_extension(paths[i]);
-            snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s%c%u%s", files_dir, PLATFORM_DIRSEP, song.crc32, extension);
+        // Make sure the path will fit in our static sized buffer.
+        // hash -> [up to] 10 chars, extension -> 4 chars, dirsep -> 1 char
+        assert(ARRAY_SIZE(pathbuf) > (strlen(files_dir) + 10 + 4 + 1) && "Path is too long to fit!");
 
-            if (file_exists(pathbuf)) {
-                // File with this hash already exists in the database. Either a
-                // duplicate (very likely) or a hash conflict.
-                import_conflicts.push_back(i);
-                out.num_skipped++;
-            } else {
-                // Copy file into the database folder for import
-                std::filesystem::copy_file(paths[i], pathbuf);
+        const char* extension = path_get_extension(paths[i]);
+        snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s%c%u%s", files_dir, PLATFORM_DIRSEP, song.crc32, extension);
 
-                // Generate INSERT statement
-                song.insert_sql(out.sql);
-                out.num_imported++;
-            }
+        if (file_exists(pathbuf)) {
+            // File with this hash already exists in the database. Either a
+            // duplicate (very likely) or a hash conflict.
+            import_conflicts.push_back(i);
+            out.num_skipped++;
+        } else {
+            // Copy file into the database folder for import
+            std::filesystem::copy_file(paths[i], pathbuf);
+
+            // Generate INSERT statement
+            song.insert_sql(out.sql);
+            out.num_imported++;
         }
     }
+
+    } // Timer scope
 
     // TODO: Try to figure out if any of the failed imports are real hash conflicts (not duplicates)
 
