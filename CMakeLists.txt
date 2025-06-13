@@ -66,4 +66,9 @@ add_executable(blackbook
     lib/glad/src/glad.c
 )
 
+add_library(sqlite_crc32 SHARED
+    lib/sqlite-crc32.c
+    lib/bobtail/common/crc32.c
+)
+
 target_link_libraries(blackbook PRIVATE bobtail sqlite3-static imgui nfd raudio glfw)
