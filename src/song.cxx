@@ -35,7 +35,7 @@ void song_record::print() const noexcept {
 }
 
 song_record::song_record(u8* mp3, u32 size) {
-    assert(size >= sizeof(id3::header) && "MP3 file is too small!");
+    assert(size >= sizeof(id3::header) && "MP3 file is impossibly small!");
 
     vfile id3 = vfile_open(mp3, size);
     const id3::header header = VFILE_READ(id3::header, &id3);
@@ -118,7 +118,8 @@ import_result import_many_files(const char* const* paths, u32 num_paths, const c
     { // Scope to control timer
     const scope_timer generator_timer(out.sqlgen_time);
 
-    std::vector<u8> mp3_buf(5 * 1024 * 1024);
+    std::vector<u8> file_buf(5 * 1024 * 1024); // Buffer is reused for many files
+
     // Indices of all paths that were found to already be in the database
     std::vector<u32> import_conflicts;
     for (u32 i = 0; i < num_paths; i++) {
@@ -134,35 +135,34 @@ import_result import_many_files(const char* const* paths, u32 num_paths, const c
 
         // Load the file
         const u32 size = file_size(paths[i]);
-        if (size > mp3_buf.capacity()) {
-            mp3_buf.reserve(size + 1);
+        if (size > file_buf.capacity()) {
+            file_buf.reserve(size + 1);
         }
-        file_load_existing(paths[i], mp3_buf.data(), size);
+        file_load_existing(paths[i], file_buf.data(), size);
 
         // Extract metadata & hash the file
-        const song_record song(mp3_buf.data(), size);
+        const song_record song(file_buf.data(), size);
 
         // Copy file into database folder with hash for its name
 
-        // Buffer for the path where the file will be copied to
         // [files_dir]/[hash].mp3
-        char pathbuf[512] = {0};
+        char destpath[512] = {0};
 
         // Make sure the path will fit in our static sized buffer.
         // hash -> [up to] 10 chars, extension -> 4 chars, dirsep -> 1 char
-        assert(ARRAY_SIZE(pathbuf) > (strlen(files_dir) + 10 + 4 + 1) && "Path is too long to fit!");
+        assert(ARRAY_SIZE(destpath) > (strlen(files_dir) + 10 + 4 + 1) && "Destination path too long [programmer error]!");
 
         const char* extension = path_get_extension(paths[i]);
-        snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s%c%u%s", files_dir, PLATFORM_DIRSEP, song.crc32, extension);
+        snprintf(destpath, ARRAY_SIZE(destpath), "%s%c%u%s", files_dir, PLATFORM_DIRSEP, song.crc32, extension);
 
-        if (file_exists(pathbuf)) {
+        if (file_exists(destpath)) {
             // File with this hash already exists in the database. Either a
             // duplicate (very likely) or a hash conflict.
             import_conflicts.push_back(i);
             out.num_skipped++;
         } else {
             // Copy file into the database folder for import
-            std::filesystem::copy_file(paths[i], pathbuf);
+            std::filesystem::copy_file(paths[i], destpath);
 
             // Generate INSERT statement
             song.insert_sql(out.sql);
@@ -177,6 +177,8 @@ import_result import_many_files(const char* const* paths, u32 num_paths, const c
     return out;
 }
 
+// C11 threading library only allows functions with a single void* argument, so
+// we need a struct for all our arguments
 typedef struct {
     const char* const* paths;
     u32 num_paths;
