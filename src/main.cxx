@@ -22,6 +22,7 @@ int main(int argc, char** argv) {
         LOG_MSG(debug, "Got database path \"%s\"\n", db_path);
     }
 
+    sqlite3_initialize();
     sqlite3* db = nullptr;
     const int res = sqlite3_open(db_path, &db);
     if (res != SQLITE_OK) {
@@ -62,5 +63,6 @@ int main(int argc, char** argv) {
     }
 
     sqlite3_close(db);
+    sqlite3_shutdown();
     return result;
 }

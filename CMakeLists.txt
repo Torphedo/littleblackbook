@@ -20,7 +20,7 @@ include_directories(
     lib/glad/include
     lib/glfw/include
     lib/raudio/src
-    lib/nfde
+    lib/nfde/src/include
 )
 
 # Add ImGui as a library
@@ -35,16 +35,24 @@ add_library(imgui STATIC
 )
 
 # Dependencies
-set (BOBTAIL_OPENGL ON)
+set(BOBTAIL_OPENGL ON)
 add_subdirectory(lib/bobtail)
 add_subdirectory(lib/raudio/projects/CMake)
 add_subdirectory(lib/nfde)
+
+set(GLFW_BUILD_DOCS OFF)
+set(GLFW_INSTALL OFF)
 add_subdirectory(lib/glfw)
 
-set(BUILD_STATIC ON)
-set(BUILD_SHARED OFF)
+# We turn off as many SQLite options as we can to reduce compile time
+set(ENABLE_STATIC ON)
+set(ENABLE_SHARED OFF)
 set(BUILD_SHELL OFF)
-set(BUILD_STATIC_SHELL OFF)
+set(ENABLE_STATIC_SHELL ON)
+set(ENABLE_FTS4 OFF) # We only use FTS5
+set(ENABLE_RTREE OFF)
+set(OMIT_JSON OFF)
+set(OMIT_AUTOINIT OFF)
 add_subdirectory(lib/sqlite)
 
 add_executable(blackbook
@@ -66,9 +74,10 @@ add_executable(blackbook
     lib/glad/src/glad.c
 )
 
+# We dynamically load this in SQLite to add CRC32 support for SQL code
 add_library(sqlite_crc32 SHARED
     lib/sqlite-crc32.c
-    lib/bobtail/common/crc32.c
 )
+target_link_libraries(sqlite_crc32 PUBLIC bobtail)
 
-target_link_libraries(blackbook PRIVATE bobtail sqlite3-static imgui nfd raudio glfw)
+target_link_libraries(blackbook PUBLIC bobtail sqlite3-static glfw imgui nfd)
