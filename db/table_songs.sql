@@ -9,5 +9,5 @@ CREATE TABLE IF NOT EXISTS "songs" (
     duration_secs    INTEGER,
     -- CRC32 hash, left as just "hash" in case the algorithm changes late
     hash      INTEGER NOT NULL UNIQUE,
-    import_timestamp INTEGER NOT NULL -- Unix timestamp
+    import_timestamp INTEGER NOT NULL DEFAULT 0 -- Unix timestamp, set by a trigge
 ) STRICT;
