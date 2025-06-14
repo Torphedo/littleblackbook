@@ -82,8 +82,8 @@ void song_record::insert_sql(std::string& out) const noexcept {
     const std::string album_str = album.to_utf8();
 
     sqlgen(out,
-        "INSERT INTO songs (title, artist, album, year, hash, import_timestamp) VALUES ('%s', '%s', '%s', %u, %u, %lu);\n",
-        title_str.c_str(), artist_str.c_str(), album_str.c_str(), release_year, crc32, import_timestamp
+        "INSERT INTO songs (title, artist, album, year, hash) VALUES ('%s', '%s', '%s', %u, %u);\n",
+        title_str.c_str(), artist_str.c_str(), album_str.c_str(), release_year, crc32
     );
 }
 
@@ -161,6 +161,9 @@ import_result import_many_files(const char* const* paths, u32 num_paths, const c
             import_conflicts.push_back(i);
             out.num_skipped++;
         } else {
+            // TODO: Don't copy until the SQL inserts finish successfully.
+            // If SQL can't insert the data, we don't want to copy the file.
+
             // Copy file into the database folder for import
             std::filesystem::copy_file(paths[i], destpath);
 

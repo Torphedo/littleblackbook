@@ -12,4 +12,5 @@ then
     echo $#
 fi
 
+rm files/*.mp3
 sqlite3 $DB_FILE "DROP TABLE 'songs'; DROP TABLE 'tags'; DROP TABLE 'tagmap';"

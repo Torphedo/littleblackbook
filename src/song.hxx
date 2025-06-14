@@ -1,6 +1,5 @@
 #pragma once
 #include "id3.hxx"
-#include <ctime>
 #include <string>
 #include <sqlite3.h>
 
@@ -14,7 +13,6 @@ struct song_record {
 
     u32 release_year = 0;
     u32 crc32 = 0;
-    time_t import_timestamp = time(nullptr);
 
     /// @brief Collect MP3 metadata into song info.
     ///

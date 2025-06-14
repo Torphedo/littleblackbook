@@ -20,4 +20,5 @@ cat table_tag_parents.sql | sqlite3 $DB_FILE
 
 # Setup triggers
 cat trigger_albumtag.sql | sqlite3 $DB_FILE
+cat trigger_timestamps.sql | sqlite3 $DB_FILE
 
