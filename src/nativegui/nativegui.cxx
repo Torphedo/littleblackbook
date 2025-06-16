@@ -1,5 +1,9 @@
 #include "nativegui.hxx"
+#include "imgui_internal.h"
+#include <algorithm>
+
 #include <imgui.h>
+#include <misc/cpp/imgui_stdlib.h>
 
 #include <common/logging.h>
 #include <common/vfile.h>
@@ -26,27 +30,19 @@ sqlite3_stmt* compile_sql(const char* sql, s32 sql_len, sqlite3* db) {
     return stmt;
 }
 
-bool nativegui::load_from_db(sqlite3* db) {
+
+bool nativegui::load_songs_by_query(sqlite3* db, const char* query) {
     // We don't bother getting album/artist, since those are stored as tags.
     static const char fetchsongs_sql[] = "SELECT title, year, lyrics, hash, import_timestamp, duration_secs FROM songs";
-    const char tags_sql[] = "SELECT tag, hash FROM tags";
-    const char tagmap_sql[] = "SELECT tag_hash, song_hash FROM " TAG_SONG_TABLE;
-    const char tagparents_sql[] = "SELECT parent_hash, child_hash FROM " TAG_PARENT_TABLE;
-
-    // Compile all of our basic SQL queries
-    sqlite3_stmt* fetchsongs = compile_sql(fetchsongs_sql, ARRAY_SIZE(fetchsongs_sql) + 1, db);
-    sqlite3_stmt* fetchtags = compile_sql(tags_sql, ARRAY_SIZE(tags_sql) + 1, db);
-    sqlite3_stmt* fetchtagmap = compile_sql(tagmap_sql, ARRAY_SIZE(tagmap_sql) + 1, db);
-    sqlite3_stmt* fetchtagparents = compile_sql(tagparents_sql, ARRAY_SIZE(tagparents_sql) + 1, db);
-    if (!fetchsongs || !fetchtags || !fetchtagmap || !fetchtagparents) {
-        sqlite3_finalize(fetchsongs);
-        sqlite3_finalize(fetchtags);
-        sqlite3_finalize(fetchtagmap);
-        sqlite3_finalize(fetchtagparents);
-        return false; // Error already printed for us
+    if (!query) {
+        query = fetchsongs_sql;
     }
 
-    // TODO: Check for errors after each sqlite3_step() loop so we can get detailed error messages
+    sqlite3_stmt* fetchsongs = compile_sql(fetchsongs_sql, ARRAY_SIZE(fetchsongs_sql) + 1, db);
+    if (!fetchsongs) {
+        sqlite3_finalize(fetchsongs);
+        return false; // Error already printed for us
+    }
 
     // Load songs
     int exec_result = 0;
@@ -57,7 +53,7 @@ bool nativegui::load_from_db(sqlite3* db) {
         const time_t time = sqlite3_column_int(fetchsongs, 4);
 
         // Construct in-place to encourage use of the move ctor, to avoid cloning strings
-        songs[hash] = (runtime_song) {
+        song_map[hash] = (runtime_song) {
             .name = (char*)title,
             .import_timestamp = time,
             .hash = hash,
@@ -65,7 +61,35 @@ bool nativegui::load_from_db(sqlite3* db) {
         };
     }
 
+    sqlite3_finalize(fetchsongs);
+    return true;
+}
+
+bool nativegui::load_from_db() {
+    static const char tags_sql[] = "SELECT tag, hash FROM tags";
+    static const char tagmap_sql[] = "SELECT tag_hash, song_hash FROM " TAG_SONG_TABLE;
+    static const char tagparents_sql[] = "SELECT parent_hash, child_hash FROM " TAG_PARENT_TABLE;
+
+    // Try to load songs
+    if (!load_songs_by_query(db)) {
+        return false; // Error printed for us
+    }
+
+    // Compile all of our basic SQL queries
+    sqlite3_stmt* fetchtags = compile_sql(tags_sql, ARRAY_SIZE(tags_sql) + 1, db);
+    sqlite3_stmt* fetchtagmap = compile_sql(tagmap_sql, ARRAY_SIZE(tagmap_sql) + 1, db);
+    sqlite3_stmt* fetchtagparents = compile_sql(tagparents_sql, ARRAY_SIZE(tagparents_sql) + 1, db);
+    if (!fetchtags || !fetchtagmap || !fetchtagparents) {
+        sqlite3_finalize(fetchtags);
+        sqlite3_finalize(fetchtagmap);
+        sqlite3_finalize(fetchtagparents);
+        return false; // Error already printed for us
+    }
+
+    // TODO: Check for errors after each sqlite3_step() loop so we can get detailed error messages
+
     // Load tags
+    int exec_result = SQLITE_OK;
     while ((exec_result = sqlite3_step(fetchtags)) == SQLITE_ROW) {
         const unsigned char* tag = sqlite3_column_text(fetchtags, 0);
         const u32 hash = sqlite3_column_int(fetchtags, 1);
@@ -80,8 +104,8 @@ bool nativegui::load_from_db(sqlite3* db) {
         const u32 song_hash = sqlite3_column_int(fetchtagmap, 1);
 
         // Add the tag to the song
-        if (songs.count(song_hash)) {
-            songs[song_hash].tags.insert(tag_hash);
+        if (song_map.count(song_hash)) {
+            song_map[song_hash].tags.insert(tag_hash);
         }
     }
 
@@ -94,7 +118,7 @@ bool nativegui::load_from_db(sqlite3* db) {
         // We probably can just do a more complex query to do this more efficiently:
         // SELECT song_hash FROM tagmap WHERE tag_hash IN (SELECT child_hash FROM tag_parents)
         // That should filter out songs that don't need parent tags added.
-        for (auto& pair : songs) {
+        for (auto& pair : song_map) {
             auto& song = pair.second;
             for (u32 tag_hash : song.tags) {
                 if (tag_hash == child_hash) {
@@ -105,7 +129,6 @@ bool nativegui::load_from_db(sqlite3* db) {
     }
 
     // Free our compiled SQL queries
-    sqlite3_finalize(fetchsongs);
     sqlite3_finalize(fetchtags);
     sqlite3_finalize(fetchtagmap);
     sqlite3_finalize(fetchtagparents);
@@ -114,13 +137,17 @@ bool nativegui::load_from_db(sqlite3* db) {
 
 nativegui::nativegui(sqlite3* db) {
     bool result = true;
+    this->db = db;
 
     float elapsed_loading = 0.0f;
     {
         scope_timer load_timer(elapsed_loading);
-        result &= load_from_db(db);
+        result &= load_from_db();
     }
     LOG_MSG(info, "Finished loading from database in %.3fms\n", elapsed_loading);
+    if (!result) {
+        db = nullptr; // Don't keep DB ptr
+    }
 
     initialized = result;
 }
@@ -155,9 +182,54 @@ bool nativegui::draw_song_editor(runtime_song& song) {
     return true;
 }
 
+void tag_search::finalize_current_tag() {
+    // Remove the tag if it was already in the list
+    auto iter = std::find(tags.begin(), tags.end(), current_tag);
+    if (iter != tags.end()) {
+        tags.erase(iter);
+        current_tag = "";
+        return;
+    }
+
+    // Add the tag as normal
+    tags.push_back(current_tag);
+    current_tag = "";
+}
+
+void nativegui::draw_search_menu() noexcept {
+    ImGui::Begin("Search");
+
+    // Show current tags and input box
+    for (const std::string& tag : search.tags) {
+        ImGui::Text("%s", tag.c_str());
+    }
+
+    // TODO: This steals focus from all other windows at the moment...
+    ImGui::SetKeyboardFocusHere(); // Always the input so user can keep typing
+
+    // Input for next tag
+    if (ImGui::InputText("Input tag: ", &search.current_tag, ImGuiInputTextFlags_EnterReturnsTrue)) {
+        search.finalize_current_tag();
+
+        // TODO: Execute search
+        // We can generate search, SQL that grabs whole records, then just throw
+        // a "SELECT hash from (%s)" on it to grab only hash.
+    }
+
+    // Display results
+    for (u32 hash : search.result_hashes) {
+        const runtime_song& s = song_map[hash];
+        if (ImGui::Selectable(s.name.c_str())) {
+            song_editors.insert(s.hash);
+        }
+    }
+
+    ImGui::End();
+}
+
 void nativegui::draw_song_list() noexcept {
     ImGui::Begin("Song List");
-    for (const auto& pair : songs) {
+    for (const auto& pair : song_map) {
         const runtime_song& s = pair.second;
         if (ImGui::Selectable(s.name.c_str())) {
             song_editors.insert(s.hash);
@@ -170,10 +242,11 @@ void nativegui::draw_song_list() noexcept {
 bool gui_main(void* ctx, GLFWwindow* window) {
     nativegui* gui = (nativegui*)ctx;
     gui->draw_song_list();
+    gui->draw_search_menu();
 
     std::vector<u32> editors_to_close(0);
     for (u32 song_hash : gui->song_editors) {
-        if (!gui->draw_song_editor(gui->songs[song_hash])) {
+        if (!gui->draw_song_editor(gui->song_map[song_hash])) {
             editors_to_close.push_back(song_hash);
         }
     }

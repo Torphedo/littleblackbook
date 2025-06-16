@@ -3,26 +3,44 @@
 #include <sqlite3.h>
 
 #include <map>
+#include <vector>
+#include <string>
 
 #include "runtime_records.hxx"
+
+struct tag_search {
+    // The tags currently being searched for
+    std::vector<std::string> tags;
+    // Buffer for the tag the user is currently typing
+    std::string current_tag;
+
+    std::vector<u32> result_hashes;
+
+    void finalize_current_tag();
+};
 
 // Struct for all GUI state
 struct nativegui {
     // Set by ctor to indicate results (instead of an exception)
     bool initialized = false;
 
+    sqlite3* db = nullptr;
+
     // Doubles as song storage, and a lookup by hash
-    std::map<u32, runtime_song> songs;
+    std::map<u32, runtime_song> song_map;
 
     // Doubles as tag storage, and a lookup by hash
     std::map<u32, std::string> tags;
+
+    /// @brief Load songs from database, optionally with a custom query
+    bool load_songs_by_query(sqlite3* db, const char* query = nullptr);
 
     /// @brief Load songs and tags from the database
     ///
     /// Loads from scratch all songs and tags, the tag<->song mapping, and
     /// parent-child tag mappings. Automatically reloads all open searches using
     /// the new data
-    bool load_from_db(sqlite3* db);
+    bool load_from_db();
     // Maybe also add a "lazy" version that only loads new songs whose hash we
     // don't recognize
 
@@ -33,7 +51,11 @@ struct nativegui {
     // All song hashes that need their editing window drawn
     std::set<u32> song_editors;
 
+    tag_search search;
+
     bool draw_song_editor(runtime_song& song);
+
+    void draw_search_menu() noexcept;
 
     void draw_song_list() noexcept;
 

@@ -79,6 +79,9 @@ bool gui_loop(gui_callback callback, void* ctx) {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        // Make the entire window a giant docking space
+        ImGui::DockSpaceOverViewport();
+
         // The callback renders the actual UI and "drives" the program.
         (callback)(ctx, window);
 

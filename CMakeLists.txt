@@ -32,6 +32,7 @@ add_library(imgui STATIC
     lib/imgui/imgui_widgets.cpp
     lib/imgui/backends/imgui_impl_opengl3.cpp
     lib/imgui/backends/imgui_impl_glfw.cpp
+    lib/imgui/misc/cpp/imgui_stdlib.cpp
 )
 
 # Dependencies
