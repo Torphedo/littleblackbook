@@ -6,6 +6,8 @@
 #include <vector>
 #include <set>
 
+#include <sqlite3.h>
+
 #include <common/int.h>
 
 struct runtime_song {
@@ -19,4 +21,28 @@ struct runtime_song {
     // are included.
     // This is intended for immediate display.
     std::set<u32> tags;
+};
+
+struct tag_search {
+    // The tags currently being searched for
+    std::vector<std::string> tags;
+
+    // Buffer for the tag the user is currently typing
+    std::string current_tag;
+
+    std::vector<u32> result_hashes;
+
+    /// @brief Add the current tag to the list of tags, or delete it if already there
+    ///
+    /// This should run after the user hits Enter (or equivalent) on the text
+    /// input for the current tag. The string is added to the list of tags, or if
+    /// it's already in the list, removed. Either way, the current tag is cleared.
+    void finalize_current_tag(sqlite3* db) noexcept;
+
+    /// @brief Run a query against the database and update the search results
+    ///
+    /// The database is not modified by this method.
+    /// Clears the search results, then searches the database using the current
+    /// list of tags. The "current tag" (text input state) is ignored.
+    void update_results(sqlite3* db) noexcept;
 };

@@ -3,21 +3,11 @@
 #include <sqlite3.h>
 
 #include <map>
-#include <vector>
-#include <string>
 
 #include "runtime_records.hxx"
 
-struct tag_search {
-    // The tags currently being searched for
-    std::vector<std::string> tags;
-    // Buffer for the tag the user is currently typing
-    std::string current_tag;
-
-    std::vector<u32> result_hashes;
-
-    void finalize_current_tag();
-};
+// Compile SQL and print detailed error messages on failure
+sqlite3_stmt* compile_sql(const char* sql, s32 sql_len, sqlite3* db);
 
 // Struct for all GUI state
 struct nativegui {

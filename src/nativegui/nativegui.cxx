@@ -1,6 +1,4 @@
 #include "nativegui.hxx"
-#include "imgui_internal.h"
-#include <algorithm>
 
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
@@ -11,7 +9,6 @@
 #include <schema.hxx>
 #include <scope_timer.hxx>
 
-// Compile SQL and print detailed error messages on failure
 sqlite3_stmt* compile_sql(const char* sql, s32 sql_len, sqlite3* db) {
     sqlite3_stmt* stmt = nullptr;
     int songres = sqlite3_prepare_v2(db, sql, sql_len, &stmt, nullptr);
@@ -182,20 +179,6 @@ bool nativegui::draw_song_editor(runtime_song& song) {
     return true;
 }
 
-void tag_search::finalize_current_tag() {
-    // Remove the tag if it was already in the list
-    auto iter = std::find(tags.begin(), tags.end(), current_tag);
-    if (iter != tags.end()) {
-        tags.erase(iter);
-        current_tag = "";
-        return;
-    }
-
-    // Add the tag as normal
-    tags.push_back(current_tag);
-    current_tag = "";
-}
-
 void nativegui::draw_search_menu() noexcept {
     ImGui::Begin("Search");
 
@@ -209,7 +192,7 @@ void nativegui::draw_search_menu() noexcept {
 
     // Input for next tag
     if (ImGui::InputText("Input tag: ", &search.current_tag, ImGuiInputTextFlags_EnterReturnsTrue)) {
-        search.finalize_current_tag();
+        search.finalize_current_tag(db);
 
         // TODO: Execute search
         // We can generate search, SQL that grabs whole records, then just throw
