@@ -1,6 +1,4 @@
 #include "tags.hxx"
-#include <algorithm>
-#include <cctype>
 #include <cstring>
 
 #include <common/int.h>
@@ -8,33 +6,22 @@
 #include <common/path.h>
 #include "sqlgen.hxx"
 #include "schema.hxx"
+#include "stringcase.hxx"
 
+// TODO: This could return an array of positions instead, which would be a lot simpler
 std::vector<std::string> parse_artists(const char* str) {
     // Clone string so we can make it lowercase
-    std::string str_lower = str;
-    // TODO: As in the tag search menu, this breaks outside of ASCII!
-    std::transform(str_lower.begin(), str_lower.end(), str_lower.begin(), ::tolower);
+    const std::string str_lower = str_tolower_copy(str);
 
     std::vector<std::string> results;
     const char* delim = "/";
-
-    // Case for if there's no delimiter
-    {
-        const size_t pos = str_lower.find(delim, 0);
-
-        if (pos == str_lower.npos) {
-            std::string copy = str_lower;
-            results.push_back(copy);
-            return results;
-        }
-    }
 
     size_t prev_pos = 0;
     size_t pos = 0;
     while (true) {
         pos = str_lower.find(delim, pos);
 
-        std::string temp = str_lower.substr(prev_pos, pos - prev_pos);
+        const std::string temp = str_lower.substr(prev_pos, pos - prev_pos);
         results.push_back(temp);
         if (pos == str_lower.npos) {
             break;

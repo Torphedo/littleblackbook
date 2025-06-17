@@ -65,6 +65,7 @@ add_executable(blackbook
 
     src/arguments.cxx
     src/scope_timer.cxx
+    src/stringcase.cxx
 
     src/cli/cli_main.cxx
 

@@ -1,6 +1,7 @@
 #pragma once
 // This file is for structures representing database records, in the format most
-// convenient for use at runtime.
+// convenient for use at runtime. Class methods are meant to isolate application
+// logic without being tied to any GUI code.
 
 #include <string>
 #include <vector>

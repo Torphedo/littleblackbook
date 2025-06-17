@@ -1,19 +1,13 @@
-#include <cctype>
+#include "runtime_records.hxx"
 #include <algorithm>
 
-#include "runtime_records.hxx"
 #include "nativegui/nativegui.hxx"
+#include "stringcase.hxx"
 #include "tags.hxx"
 
 void tag_search::finalize_current_tag(sqlite3* db) noexcept {
     // Go to lowercase to make it case-insensitive
-    // TODO: This will break for any non-ASCII characters. We need to use the ICU
-    // library to get correct behaviour.
-    // https://stackoverflow.com/questions/313970/how-to-convert-an-instance-of-stdstring-to-lower-case#313990
-    // https://icu.unicode.org
-    // We might also want to just convert to the closest ASCII character, since
-    // I can't type Unicode without a numpad anyway. - torph
-    std::transform(current_tag.begin(), current_tag.end(), current_tag.begin(), ::tolower);
+    str_tolower(current_tag);
 
     // Remove the tag if it was already in the list
     auto iter = std::find(tags.begin(), tags.end(), current_tag);
