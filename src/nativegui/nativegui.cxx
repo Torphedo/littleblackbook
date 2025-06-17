@@ -28,7 +28,7 @@ bool nativegui::load_songs_by_query(sqlite3* db, const char* query) {
     while ((exec_result = sqlite3_step(fetchsongs)) == SQLITE_ROW) {
         const unsigned char* title = sqlite3_column_text(fetchsongs, 0);
         const u32 year = sqlite3_column_int(fetchsongs, 1);
-        const s32 hash = sqlite3_column_int(fetchsongs, 3);
+        const song_hash_t hash = sqlite3_column_int(fetchsongs, 3);
         const time_t time = sqlite3_column_int(fetchsongs, 4);
 
         // Construct in-place to encourage use of the move ctor, to avoid cloning strings
@@ -76,7 +76,7 @@ bool nativegui::load_from_db() {
     int exec_result = SQLITE_OK;
     while ((exec_result = sqlite3_step(fetchtags)) == SQLITE_ROW) {
         const unsigned char* tag = sqlite3_column_text(fetchtags, 0);
-        const s32 hash = sqlite3_column_int(fetchtags, 1);
+        const tag_hash_t hash = sqlite3_column_int(fetchtags, 1);
 
         // Add to the map
         tags[hash] = (char*)tag;
@@ -84,8 +84,8 @@ bool nativegui::load_from_db() {
 
     // Attach tags to their corresponding songs
     while ((exec_result = sqlite3_step(fetchtagmap)) == SQLITE_ROW) {
-        const s32 tag_hash = sqlite3_column_int(fetchtagmap, 0);
-        const s32 song_hash = sqlite3_column_int(fetchtagmap, 1);
+        const tag_hash_t tag_hash = sqlite3_column_int(fetchtagmap, 0);
+        const song_hash_t song_hash = sqlite3_column_int(fetchtagmap, 1);
 
         // Add the tag to the song
         if (song_map.count(song_hash)) {
@@ -95,8 +95,8 @@ bool nativegui::load_from_db() {
 
     // Add parented tags to songs as needed
     while ((exec_result = sqlite3_step(fetchtagparents)) == SQLITE_ROW) {
-        const s32 parent_hash = sqlite3_column_int(fetchtagparents, 0);
-        const s32 child_hash = sqlite3_column_int(fetchtagparents, 1);
+        const tag_hash_t parent_hash = sqlite3_column_int(fetchtagparents, 0);
+        const tag_hash_t child_hash = sqlite3_column_int(fetchtagparents, 1);
 
         // Very inefficiently, add all tag parents.
         // We probably can just do a more complex query to do this more efficiently:
@@ -104,7 +104,7 @@ bool nativegui::load_from_db() {
         // That should filter out songs that don't need parent tags added.
         for (auto& pair : song_map) {
             auto& song = pair.second;
-            for (s32 tag_hash : song.tags) {
+            for (tag_hash_t tag_hash : song.tags) {
                 if (tag_hash == child_hash) {
                     song.tags.insert(parent_hash);
                 }
@@ -152,7 +152,7 @@ bool nativegui::draw_song_editor(runtime_song& song) {
 
     if (song.tags.size() > 0) {
         ImGui::Text("Tags:");
-        for (s32 hash : song.tags) {
+        for (song_hash_t hash : song.tags) {
             const std::string& tag = tags[hash];
             ImGui::Text("%s", tag.c_str());
         }
@@ -188,7 +188,7 @@ void nativegui::draw_search_menu() noexcept {
     }
 
     // Display results
-    for (s32 hash : search.result_hashes) {
+    for (song_hash hash : search.result_hashes) {
         const runtime_song& s = song_map[hash];
         if (ImGui::Selectable(s.name.c_str())) {
             song_editors.insert(s.hash);
@@ -215,15 +215,15 @@ bool gui_main(void* ctx, GLFWwindow* window) {
     gui->draw_song_list();
     gui->draw_search_menu();
 
-    std::vector<s32> editors_to_close(0);
-    for (s32 song_hash : gui->song_editors) {
+    std::vector<song_hash_t> editors_to_close(0);
+    for (song_hash_t song_hash : gui->song_editors) {
         if (!gui->draw_song_editor(gui->song_map[song_hash])) {
             editors_to_close.push_back(song_hash);
         }
     }
 
     // We can't edit the set while iterating over it
-    for (s32 hash : editors_to_close) {
+    for (song_hash_t hash : editors_to_close) {
         gui->song_editors.erase(hash);
     }
 

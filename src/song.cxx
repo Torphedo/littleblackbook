@@ -14,6 +14,7 @@
 #include <common/path.h>
 
 #include "id3.hxx"
+#include "schema.hxx"
 #include "scope_timer.hxx"
 #include "sqlgen.hxx"
 #include "tags.hxx"
@@ -125,7 +126,7 @@ import_result import_many_files(const char* const* paths, u32 num_paths, const c
     std::vector<u8> file_buf(5 * 1024 * 1024); // Buffer is reused for many files
 
     // Indices of all paths that were found to already be in the database
-    std::vector<s32> import_conflicts;
+    std::vector<song_hash_t> import_conflicts;
     for (u32 i = 0; i < num_paths; i++) {
         // Early exit for simple errors
         if (!path_has_extension(paths[i], ".mp3")) {

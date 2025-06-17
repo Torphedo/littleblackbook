@@ -5,6 +5,8 @@
 
 #include <common/int.h>
 
+#include "schema.hxx"
+
 std::vector<std::string> parse_artists(const char* str);
 
 /// Create a tag, but don't add it to any songs
@@ -13,10 +15,10 @@ std::vector<std::string> parse_artists(const char* str);
 /// @param sql_out The buffer to store the generated SQL code
 /// @param hash If you already know the tag's hash, you can provide it to prevent a redundant calculation
 /// @return The newly calculated hash, or the hash you provided
-s32 create_tag_sql(const char* tag, std::string& sql_out, s32 hash = 0);
+tag_hash_t create_tag_sql(const char* tag, std::string& sql_out, tag_hash_t hash = 0);
 
 // Add a tag to a song, adding it to the tag table if needed
-void add_tag_sql(const char* tag, s32 song_hash, std::string& sql_out);
+void add_tag_sql(const char* tag, song_hash_t song_hash, std::string& sql_out);
 
 /// @brief Add a parent-child relationship between 2 tags
 ///

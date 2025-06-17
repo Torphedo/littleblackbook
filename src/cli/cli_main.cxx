@@ -5,9 +5,10 @@
 #include <common/path.h>
 #include <cstdlib>
 
-#include "../song.hxx"
-#include "../tags.hxx"
-#include "../sqlgen.hxx"
+#include <song.hxx>
+#include <tags.hxx>
+#include <sqlgen.hxx>
+#include <schema.hxx>
 
 static const char* version_string = "1.0.0";
 static const char* url = "https://github.com/Torphedo";
@@ -66,7 +67,7 @@ int cli_main(const arguments& args, sqlite3* db, const char* db_path) {
     if (args.seen_values[VALUE_ARG_NEW_TAG]) {
         const char* tag = args.values[VALUE_ARG_NEW_TAG];
         // Temporary hardcoded value, eventually should take this on command-line
-        const s32 song_hash = 347807049;
+        const song_hash_t song_hash = 347807049;
         std::string sqlbuf;
         add_tag_sql(tag, song_hash, sqlbuf);
         sqlgen_exec(db, sqlbuf.data());

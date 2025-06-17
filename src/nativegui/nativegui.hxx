@@ -5,6 +5,7 @@
 #include <map>
 
 #include "runtime_records.hxx"
+#include "schema.hxx"
 
 // Struct for all GUI state
 struct nativegui {
@@ -14,10 +15,10 @@ struct nativegui {
     sqlite3* db = nullptr;
 
     // Doubles as song storage, and a lookup by hash
-    std::map<s32, runtime_song> song_map;
+    std::map<song_hash_t, runtime_song> song_map;
 
     // Doubles as tag storage, and a lookup by hash
-    std::map<s32, std::string> tags;
+    std::map<tag_hash_t, std::string> tags;
 
     /// @brief Load songs from database, optionally with a custom query
     bool load_songs_by_query(sqlite3* db, const char* query = nullptr);
@@ -36,7 +37,7 @@ struct nativegui {
     /* ======================================================================= */
 
     // All song hashes that need their editing window drawn
-    std::set<s32> song_editors;
+    std::set<song_hash_t> song_editors;
 
     tag_search search;
     // Set after the user enters a tag to keep keyboard focus in the text input

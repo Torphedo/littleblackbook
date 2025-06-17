@@ -1,4 +1,5 @@
 #include "runtime_records.hxx"
+#include "schema.hxx"
 #include <algorithm>
 
 #include <sqlgen.hxx>
@@ -49,7 +50,7 @@ void tag_search::update_results(sqlite3* db) noexcept {
 
     int result = SQLITE_OK;
     while ((result = sqlite3_step(query)) == SQLITE_ROW) {
-        const s32 hash = sqlite3_column_int(query, 6);
+        const tag_hash_t hash = sqlite3_column_int(query, 6);
         result_hashes.push_back(hash);
     }
 }

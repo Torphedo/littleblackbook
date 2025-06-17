@@ -1,4 +1,5 @@
 #pragma once
+#include <common/int.h>
 
 // String constants for table/column names that might change
 
@@ -14,3 +15,8 @@
 
 // Name of the many-to-many table that lets tags automatically "imply" other tags
 #define TAG_PARENT_TABLE "tag_parents"
+
+// Typedefs in case we go back to unsigned eventually
+using song_hash_t = s32;
+using tag_hash_t = s32;
+

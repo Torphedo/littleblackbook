@@ -1,9 +1,11 @@
 #pragma once
-#include "id3.hxx"
 #include <string>
 #include <sqlite3.h>
 
 #include <common/int.h>
+
+#include "id3.hxx"
+#include "schema.hxx"
 
 // C++ representation of a row in the song table
 struct song_record {
@@ -12,7 +14,7 @@ struct song_record {
     id3::text artist;
 
     u32 release_year = 0;
-    s32 crc32 = 0;
+    song_hash_t crc32 = 0;
 
     /// @brief Collect MP3 metadata into song info.
     ///
