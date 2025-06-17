@@ -17,10 +17,10 @@ struct nativegui {
     sqlite3* db = nullptr;
 
     // Doubles as song storage, and a lookup by hash
-    std::map<u32, runtime_song> song_map;
+    std::map<s32, runtime_song> song_map;
 
     // Doubles as tag storage, and a lookup by hash
-    std::map<u32, std::string> tags;
+    std::map<s32, std::string> tags;
 
     /// @brief Load songs from database, optionally with a custom query
     bool load_songs_by_query(sqlite3* db, const char* query = nullptr);
@@ -39,7 +39,7 @@ struct nativegui {
     /* ======================================================================= */
 
     // All song hashes that need their editing window drawn
-    std::set<u32> song_editors;
+    std::set<s32> song_editors;
 
     tag_search search;
 

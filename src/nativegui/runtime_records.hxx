@@ -13,14 +13,14 @@
 struct runtime_song {
     std::string name; // Song name
     time_t import_timestamp = 0;
-    u32 hash = 0; // Hash of the underlying audio file
+    s32 hash = 0; // Hash of the underlying audio file
     u32 release_year = 0;
 
     // @brief All tags attached to the song (by hash)
     // These are "pre-calculated", in that implied tags (parents) in the database
     // are included.
     // This is intended for immediate display.
-    std::set<u32> tags;
+    std::set<s32> tags;
 };
 
 struct tag_search {
@@ -30,7 +30,7 @@ struct tag_search {
     // Buffer for the tag the user is currently typing
     std::string current_tag;
 
-    std::vector<u32> result_hashes;
+    std::vector<s32> result_hashes;
 
     /// @brief Add the current tag to the list of tags, or delete it if already there
     ///

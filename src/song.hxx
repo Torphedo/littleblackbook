@@ -12,7 +12,7 @@ struct song_record {
     id3::text artist;
 
     u32 release_year = 0;
-    u32 crc32 = 0;
+    s32 crc32 = 0;
 
     /// @brief Collect MP3 metadata into song info.
     ///

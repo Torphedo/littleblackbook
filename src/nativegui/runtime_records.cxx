@@ -55,7 +55,7 @@ void tag_search::update_results(sqlite3* db) noexcept {
 
     int result = SQLITE_OK;
     while ((result = sqlite3_step(query)) == SQLITE_ROW) {
-        const u32 hash = sqlite3_column_int(query, 6);
+        const s32 hash = sqlite3_column_int(query, 6);
         result_hashes.push_back(hash);
     }
 }

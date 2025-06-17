@@ -31,7 +31,7 @@ void song_record::print() const noexcept {
     printf("\n");
 
     printf("\tReleased in: %d\n", release_year);
-    printf("\tCRC32 Hash: %u\n", crc32);
+    printf("\tCRC32 Hash: %d\n", crc32);
 }
 
 song_record::song_record(u8* mp3, u32 size) {
@@ -82,7 +82,7 @@ void song_record::insert_sql(std::string& out) const noexcept {
     const std::string album_str = album.to_utf8();
 
     sqlgen(out,
-        "INSERT INTO songs (title, artist, album, year, hash) VALUES ('%s', '%s', '%s', %u, %u);\n",
+        "INSERT INTO songs (title, artist, album, year, hash) VALUES ('%s', '%s', '%s', %u, %d);\n",
         title_str.c_str(), artist_str.c_str(), album_str.c_str(), release_year, crc32
     );
 }
@@ -121,7 +121,7 @@ import_result import_many_files(const char* const* paths, u32 num_paths, const c
     std::vector<u8> file_buf(5 * 1024 * 1024); // Buffer is reused for many files
 
     // Indices of all paths that were found to already be in the database
-    std::vector<u32> import_conflicts;
+    std::vector<s32> import_conflicts;
     for (u32 i = 0; i < num_paths; i++) {
         // Early exit for simple errors
         if (!path_has_extension(paths[i], ".mp3")) {
@@ -153,7 +153,7 @@ import_result import_many_files(const char* const* paths, u32 num_paths, const c
         assert(ARRAY_SIZE(destpath) > (strlen(files_dir) + 10 + 4 + 1) && "Destination path too long [programmer error]!");
 
         const char* extension = path_get_extension(paths[i]);
-        snprintf(destpath, ARRAY_SIZE(destpath), "%s%c%u%s", files_dir, PLATFORM_DIRSEP, song.crc32, extension);
+        snprintf(destpath, ARRAY_SIZE(destpath), "%s%c%d%s", files_dir, PLATFORM_DIRSEP, song.crc32, extension);
 
         if (file_exists(destpath)) {
             // File with this hash already exists in the database. Either a

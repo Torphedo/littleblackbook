@@ -12,7 +12,7 @@ s32 create_tag_sql(const char* tag, std::string& sql_out, s32 hash) {
         hash = crc32buf((u8*)tag, strlen(tag));
     }
 
-    sqlgen(sql_out, "INSERT INTO tags (tag, hash) VALUES ('%s', %u);\n", tag, hash);
+    sqlgen(sql_out, "INSERT INTO tags (tag, hash) VALUES ('%s', %d);\n", tag, hash);
     return hash;
 }
 
