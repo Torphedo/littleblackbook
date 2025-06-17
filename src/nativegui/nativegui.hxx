@@ -6,9 +6,6 @@
 
 #include "runtime_records.hxx"
 
-// Compile SQL and print detailed error messages on failure
-sqlite3_stmt* compile_sql(const char* sql, s32 sql_len, sqlite3* db);
-
 // Struct for all GUI state
 struct nativegui {
     // Set by ctor to indicate results (instead of an exception)

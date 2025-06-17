@@ -1,9 +1,9 @@
 #include "runtime_records.hxx"
 #include <algorithm>
 
-#include "nativegui/nativegui.hxx"
-#include "stringcase.hxx"
-#include "tags.hxx"
+#include <sqlgen.hxx>
+#include <stringcase.hxx>
+#include <tags.hxx>
 
 void tag_search::finalize_current_tag(sqlite3* db) noexcept {
     // Go to lowercase to make it case-insensitive

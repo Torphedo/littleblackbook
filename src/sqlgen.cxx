@@ -81,3 +81,21 @@ bool sqlgen(std::string& sql_out, const char* fmt, ...) {
     sql_out.append(sqlbuf);
     return true;
 }
+
+sqlite3_stmt* compile_sql(const char* sql, s32 sql_len, sqlite3* db) {
+    sqlite3_stmt* stmt = nullptr;
+    int songres = sqlite3_prepare_v2(db, sql, sql_len, &stmt, nullptr);
+
+    if (songres != SQLITE_OK) {
+        const char* msg = sqlite3_errmsg(db);
+        if (msg) {
+            LOG_MSG(error, "Couldn't compile SQL statement because: \"%s\"\n", msg);
+        } else {
+            LOG_MSG(error, "Couldn't compile SQL statement (no error message given)\n", msg);
+        }
+
+        return nullptr;
+    }
+
+    return stmt;
+}

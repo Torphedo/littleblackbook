@@ -6,27 +6,9 @@
 #include <common/logging.h>
 #include <common/vfile.h>
 
+#include <sqlgen.hxx>
 #include <schema.hxx>
 #include <scope_timer.hxx>
-
-sqlite3_stmt* compile_sql(const char* sql, s32 sql_len, sqlite3* db) {
-    sqlite3_stmt* stmt = nullptr;
-    int songres = sqlite3_prepare_v2(db, sql, sql_len, &stmt, nullptr);
-
-    if (songres != SQLITE_OK) {
-        const char* msg = sqlite3_errmsg(db);
-        if (msg) {
-            LOG_MSG(error, "Couldn't compile SQL statement because: \"%s\"\n", msg);
-        } else {
-            LOG_MSG(error, "Couldn't compile SQL statement (no error message given)\n", msg);
-        }
-
-        return nullptr;
-    }
-
-    return stmt;
-}
-
 
 bool nativegui::load_songs_by_query(sqlite3* db, const char* query) {
     // We don't bother getting album/artist, since those are stored as tags.
