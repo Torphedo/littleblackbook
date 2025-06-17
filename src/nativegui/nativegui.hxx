@@ -3,6 +3,7 @@
 #include <sqlite3.h>
 
 #include <map>
+#include <unordered_map>
 
 #include "runtime_records.hxx"
 #include "schema.hxx"
@@ -36,18 +37,27 @@ struct nativegui {
     /*                   ImGui Drawing Functions & UI State                    */
     /* ======================================================================= */
 
+    // Debug performance timers
+    bool show_timers = false;
+    std::unordered_map<const char*, float> timer_map;
+
     // All song hashes that need their editing window drawn
     std::set<song_hash_t> song_editors;
 
-    tag_search search;
     // Set after the user enters a tag to keep keyboard focus in the text input
+    bool show_search = false; // Toggle for search window
     bool search_focus_next_frame = false;
+    tag_search search;
 
     bool draw_song_editor(runtime_song& song);
 
     void draw_search_menu() noexcept;
 
     void draw_song_list() noexcept;
+
+    void draw_toolbar() noexcept;
+
+    void draw_timers() noexcept;
 
     /// @brief Load everything needed to start the GUI from the database
     nativegui(sqlite3* db);

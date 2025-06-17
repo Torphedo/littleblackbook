@@ -1,6 +1,7 @@
 #include "nativegui.hxx"
 
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
 
 #include <common/logging.h>
@@ -123,14 +124,13 @@ nativegui::nativegui(sqlite3* db) {
     bool result = true;
     this->db = db;
 
-    float elapsed_loading = 0.0f;
     {
-        scope_timer load_timer(elapsed_loading);
+        const scope_timer load_timer(timer_map, "initial_load");
         result &= load_from_db();
     }
-    LOG_MSG(info, "Finished loading from database in %.3fms\n", elapsed_loading);
+    LOG_MSG(info, "Finished loading from database in %.3fms\n", timer_map["initial_load"]);
     if (!result) {
-        db = nullptr; // Don't keep DB ptr
+        db = nullptr;
     }
 
     initialized = result;
@@ -183,12 +183,13 @@ void nativegui::draw_search_menu() noexcept {
     // Input for next tag
     if (ImGui::InputText("Input tag: ", &search.current_tag, ImGuiInputTextFlags_EnterReturnsTrue)) {
         search_focus_next_frame = true;
+        const scope_timer main_timer(timer_map, "last_search");
         // This also executes the search and updates our state
         search.finalize_current_tag(db);
     }
 
     // Display results
-    for (song_hash hash : search.result_hashes) {
+    for (song_hash_t hash : search.result_hashes) {
         const runtime_song& s = song_map[hash];
         if (ImGui::Selectable(s.name.c_str())) {
             song_editors.insert(s.hash);
@@ -210,8 +211,61 @@ void nativegui::draw_song_list() noexcept {
     ImGui::End();
 }
 
+void nativegui::draw_toolbar() noexcept {
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    const float height = ImGui::GetFrameHeight();
+    const ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_MenuBar;
+
+    const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl);
+    bool import_files = ctrl_pressed && ImGui::IsKeyPressed(ImGuiKey_I, false);
+
+    if (ImGui::BeginViewportSideBar("MainMenu", viewport, ImGuiDir_Up, height, flags)) {
+        if (ImGui::BeginMenuBar()) {
+            if (ImGui::BeginMenu("File")) {
+                import_files |= ImGui::MenuItem("Import files", "Ctrl-I");
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu("View")) {
+                ImGuiIO& io = ImGui::GetIO();
+                ImGui::InputFloat("Font Size", &io.FontGlobalScale, 0.1f);
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu("Windows")) {
+                ImGui::MenuItem("Performance Timers", nullptr, &this->show_timers);
+                ImGui::EndMenu();
+            }
+
+            ImGui::EndMenuBar();
+        }
+        ImGui::End();
+    }
+
+
+    if (import_files) {
+        // TODO: Implement file import
+    }
+}
+
+void nativegui::draw_timers() noexcept {
+    if (!show_timers) {
+        return;
+    }
+
+    ImGui::Begin("Performance Timers", &show_timers);
+    for (const auto& entry : timer_map) {
+        ImGui::Text("%s: %.2lfms", entry.first, entry.second);
+    }
+    ImGui::End();
+}
+
 bool gui_main(void* ctx, GLFWwindow* window) {
     nativegui* gui = (nativegui*)ctx;
+    const scope_timer main_timer(gui->timer_map, "main_draw");
+
+    gui->draw_toolbar();
+    gui->draw_timers();
     gui->draw_song_list();
     gui->draw_search_menu();
 
