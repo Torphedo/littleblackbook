@@ -1,4 +1,5 @@
 #include "song.hxx"
+#include <cstdio>
 
 #include <filesystem>
 #include <vector>
@@ -15,6 +16,7 @@
 #include "id3.hxx"
 #include "scope_timer.hxx"
 #include "sqlgen.hxx"
+#include "tags.hxx"
 
 void song_record::print() const noexcept {
     // We can't print the text fields directly because they may be UCS2
@@ -85,11 +87,13 @@ void song_record::insert_sql(std::string& out) const noexcept {
         "INSERT INTO songs (title, artist, album, year, hash) VALUES ('%s', '%s', '%s', %u, %d);\n",
         title_str.c_str(), artist_str.c_str(), album_str.c_str(), release_year, crc32
     );
-}
 
-void parse_artists(const char* artists, std::string& sql_out) {
-    // TODO Implement artist parsing
-    // strtok
+    // TODO: Should this be part of this method or a new one like tags_sql()?
+    std::vector<std::string> artist_tags = parse_artists(artist_str.c_str());
+    for (const std::string& tag : artist_tags) {
+        create_tag_sql(tag.c_str(), out);
+        add_tag_sql(tag.c_str(), this->crc32, out);
+    }
 }
 
 // Container for results of a single import thread

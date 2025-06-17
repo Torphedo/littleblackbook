@@ -1,8 +1,11 @@
 #pragma once
+#include <vector>
 #include <string>
 #include <sqlite3.h>
 
 #include <common/int.h>
+
+std::vector<std::string> parse_artists(const char* str);
 
 /// Create a tag, but don't add it to any songs
 ///

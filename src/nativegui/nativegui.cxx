@@ -188,7 +188,7 @@ void nativegui::draw_search_menu() noexcept {
     }
 
     // TODO: This steals focus from all other windows at the moment...
-    ImGui::SetKeyboardFocusHere(); // Always the input so user can keep typing
+    // ImGui::SetKeyboardFocusHere(); // Always the input so user can keep typing
 
     // Input for next tag
     if (ImGui::InputText("Input tag: ", &search.current_tag, ImGuiInputTextFlags_EnterReturnsTrue)) {

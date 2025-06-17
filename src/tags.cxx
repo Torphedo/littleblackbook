@@ -1,10 +1,50 @@
 #include "tags.hxx"
+#include <algorithm>
+#include <cctype>
 #include <cstring>
 
 #include <common/int.h>
 #include <common/crc32.h>
+#include <common/path.h>
 #include "sqlgen.hxx"
 #include "schema.hxx"
+
+std::vector<std::string> parse_artists(const char* str) {
+    // Clone string so we can make it lowercase
+    std::string str_lower = str;
+    // TODO: As in the tag search menu, this breaks outside of ASCII!
+    std::transform(str_lower.begin(), str_lower.end(), str_lower.begin(), ::tolower);
+
+    std::vector<std::string> results;
+    const char* delim = "/";
+
+    // Case for if there's no delimiter
+    {
+        const size_t pos = str_lower.find(delim, 0);
+
+        if (pos == str_lower.npos) {
+            std::string copy = str_lower;
+            results.push_back(copy);
+            return results;
+        }
+    }
+
+    size_t prev_pos = 0;
+    size_t pos = 0;
+    while (true) {
+        pos = str_lower.find(delim, pos);
+
+        std::string temp = str_lower.substr(prev_pos, pos - prev_pos);
+        results.push_back(temp);
+        if (pos == str_lower.npos) {
+            break;
+        }
+
+        prev_pos = ++pos;
+    }
+
+    return results;
+}
 
 s32 create_tag_sql(const char* tag, std::string& sql_out, s32 hash) {
     if (hash == 0) {
