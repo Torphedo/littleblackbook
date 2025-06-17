@@ -45,6 +45,11 @@ bool nativegui::load_songs_by_query(sqlite3* db, const char* query) {
 }
 
 bool nativegui::load_from_db() {
+    // Wipe current state
+    song_map.clear();
+    tags.clear();
+    tag_parents.clear();
+
     static const char tags_sql[] = "SELECT tag, hash FROM tags";
     static const char tagmap_sql[] = "SELECT tag_hash, song_hash FROM " TAG_SONG_TABLE;
     static const char tagparents_sql[] = "SELECT parent_hash, child_hash FROM " TAG_PARENT_TABLE;
@@ -169,16 +174,17 @@ void nativegui::draw_search_menu() noexcept {
         ImGui::Text("%s", tag.c_str());
     }
 
-    // TODO: This steals focus from all other windows at the moment...
-    // ImGui::SetKeyboardFocusHere(); // Always the input so user can keep typing
+    // Focus text input so user can keep typing
+    if (search_focus_next_frame) {
+        search_focus_next_frame = false; // Reset flag
+        ImGui::SetKeyboardFocusHere();
+    }
 
     // Input for next tag
     if (ImGui::InputText("Input tag: ", &search.current_tag, ImGuiInputTextFlags_EnterReturnsTrue)) {
+        search_focus_next_frame = true;
+        // This also executes the search and updates our state
         search.finalize_current_tag(db);
-
-        // TODO: Execute search
-        // We can generate search, SQL that grabs whole records, then just throw
-        // a "SELECT hash from (%s)" on it to grab only hash.
     }
 
     // Display results

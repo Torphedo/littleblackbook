@@ -39,6 +39,8 @@ struct nativegui {
     std::set<s32> song_editors;
 
     tag_search search;
+    // Set after the user enters a tag to keep keyboard focus in the text input
+    bool search_focus_next_frame = false;
 
     bool draw_song_editor(runtime_song& song);
 
