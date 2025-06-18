@@ -20,3 +20,7 @@
 using song_hash_t = s32;
 using tag_hash_t = s32;
 
+struct linked_tags {
+    tag_hash_t parent;
+    tag_hash_t child;
+};

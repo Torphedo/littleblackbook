@@ -1,4 +1,5 @@
 #include "nativegui.hxx"
+#include "tags.hxx"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -6,6 +7,7 @@
 
 #include <common/logging.h>
 #include <common/vfile.h>
+#include <common/crc32.h>
 
 #include <sqlgen.hxx>
 #include <schema.hxx>
@@ -49,7 +51,7 @@ bool nativegui::load_from_db() {
     // Wipe current state
     song_map.clear();
     tags.clear();
-    tag_parents.clear();
+    tag_parents.pairs.clear();
 
     static const char tags_sql[] = "SELECT tag, hash FROM tags";
     static const char tagmap_sql[] = "SELECT tag_hash, song_hash FROM " TAG_SONG_TABLE;
@@ -98,6 +100,7 @@ bool nativegui::load_from_db() {
     while ((exec_result = sqlite3_step(fetchtagparents)) == SQLITE_ROW) {
         const tag_hash_t parent_hash = sqlite3_column_int(fetchtagparents, 0);
         const tag_hash_t child_hash = sqlite3_column_int(fetchtagparents, 1);
+        tag_parents.pairs.push_back((linked_tags){parent_hash, child_hash});
 
         // Very inefficiently, add all tag parents.
         // We probably can just do a more complex query to do this more efficiently:
@@ -211,6 +214,54 @@ void nativegui::draw_song_list() noexcept {
     ImGui::End();
 }
 
+void nativegui::apply_parent_child_pair() noexcept {
+    const auto& child = tag_parents.input_child;
+    const auto& parent = tag_parents.input_parent;
+
+    std::string sql;
+    link_tags_sql(parent.c_str(), child.c_str(), sql);
+
+    char* errmsg = nullptr;
+    int result = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
+    if (result != SQLITE_OK && errmsg != nullptr) {
+        LOG_MSG(error, "SQLite error: %s\n", errmsg);
+    }
+
+    // Reset and reload
+    tag_parents.input_child = "";
+    tag_parents.input_parent = "";
+    this->load_from_db();
+}
+
+void nativegui::draw_tag_parents() noexcept {
+    if (!show_tag_parents) {
+        return;
+    }
+
+    ImGui::Begin("Tag Parents");
+    ImGui::InputText("Child tag", &tag_parents.input_child);
+    ImGui::InputText("Parent tag", &tag_parents.input_parent);
+    if (ImGui::Button("Apply")) {
+        apply_parent_child_pair();
+    }
+
+    for (const auto& pair : tag_parents.pairs) {
+        if (!tags.count(pair.child)) {
+            ImGui::Text("[child hash %d not found in list of tags]", pair.child);
+            continue;
+        }
+
+        if (!tags.count(pair.parent)) {
+            ImGui::Text("[parent hash %d not found in list of tags]", pair.child);
+            continue;
+        }
+
+        ImGui::Text("%s : %s", tags[pair.child].c_str(), tags[pair.parent].c_str());
+    }
+
+    ImGui::End();
+}
+
 void nativegui::draw_toolbar() noexcept {
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     const float height = ImGui::GetFrameHeight();
@@ -233,6 +284,7 @@ void nativegui::draw_toolbar() noexcept {
             }
 
             if (ImGui::BeginMenu("Windows")) {
+                ImGui::MenuItem("Tag Parents", nullptr, &this->show_tag_parents);
                 ImGui::MenuItem("Performance Timers", nullptr, &this->show_timers);
                 ImGui::EndMenu();
             }
@@ -265,11 +317,12 @@ bool gui_main(void* ctx, GLFWwindow* window) {
     const scope_timer main_timer(gui->timer_map, "main_draw");
 
     gui->draw_toolbar();
+    gui->draw_tag_parents();
     gui->draw_timers();
     gui->draw_song_list();
     gui->draw_search_menu();
 
-    std::vector<song_hash_t> editors_to_close(0);
+    std::vector<song_hash_t> editors_to_close(0); // Reserve 0 since this is rare
     for (song_hash_t song_hash : gui->song_editors) {
         if (!gui->draw_song_editor(gui->song_map[song_hash])) {
             editors_to_close.push_back(song_hash);

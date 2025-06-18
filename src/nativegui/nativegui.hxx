@@ -21,6 +21,12 @@ struct nativegui {
     // Doubles as tag storage, and a lookup by hash
     std::map<tag_hash_t, std::string> tags;
 
+    bool show_tag_parents = false;
+    tag_parents_t tag_parents;
+
+    // Add the tags the user typed to the database as a parent/child pair
+    void apply_parent_child_pair() noexcept;
+
     /// @brief Load songs from database, optionally with a custom query
     bool load_songs_by_query(sqlite3* db, const char* query = nullptr);
 
@@ -54,6 +60,8 @@ struct nativegui {
     void draw_search_menu() noexcept;
 
     void draw_song_list() noexcept;
+
+    void draw_tag_parents() noexcept;
 
     void draw_toolbar() noexcept;
 

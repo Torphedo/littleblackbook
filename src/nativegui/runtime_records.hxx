@@ -48,3 +48,11 @@ struct tag_search {
     /// list of tags. The "current tag" (text input state) is ignored.
     void update_results(sqlite3* db) noexcept;
 };
+
+struct tag_parents_t {
+    std::vector<linked_tags> pairs;
+
+    // Input fields the user will submit
+    std::string input_child;
+    std::string input_parent;
+};
