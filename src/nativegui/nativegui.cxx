@@ -48,6 +48,7 @@ bool nativegui::load_songs_by_query(sqlite3* db, const char* query) {
 }
 
 bool nativegui::load_from_db() {
+    const scope_timer load_timer(timer_map, "db_load");
     // Wipe current state
     song_map.clear();
     tags.clear();
@@ -127,11 +128,8 @@ nativegui::nativegui(sqlite3* db) {
     bool result = true;
     this->db = db;
 
-    {
-        const scope_timer load_timer(timer_map, "initial_load");
-        result &= load_from_db();
-    }
-    LOG_MSG(info, "Finished loading from database in %.3fms\n", timer_map["initial_load"]);
+    result &= load_from_db();
+    LOG_MSG(info, "Finished loading from database in %.3fms\n", timer_map["db_load"]);
     if (!result) {
         db = nullptr;
     }
