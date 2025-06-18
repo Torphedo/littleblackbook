@@ -55,7 +55,16 @@ bool nativegui::load_from_db() {
     tag_parents.pairs.clear();
 
     static const char tags_sql[] = "SELECT tag, hash FROM tags";
-    static const char tagmap_sql[] = "SELECT tag_hash, song_hash FROM " TAG_SONG_TABLE;
+    // This ensures that tags displayed on each song include parents up to 3 layers deep
+    static const char tagmap_sql[] = R"(
+        SELECT tag_hash, song_hash FROM (
+            SELECT * FROM tagmap
+            UNION SELECT * FROM applied_parents
+            UNION SELECT * FROM applied_grandparents
+            UNION SELECT * FROM applied_great_grandparents
+        )
+    )";
+
     static const char tagparents_sql[] = "SELECT parent_hash, child_hash FROM " TAG_PARENT_TABLE;
 
     // Try to load songs
@@ -103,18 +112,7 @@ bool nativegui::load_from_db() {
         const tag_hash_t child_hash = sqlite3_column_int(fetchtagparents, 1);
         tag_parents.pairs.push_back((linked_tags){parent_hash, child_hash});
 
-        // Very inefficiently, add all tag parents.
-        // We probably can just do a more complex query to do this more efficiently:
-        // SELECT song_hash FROM tagmap WHERE tag_hash IN (SELECT child_hash FROM tag_parents)
-        // That should filter out songs that don't need parent tags added.
-        for (auto& pair : song_map) {
-            auto& song = pair.second;
-            for (tag_hash_t tag_hash : song.tags) {
-                if (tag_hash == child_hash) {
-                    song.tags.insert(parent_hash);
-                }
-            }
-        }
+        // Our tag query handles parents up to 3 layers deep, no need to handle here.
     }
 
     // Free our compiled SQL queries

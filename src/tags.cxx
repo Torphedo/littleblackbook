@@ -65,10 +65,13 @@ void search_tag(const char* tag, std::string& sql_out, bool standalone_query) {
 
     // Generate the SQL
     sqlgen(sql_out, R"(
-SELECT hash FROM songs s
-JOIN %s junction ON s.hash = junction.song_hash
-WHERE (junction.tag_hash = %d OR junction.tag_hash IN (SELECT child_hash FROM %s p WHERE p.parent_hash = %d)))",
-        TAG_SONG_TABLE, tag_hash, TAG_PARENT_TABLE, tag_hash);
+SELECT song_hash FROM (
+    SELECT * FROM tagmap
+    UNION SELECT * FROM applied_parents
+    UNION SELECT * FROM applied_grandparents
+    UNION SELECT * FROM applied_great_grandparents
+) WHERE tag_hash = %d
+)", tag_hash);
 
     if (standalone_query) {
         // Terminate the statement
