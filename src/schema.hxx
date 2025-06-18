@@ -16,6 +16,9 @@
 // Name of the many-to-many table that lets tags automatically "imply" other tags
 #define TAG_PARENT_TABLE "tag_parents"
 
+// A view that's like TAG_SONG_TABLE, but with parents automatically applied
+#define RESOLVED_TAG_SONG_TABLE "resolved_tagmap"
+
 // Typedefs in case we go back to unsigned eventually
 using song_hash_t = s32;
 using tag_hash_t = s32;

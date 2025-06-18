@@ -56,15 +56,7 @@ bool nativegui::load_from_db() {
 
     static const char tags_sql[] = "SELECT tag, hash FROM tags";
     // This ensures that tags displayed on each song include parents up to 3 layers deep
-    static const char tagmap_sql[] = R"(
-        SELECT tag_hash, song_hash FROM (
-            SELECT * FROM tagmap
-            UNION SELECT * FROM applied_parents
-            UNION SELECT * FROM applied_grandparents
-            UNION SELECT * FROM applied_great_grandparents
-        )
-    )";
-
+    static const char tagmap_sql[] = "SELECT tag_hash, song_hash FROM " RESOLVED_TAG_SONG_TABLE ";";
     static const char tagparents_sql[] = "SELECT parent_hash, child_hash FROM " TAG_PARENT_TABLE;
 
     // Try to load songs

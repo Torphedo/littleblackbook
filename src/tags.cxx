@@ -64,14 +64,7 @@ void search_tag(const char* tag, std::string& sql_out, bool standalone_query) {
     const tag_hash_t tag_hash = crc32buf((u8*)tag, strlen(tag));
 
     // Generate the SQL
-    sqlgen(sql_out, R"(
-SELECT song_hash FROM (
-    SELECT * FROM tagmap
-    UNION SELECT * FROM applied_parents
-    UNION SELECT * FROM applied_grandparents
-    UNION SELECT * FROM applied_great_grandparents
-) WHERE tag_hash = %d
-)", tag_hash);
+    sqlgen(sql_out, "SELECT song_hash FROM " RESOLVED_TAG_SONG_TABLE " WHERE tag_hash = %d", tag_hash);
 
     if (standalone_query) {
         // Terminate the statement
