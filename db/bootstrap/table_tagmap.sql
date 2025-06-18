@@ -1,5 +1,5 @@
 -- Many-to-many table attaching tags to songs
-CREATE TABLE IF NOT EXISTS "tagmap" (
+CREATE TABLE IF NOT EXISTS tagmap (
     song_hash INTEGER NOT NULL,
     tag_hash INTEGER NOT NULL
 )STRICT;
