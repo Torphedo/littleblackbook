@@ -111,6 +111,9 @@ bool nativegui::load_from_db() {
     sqlite3_finalize(fetchtags);
     sqlite3_finalize(fetchtagmap);
     sqlite3_finalize(fetchtagparents);
+
+    need_reload = false; // Reset reload flag
+    LOG_MSG(info, "Finished loading from database in %.3fms\n", timer_map["db_load"]);
     return true;
 }
 
@@ -191,11 +194,37 @@ void nativegui::draw_search_menu() noexcept {
 
 void nativegui::draw_song_list() noexcept {
     ImGui::Begin("Song List");
-    for (const auto& pair : song_map) {
-        const runtime_song& s = pair.second;
-        if (ImGui::Selectable(s.name.c_str())) {
-            song_editors.insert(s.hash);
+    if (ImGui::BeginTable("song table", 3, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {
+        // Make header row that never scrolls away
+        ImGui::TableSetupScrollFreeze(0, 1);
+
+        // Setup table header
+        ImGui::TableSetupColumn("Title");
+        ImGui::TableSetupColumn("Year");
+        ImGui::TableSetupColumn("Album");
+        ImGui::TableHeadersRow();
+
+        // Draw a row for each chunk
+        for (const auto& pair : song_map) {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+
+            // TODO: Maybe we should have the open windows determined by a flag
+            // on each song (like on Polaris ALR chunks)? Easier to store.
+            // Although, that could suck on reloads since we wipe the vector...
+            const runtime_song& s = pair.second;
+            // The 2nd arg is whether the row is selected (for highlighting)
+            if (ImGui::Selectable(s.name.c_str(), false, ImGuiSelectableFlags_SpanAllColumns)) {
+                song_editors.insert(s.hash);
+            }
+
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", s.release_year);
+
+            ImGui::TableSetColumnIndex(2);
+            ImGui::Text("[Not loaded]");
         }
+        ImGui::EndTable();
     }
 
     ImGui::End();
