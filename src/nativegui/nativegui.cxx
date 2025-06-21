@@ -48,7 +48,9 @@ bool nativegui::load_songs_by_query(sqlite3* db, const char* query) {
 }
 
 bool nativegui::load_from_db() {
+    { // Scope for timer
     const scope_timer load_timer(timer_map, "db_load");
+
     // Wipe current state
     song_map.clear();
     tags.clear();
@@ -113,6 +115,8 @@ bool nativegui::load_from_db() {
     sqlite3_finalize(fetchtagparents);
 
     need_reload = false; // Reset reload flag
+
+    } // Scope for timer
     LOG_MSG(info, "Finished loading from database in %.3fms\n", timer_map["db_load"]);
     return true;
 }
