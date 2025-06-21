@@ -259,8 +259,11 @@ void nativegui::draw_tag_parents() noexcept {
 
     ImGui::Begin("Tag Parents");
     ImGui::InputText("Child tag", &tag_parents.input_child);
-    ImGui::InputText("Parent tag", &tag_parents.input_parent);
-    if (ImGui::Button("Apply")) {
+
+    // Let user apply by hitting Enter or using the button
+    bool apply = ImGui::InputText("Parent tag", &tag_parents.input_parent, ImGuiInputTextFlags_EnterReturnsTrue);
+    apply |= ImGui::Button("Apply");
+    if (apply) {
         apply_parent_child_pair();
     }
 
