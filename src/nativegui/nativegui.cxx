@@ -271,20 +271,35 @@ void nativegui::draw_tag_parents() noexcept {
         apply_parent_child_pair();
     }
 
-    for (const auto& pair : tag_parents.pairs) {
-        if (!tags.count(pair.child)) {
-            ImGui::Text("[child hash %d not found in list of tags]", pair.child);
-            continue;
-        }
+    if (ImGui::BeginTable("tag parent table", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {
+        // Make header row that never scrolls away
+        ImGui::TableSetupScrollFreeze(0, 1);
 
-        if (!tags.count(pair.parent)) {
-            ImGui::Text("[parent hash %d not found in list of tags]", pair.child);
-            continue;
-        }
+        // Setup table header
+        ImGui::TableSetupColumn("Child");
+        ImGui::TableSetupColumn("Parent");
+        ImGui::TableHeadersRow();
 
-        ImGui::Text("%s : %s", tags[pair.child].c_str(), tags[pair.parent].c_str());
+        // Draw a row for each chunk
+        for (const auto& pair : tag_parents.pairs) {
+            ImGui::TableNextRow();
+
+            ImGui::TableSetColumnIndex(0);
+            if (!tags.count(pair.child)) {
+                ImGui::Text("[child hash %d not found in list of tags]", pair.child);
+            } else {
+                ImGui::Text("%s", tags[pair.child].c_str());
+            }
+
+            ImGui::TableSetColumnIndex(1);
+            if (!tags.count(pair.parent)) {
+                ImGui::Text("[parent hash %d not found in list of tags]", pair.child);
+            } else {
+                ImGui::Text("%s", tags[pair.parent].c_str());
+            }
+        }
+        ImGui::EndTable();
     }
-
     ImGui::End();
 }
 
