@@ -198,14 +198,13 @@ void nativegui::draw_search_menu() noexcept {
 
 void nativegui::draw_song_list() noexcept {
     ImGui::Begin("Song List");
-    if (ImGui::BeginTable("song table", 3, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {
+    if (ImGui::BeginTable("song table", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {
         // Make header row that never scrolls away
         ImGui::TableSetupScrollFreeze(0, 1);
 
         // Setup table header
         ImGui::TableSetupColumn("Title");
         ImGui::TableSetupColumn("Year");
-        ImGui::TableSetupColumn("Album");
         ImGui::TableHeadersRow();
 
         // Draw a row for each chunk
@@ -224,9 +223,6 @@ void nativegui::draw_song_list() noexcept {
 
             ImGui::TableSetColumnIndex(1);
             ImGui::Text("%d", s.release_year);
-
-            ImGui::TableSetColumnIndex(2);
-            ImGui::Text("[Not loaded]");
         }
         ImGui::EndTable();
     }
