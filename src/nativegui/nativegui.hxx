@@ -21,6 +21,9 @@ struct nativegui {
     // Doubles as tag storage, and a lookup by hash
     std::map<tag_hash_t, std::string> tags;
 
+    // Set this flag to trigger a reload at the start of the next frame
+    bool need_reload = false;
+
     bool show_tag_parents = false;
     tag_parents_t tag_parents;
 

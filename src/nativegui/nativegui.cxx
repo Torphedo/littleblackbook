@@ -115,13 +115,12 @@ bool nativegui::load_from_db() {
 }
 
 nativegui::nativegui(sqlite3* db) {
-    bool result = true;
     this->db = db;
 
-    result &= load_from_db();
-    LOG_MSG(info, "Finished loading from database in %.3fms\n", timer_map["db_load"]);
-    if (!result) {
+    bool result = true;
+    if (!load_from_db()) {
         db = nullptr;
+        result = false;
     }
 
     initialized = result;
@@ -202,6 +201,9 @@ void nativegui::draw_song_list() noexcept {
     ImGui::End();
 }
 
+// This was made a nativegui method instead of going in runtime_records.hxx
+// because it needs set the database reload flag. I guess we could do that
+// manually in the one place we use this, but whatever. - torph
 void nativegui::apply_parent_child_pair() noexcept {
     const auto& child = tag_parents.input_child;
     const auto& parent = tag_parents.input_parent;
@@ -218,7 +220,7 @@ void nativegui::apply_parent_child_pair() noexcept {
     // Reset and reload
     tag_parents.input_child = "";
     tag_parents.input_parent = "";
-    this->load_from_db();
+    this->need_reload = true;
 }
 
 void nativegui::draw_tag_parents() noexcept {
@@ -303,6 +305,9 @@ void nativegui::draw_timers() noexcept {
 bool gui_main(void* ctx, GLFWwindow* window) {
     nativegui* gui = (nativegui*)ctx;
     const scope_timer main_timer(gui->timer_map, "main_draw");
+    if (gui->need_reload) {
+        gui->load_from_db();
+    }
 
     gui->draw_toolbar();
     gui->draw_tag_parents();

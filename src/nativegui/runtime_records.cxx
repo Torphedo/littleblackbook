@@ -9,22 +9,24 @@
 #include <schema.hxx>
 
 void tag_search::finalize_current_tag(sqlite3* db) noexcept {
-    // Go to lowercase to make it case-insensitive
-    str_tolower(current_tag);
-
-    // Remove the tag if it was already in the list
-    auto iter = std::find(tags.begin(), tags.end(), current_tag);
-    if (iter != tags.end()) {
-        tags.erase(iter);
-        current_tag = "";
+    if (current_tag.empty()) {
         update_results(db);
         return;
     }
 
-    // Add the tag as normal
-    tags.push_back(current_tag);
-    current_tag = "";
+    // Go to lowercase to make it case-insensitive
+    str_tolower(current_tag);
 
+    // Remove the tag if it was already in the list
+    const auto iter = std::find(tags.begin(), tags.end(), current_tag);
+    if (iter != tags.end()) {
+        tags.erase(iter);
+    } else {
+        // Add the tag as normal
+        tags.push_back(current_tag);
+    }
+
+    current_tag = "";
     update_results(db);
 }
 
@@ -38,7 +40,7 @@ void tag_search::update_results(sqlite3* db) noexcept {
     std::vector<const char*> tags_temp;
     tags_temp.reserve(tags.size());
 
-    for (std::string& tag : tags) {
+    for (const std::string& tag : tags) {
         tags_temp.push_back(tag.c_str());
     }
 
@@ -55,4 +57,6 @@ void tag_search::update_results(sqlite3* db) noexcept {
         const tag_hash_t hash = sqlite3_column_int(query, 6);
         result_hashes.push_back(hash);
     }
+
+    sqlite3_finalize(query);
 }
