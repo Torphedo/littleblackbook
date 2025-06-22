@@ -267,7 +267,7 @@ void nativegui::draw_tag_parents() noexcept {
         apply_parent_child_pair();
     }
 
-    if (ImGui::BeginTable("tag parent table", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {
+    if (ImGui::BeginTable("tag parent table", 3, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {
         // Make header row that never scrolls away
         ImGui::TableSetupScrollFreeze(0, 1);
 
@@ -278,21 +278,41 @@ void nativegui::draw_tag_parents() noexcept {
 
         // Draw a row for each chunk
         for (const auto& pair : tag_parents.pairs) {
+            const char* parent_str = "[parent hash %d not found]";
+            const char* child_str = "[child hash %d not found in list of tags]";
+            if (tags.count(pair.child)) {
+                child_str = tags[pair.child].c_str();
+            }
+            if (tags.count(pair.parent)) {
+                parent_str = tags[pair.parent].c_str();
+            }
+
             ImGui::TableNextRow();
 
             ImGui::TableSetColumnIndex(0);
-            if (!tags.count(pair.child)) {
-                ImGui::Text("[child hash %d not found in list of tags]", pair.child);
+            if (child_str) {
+                ImGui::Text(child_str);
             } else {
-                ImGui::Text("%s", tags[pair.child].c_str());
+                ImGui::Text("[child hash %d not found in list of tags]", pair.child);
             }
 
             ImGui::TableSetColumnIndex(1);
-            if (!tags.count(pair.parent)) {
-                ImGui::Text("[parent hash %d not found in list of tags]", pair.child);
+            if (parent_str) {
+                ImGui::Text(parent_str);
             } else {
-                ImGui::Text("%s", tags[pair.parent].c_str());
+                ImGui::Text("[parent hash %d not found in list of tags]", pair.child);
             }
+
+            ImGui::TableSetColumnIndex(2);
+            ImGui::PushID(pair.child + pair.parent);
+            if (ImGui::Button("Delete pair") && parent_str && child_str) {
+                std::string sql;
+                char* errmsg;
+                unlink_tags_sql(parent_str, child_str, sql);
+                sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
+                need_reload = true;
+            }
+            ImGui::PopID();
         }
         ImGui::EndTable();
     }

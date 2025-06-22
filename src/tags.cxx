@@ -36,7 +36,7 @@ std::vector<std::string> parse_artists(const char* str) {
 tag_hash_t create_tag_sql(const char* tag, std::string& sql_out, tag_hash_t hash) {
     if (hash == 0) {
         // No hash provided, calculate it
-        hash = crc32buf((u8*)tag, strlen(tag));
+        hash = crc32buf((const u8*)tag, strlen(tag));
     }
 
     sqlgen(sql_out, "INSERT INTO tags (tag, hash) VALUES ('%s', %d);\n", tag, hash);
@@ -58,6 +58,15 @@ void link_tags_sql(const char* parent, const char* child, std::string& sql_out) 
 
     // Add the tag association
     sqlgen(sql_out, "INSERT INTO " TAG_PARENT_TABLE " (child_hash, parent_hash) VALUES (%d, %d);\n", child_hash, parent_hash);
+}
+
+void unlink_tags_sql(const char* parent, const char* child, std::string& sql_out) {
+    // We need to create the tags if they don't exist
+    const tag_hash_t child_hash = crc32buf((const u8*)child, strlen(child));
+    const tag_hash_t parent_hash = crc32buf((const u8*)parent, strlen(parent));
+
+    // Delete the tag association
+    sqlgen(sql_out, "DELETE FROM " TAG_PARENT_TABLE " WHERE child_hash = %d AND parent_hash = %d\n", child_hash, parent_hash);
 }
 
 void search_tag(const char* tag, std::string& sql_out, bool standalone_query) {

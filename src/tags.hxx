@@ -30,6 +30,9 @@ void add_tag_sql(const char* tag, song_hash_t song_hash, std::string& sql_out);
 // a pair in the parent table will instantly apply the change to the next search.
 void link_tags_sql(const char* parent, const char* child, std::string& sql_out);
 
+/// @brief Delete a parent-child relationship between 2 tags
+void unlink_tags_sql(const char* parent, const char* child, std::string& sql_out);
+
 /// @brief Generate SQL to search for songs with a specific tag
 ///
 /// The generated SQL queries for a set of song hashes, not the whole record.
