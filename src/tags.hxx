@@ -47,6 +47,10 @@ void search_tag(const char* tag, std::string& sql_out, bool standalone_query = t
 /// The generated SQL queries for a the entire song record, not just the hash.
 /// The "_and" suffix means it has to have *all* the tags (as opposed to an OR,
 /// where it only needs to have at least 1).
+///
+/// If any tag starts with "-", the "-" will be skipped and the "AND" becomes an "AND NOT".
+/// e.g. "talib kweli AND -black star" -> "talib kweli AND NOT black star".
+///
 /// @param tags An array of tags a song must have
 /// @param num_tags Size of the tag array
 /// @param sql_out The buffer to store the generated SQL in

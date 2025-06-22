@@ -82,15 +82,28 @@ void search_tag(const char* tag, std::string& sql_out, bool standalone_query) {
 }
 
 void search_many_tags_and(const char* const* tags, u32 num_tags, std::string& sql_out) {
+    // TODO: Parent search optimization:
+    // If we search for 2 tags where 1 is parented to the other, we could skip
+    // one of them. e.g. "mos def AND rap" can be simplified to "rap", since the
+    // parent/child table tells us that all results for "mos def" will be
+    // included in "rap".
+
     // Tag search gives us a list of IDs, but we want a query to pull out the actual song entries
     sql_out.append("SELECT * FROM songs s WHERE s.hash IN (\n");
 
     for (u32 i = 0; i < num_tags; i++) {
-        search_tag(tags[i], sql_out, false);
-        // Add intersection between each SELECT, but not after the last one
-        if (i < num_tags - 1) {
-            sql_out.append("\nINTERSECT ");
+        // If the tag starts with "-", we interpret that as "AND NOT [tag]".
+        const bool invert_tag = tags[i][0] == '-';
+
+        // Add compound operator before each SELECT, except the first one.
+        // EXCEPT implements the "NOT" behaviour we want if the tag is inverted.
+        const char* compounder = invert_tag ? "\nEXCEPT " : "\nINTERSECT ";
+        if (i > 0) {
+            sql_out.append(compounder);
         }
+
+        // Increment tag pointer to skip the "-" if needed
+        search_tag(tags[i] + invert_tag, sql_out, false);
     }
 
     // Terminate statement
