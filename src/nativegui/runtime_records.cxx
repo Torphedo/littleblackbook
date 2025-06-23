@@ -60,3 +60,24 @@ void tag_search::update_results(sqlite3* db) noexcept {
 
     sqlite3_finalize(query);
 }
+
+bool tag_autocomplete::update_results(const char* user_str, sqlite3* db) {
+    // Wipe previous results
+    candidates.clear();
+
+    std::string sql;
+    sqlgen(sql, "SELECT * FROM tag_search('\"%s\" *') ORDER BY rank;", user_str);
+
+    sqlite3_stmt* stmt = compile_sql(sql.c_str(), -1, db);
+    if (stmt == nullptr) {
+        return false; // Error printed for us
+    }
+
+    int res = SQLITE_OK;
+    while ((res = sqlite3_step(stmt)) == SQLITE_ROW) {
+        const char* result = (const char*)sqlite3_column_text(stmt, 0);
+        candidates.push_back(result);
+    }
+
+    return true;
+}

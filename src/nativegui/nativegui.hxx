@@ -1,6 +1,7 @@
 #pragma once
 #include <GLFW/glfw3.h>
 #include <sqlite3.h>
+#include <imgui.h>
 
 #include <map>
 #include <unordered_map>
@@ -60,6 +61,7 @@ struct nativegui {
 
     bool draw_song_editor(runtime_song& song);
 
+    bool InputTagAutocompleted(const char* label, const char* hint, ImGuiInputTextFlags flags, std::string& tag, tag_autocomplete& tac);
     void draw_search_menu() noexcept;
 
     void draw_song_list() noexcept;

@@ -1,4 +1,5 @@
 #include "nativegui.hxx"
+#include "nativegui/runtime_records.hxx"
 #include "tags.hxx"
 
 #include <imgui.h>
@@ -163,6 +164,63 @@ bool nativegui::draw_song_editor(runtime_song& song) {
     return true;
 }
 
+static int autocomplete_update_selection(ImGuiInputTextCallbackData* data) {
+    auto tac = (tag_autocomplete*) data->UserData;
+    if (data->EventFlag != ImGuiInputTextFlags_CallbackCompletion) {
+        return 0; // We only handle this flag
+    }
+
+    const bool shift = ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift);
+    const s8 diff = !shift - shift; // -1 if shift pressed, 1 if not
+    const bool need_preserve_input = tac->cur_idx == 0;
+    const bool prefix_minus = data->Buf[0] == '-';
+
+    tac->cur_idx = MAX(0, tac->cur_idx + diff); // Add difference but keep positive
+
+    // Replace with autocomplete result
+    data->DeleteChars(0, data->BufTextLen);
+    if (tac->cur_idx == 0) {
+        // Index 0 == original user input
+        // TODO: Implement preserving user input on autocomplete
+        return 0;
+    } else {
+        // Insert autocomplete result
+        data->InsertChars(0, tac->candidates[tac->cur_idx - 1].c_str());
+    }
+
+    // Restore user's "-" prefix if needed
+    if (prefix_minus) {
+        data->InsertChars(0, "-");
+    }
+
+    return 0;
+}
+
+bool nativegui::InputTagAutocompleted(const char* label, const char* hint, ImGuiInputTextFlags flags, std::string& tag, tag_autocomplete& tac) {
+    bool result = false;
+
+    // We need a callback to make this work
+    flags |= ImGuiInputTextFlags_CallbackCompletion;
+    if (ImGui::InputTextWithHint(label, hint, &tag, flags, autocomplete_update_selection, &tac)) {
+        result = true;
+    }
+
+    // Update autocomplete. If the index is a real value, the user text was
+    // replaced with autocomplete text, so refreshing would break the menu.
+    if (tac.cur_idx == 0) {
+        const scope_timer main_timer(timer_map, "tag_autocomplete");
+        tac.update_results(tag.c_str(), db);
+    }
+    ImGui::Text("%d", tac.cur_idx);
+
+    for (const std::string& candidate : tac.candidates) {
+        ImGui::Text("%s", candidate.c_str());
+    }
+    ImGui::Separator();
+
+    return result;
+}
+
 void nativegui::draw_search_menu() noexcept {
     ImGui::Begin("Search");
 
@@ -178,8 +236,12 @@ void nativegui::draw_search_menu() noexcept {
     }
 
     // Input for next tag
-    if (ImGui::InputText("Input tag: ", &search.current_tag, ImGuiInputTextFlags_EnterReturnsTrue)) {
+    ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
+    if (InputTagAutocompleted("##tag", "Input a tag", flags, search.current_tag, search.tac)) {
         search_focus_next_frame = true;
+        search.tac.candidates.clear(); // Clear autocomplete results
+        search.tac.cur_idx = 0;
+
         const scope_timer main_timer(timer_map, "last_search");
         // This also executes the search and updates our state
         search.finalize_current_tag(db);
@@ -258,10 +320,10 @@ void nativegui::draw_tag_parents() noexcept {
     }
 
     ImGui::Begin("Tag Parents");
-    ImGui::InputText("Child tag", &tag_parents.input_child);
+    ImGui::InputTextWithHint("##c", "Child tag", &tag_parents.input_child);
 
     // Let user apply by hitting Enter or using the button
-    bool apply = ImGui::InputText("Parent tag", &tag_parents.input_parent, ImGuiInputTextFlags_EnterReturnsTrue);
+    bool apply = ImGui::InputTextWithHint("##p", "Parent tag", &tag_parents.input_parent, ImGuiInputTextFlags_EnterReturnsTrue);
     apply |= ImGui::Button("Apply");
     if (apply) {
         apply_parent_child_pair();

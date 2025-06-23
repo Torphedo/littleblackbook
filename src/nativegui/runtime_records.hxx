@@ -25,12 +25,20 @@ struct runtime_song {
     std::set<tag_hash_t> tags;
 };
 
+struct tag_autocomplete {
+    u32 cur_idx = 0;
+    std::vector<std::string> candidates;
+
+    bool update_results(const char* user_str, sqlite3* db);
+};
+
 struct tag_search {
     // The tags currently being searched for
     std::vector<std::string> tags;
 
-    // Buffer for the tag the user is currently typing
+    // Buffer for the tag the user is currently typing, or an autocomplete result.
     std::string current_tag;
+    tag_autocomplete tac;
 
     std::vector<song_hash_t> result_hashes;
 
