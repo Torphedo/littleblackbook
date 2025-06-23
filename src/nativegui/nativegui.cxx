@@ -211,7 +211,6 @@ bool nativegui::InputTagAutocompleted(const char* label, const char* hint, ImGui
         const scope_timer main_timer(timer_map, "tag_autocomplete");
         tac.update_results(tag.c_str(), db);
     }
-    ImGui::Text("%d", tac.cur_idx);
 
     for (const std::string& candidate : tac.candidates) {
         ImGui::Text("%s", candidate.c_str());
@@ -320,10 +319,11 @@ void nativegui::draw_tag_parents() noexcept {
     }
 
     ImGui::Begin("Tag Parents");
-    ImGui::InputTextWithHint("##c", "Child tag", &tag_parents.input_child);
+    InputTagAutocompleted("##c", "Child tag", 0, tag_parents.input_child, tag_parents.autocomp_child);
 
+    const ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
+    bool apply = InputTagAutocompleted("##p", "Parent tag", flags, tag_parents.input_parent, tag_parents.autocomp_parent);
     // Let user apply by hitting Enter or using the button
-    bool apply = ImGui::InputTextWithHint("##p", "Parent tag", &tag_parents.input_parent, ImGuiInputTextFlags_EnterReturnsTrue);
     apply |= ImGui::Button("Apply");
     if (apply) {
         apply_parent_child_pair();

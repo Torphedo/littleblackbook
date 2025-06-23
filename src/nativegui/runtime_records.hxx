@@ -62,5 +62,8 @@ struct tag_parents_t {
 
     // Input fields the user will submit
     std::string input_child;
+    tag_autocomplete autocomp_child;
+
     std::string input_parent;
+    tag_autocomplete autocomp_parent;
 };
