@@ -13,4 +13,14 @@ then
 fi
 
 rm files/*.mp3
-sqlite3 $DB_FILE "DROP TABLE 'songs'; DROP TABLE 'tags'; DROP TABLE 'tagmap';"
+sqlite3 $DB_FILE "\
+DROP TABLE IF EXISTS songs;\
+DROP TABLE IF EXISTS tags;\
+DROP TABLE IF EXISTS tagmap;\
+DROP TABLE IF EXISTS tag_parents;\
+DROP TABLE IF EXISTS tag_search;\
+DROP VIEW IF EXISTS applied_parents;\
+DROP VIEW IF EXISTS applied_grandparents;\
+DROP VIEW IF EXISTS applied_great_grandparents;\
+DROP VIEW IF EXISTS resolved_tagmap;\
+"

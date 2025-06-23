@@ -19,6 +19,7 @@ fi
 # won't know where statements start and end without them.
 
 cat bootstrap/table_*.sql | sqlite3 $DB_FILE
+cat bootstrap/vtable_*.sql | sqlite3 $DB_FILE
 cat bootstrap/trigger_*.sql | sqlite3 $DB_FILE
 
 # Our views depend on each other, but SQLite doesn't seem to care about the

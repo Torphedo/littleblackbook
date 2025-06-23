@@ -24,6 +24,7 @@ void str_format_append(std::string& output, const char* format_str, ...) {
 
 // Minor helper functions for ImGui
 namespace ImGui {
+
 void BeginChildFitContent(const char* id, float width_percent) {
     ImGui::BeginChild(id, ImVec2(ImGui::GetContentRegionAvail().x * width_percent, 260), ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY);
 }
