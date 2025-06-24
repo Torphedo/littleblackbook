@@ -26,18 +26,41 @@ struct runtime_song {
 };
 
 struct tag_autocomplete {
-    u32 cur_idx = 0;
+    // Number of results we show
+    static const u8 AUTOCOMPLETE_SIZE = 5;
+
+    s32 cur_idx = 0;
+    // String the user typed into the text box
+    std::string user_str;
+
+    // Autocomplete results
     std::vector<std::string> candidates;
 
-    bool update_results(const char* user_str, sqlite3* db);
+    /// @brief Change the selected result
+    ///
+    /// @param diff The direction the index should change in. Only the sign is
+    /// kept, so any positive value adds 1, and any negative value subtracts 1.
+    /// Automatically keeps the index in range for you.
+    void update_selection(s8 diff) noexcept;
+
+    /// @brief Get the current string that should be in the text box
+    ///
+    /// The only reason this isn't const is that it returns a mutable reference.
+    std::string& get_current() noexcept;
+
+    /// @brief Update the autocomplete candidates using the contents of @ref [user_str].
+    /// @param db The database to query for results
+    bool update_results(sqlite3* db) noexcept;
+
+    // Wipe all text/state
+    void reset() noexcept;
 };
 
 struct tag_search {
     // The tags currently being searched for
     std::vector<std::string> tags;
 
-    // Buffer for the tag the user is currently typing, or an autocomplete result.
-    std::string current_tag;
+    // Autocomplete results and tag input buffer
     tag_autocomplete tac;
 
     std::vector<song_hash_t> result_hashes;
@@ -60,10 +83,7 @@ struct tag_search {
 struct tag_parents_t {
     std::vector<linked_tags> pairs;
 
-    // Input fields the user will submit
-    std::string input_child;
+    // Tag input fields the user will submit
     tag_autocomplete autocomp_child;
-
-    std::string input_parent;
     tag_autocomplete autocomp_parent;
 };

@@ -1,5 +1,6 @@
 #include "runtime_records.hxx"
 #include <algorithm>
+#include <cassert>
 
 #include <common/crc32.h>
 
@@ -9,24 +10,24 @@
 #include <schema.hxx>
 
 void tag_search::finalize_current_tag(sqlite3* db) noexcept {
-    if (current_tag.empty()) {
+    if (tac.get_current().empty()) {
         update_results(db);
         return;
     }
 
     // Go to lowercase to make it case-insensitive
-    str_tolower(current_tag);
+    str_tolower(tac.get_current());
 
     // Remove the tag if it was already in the list
-    const auto iter = std::find(tags.begin(), tags.end(), current_tag);
+    const auto iter = std::find(tags.begin(), tags.end(), tac.get_current());
     if (iter != tags.end()) {
         tags.erase(iter);
     } else {
         // Add the tag as normal
-        tags.push_back(current_tag);
+        tags.push_back(tac.get_current());
     }
 
-    current_tag = "";
+    tac.reset();
     update_results(db);
 }
 
@@ -61,12 +62,12 @@ void tag_search::update_results(sqlite3* db) noexcept {
     sqlite3_finalize(query);
 }
 
-bool tag_autocomplete::update_results(const char* user_str, sqlite3* db) {
+bool tag_autocomplete::update_results(sqlite3* db) noexcept {
     // Wipe previous results
     candidates.clear();
 
     std::string sql;
-    sqlgen(sql, "SELECT * FROM tag_search('\"%s\" *') ORDER BY rank;", user_str);
+    sqlgen(sql, "SELECT * FROM tag_search('\"%s\" *') ORDER BY rank LIMIT %d;", user_str.c_str(), AUTOCOMPLETE_SIZE);
 
     sqlite3_stmt* stmt = compile_sql(sql.c_str(), -1, db);
     if (stmt == nullptr) {
@@ -80,4 +81,27 @@ bool tag_autocomplete::update_results(const char* user_str, sqlite3* db) {
     }
 
     return true;
+}
+
+void tag_autocomplete::update_selection(s8 diff) noexcept {
+    diff /= abs(diff); // Clamp to -1 or 1
+
+    // Bounded addition
+    cur_idx = CLAMP(0, cur_idx + diff, candidates.size());
+}
+
+std::string& tag_autocomplete::get_current() noexcept {
+    assert(cur_idx <= candidates.size() && cur_idx >= 0 && "Autocomplete index out of bounds!");
+
+    if (cur_idx == 0) {
+        return user_str;
+    } else {
+        return candidates[cur_idx - 1];
+    }
+}
+
+void tag_autocomplete::reset() noexcept {
+    candidates.clear();
+    user_str = "";
+    cur_idx = 0;
 }

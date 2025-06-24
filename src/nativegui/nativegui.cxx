@@ -171,22 +171,14 @@ static int autocomplete_update_selection(ImGuiInputTextCallbackData* data) {
     }
 
     const bool shift = ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift);
-    const s8 diff = !shift - shift; // -1 if shift pressed, 1 if not
-    const bool need_preserve_input = tac->cur_idx == 0;
+    const s8 diff = shift ? -1 : 1;
     const bool prefix_minus = data->Buf[0] == '-';
 
-    tac->cur_idx = MAX(0, tac->cur_idx + diff); // Add difference but keep positive
+    tac->update_selection(diff);
 
     // Replace with autocomplete result
     data->DeleteChars(0, data->BufTextLen);
-    if (tac->cur_idx == 0) {
-        // Index 0 == original user input
-        // TODO: Implement preserving user input on autocomplete
-        return 0;
-    } else {
-        // Insert autocomplete result
-        data->InsertChars(0, tac->candidates[tac->cur_idx - 1].c_str());
-    }
+    data->InsertChars(0, tac->get_current().c_str());
 
     // Restore user's "-" prefix if needed
     if (prefix_minus) {
@@ -196,22 +188,23 @@ static int autocomplete_update_selection(ImGuiInputTextCallbackData* data) {
     return 0;
 }
 
-bool nativegui::InputTagAutocompleted(const char* label, const char* hint, ImGuiInputTextFlags flags, std::string& tag, tag_autocomplete& tac) {
+bool nativegui::InputTagAutocompleted(const char* label, const char* hint, ImGuiInputTextFlags flags, tag_autocomplete& tac) {
     bool result = false;
 
     // We need a callback to make this work
     flags |= ImGuiInputTextFlags_CallbackCompletion;
-    if (ImGui::InputTextWithHint(label, hint, &tag, flags, autocomplete_update_selection, &tac)) {
+    if (ImGui::InputTextWithHint(label, hint, &tac.get_current(), flags, autocomplete_update_selection, &tac)) {
         result = true;
     }
 
-    // Update autocomplete. If the index is a real value, the user text was
-    // replaced with autocomplete text, so refreshing would break the menu.
+    // Only refresh if the text being edited is the original user input, not an
+    // autocomplete result.
     if (tac.cur_idx == 0) {
         const scope_timer main_timer(timer_map, "tag_autocomplete");
-        tac.update_results(tag.c_str(), db);
+        tac.update_results(db);
     }
 
+    // Draw results
     for (const std::string& candidate : tac.candidates) {
         ImGui::Text("%s", candidate.c_str());
     }
@@ -236,14 +229,13 @@ void nativegui::draw_search_menu() noexcept {
 
     // Input for next tag
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
-    if (InputTagAutocompleted("##tag", "Input a tag", flags, search.current_tag, search.tac)) {
+    if (InputTagAutocompleted("##tag", "Input a tag", flags, search.tac)) {
         search_focus_next_frame = true;
-        search.tac.candidates.clear(); // Clear autocomplete results
-        search.tac.cur_idx = 0;
 
         const scope_timer main_timer(timer_map, "last_search");
         // This also executes the search and updates our state
         search.finalize_current_tag(db);
+        search.tac.reset();
     }
 
     // Display results
@@ -295,8 +287,8 @@ void nativegui::draw_song_list() noexcept {
 // because it needs set the database reload flag. I guess we could do that
 // manually in the one place we use this, but whatever. - torph
 void nativegui::apply_parent_child_pair() noexcept {
-    const auto& child = tag_parents.input_child;
-    const auto& parent = tag_parents.input_parent;
+    const auto& child = tag_parents.autocomp_child.get_current();
+    const auto& parent = tag_parents.autocomp_parent.get_current();
 
     std::string sql;
     link_tags_sql(parent.c_str(), child.c_str(), sql);
@@ -308,8 +300,8 @@ void nativegui::apply_parent_child_pair() noexcept {
     }
 
     // Reset and reload
-    tag_parents.input_child = "";
-    tag_parents.input_parent = "";
+    tag_parents.autocomp_child.reset();
+    tag_parents.autocomp_parent.reset();
     this->need_reload = true;
 }
 
@@ -319,10 +311,10 @@ void nativegui::draw_tag_parents() noexcept {
     }
 
     ImGui::Begin("Tag Parents");
-    InputTagAutocompleted("##c", "Child tag", 0, tag_parents.input_child, tag_parents.autocomp_child);
+    InputTagAutocompleted("##c", "Child tag", 0, tag_parents.autocomp_child);
 
     const ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
-    bool apply = InputTagAutocompleted("##p", "Parent tag", flags, tag_parents.input_parent, tag_parents.autocomp_parent);
+    bool apply = InputTagAutocompleted("##p", "Parent tag", flags, tag_parents.autocomp_parent);
     // Let user apply by hitting Enter or using the button
     apply |= ImGui::Button("Apply");
     if (apply) {
@@ -338,10 +330,10 @@ void nativegui::draw_tag_parents() noexcept {
         ImGui::TableSetupColumn("Parent");
         ImGui::TableHeadersRow();
 
-        // Draw a row for each chunk
+        // Draw a row for each pair
         for (const auto& pair : tag_parents.pairs) {
-            const char* parent_str = "[parent hash %d not found]";
-            const char* child_str = "[child hash %d not found in list of tags]";
+            const char* parent_str = "[hash %d]";
+            const char* child_str = parent_str;
             if (tags.count(pair.child)) {
                 child_str = tags[pair.child].c_str();
             }
@@ -352,26 +344,17 @@ void nativegui::draw_tag_parents() noexcept {
             ImGui::TableNextRow();
 
             ImGui::TableSetColumnIndex(0);
-            if (child_str) {
-                ImGui::Text(child_str);
-            } else {
-                ImGui::Text("[child hash %d not found in list of tags]", pair.child);
-            }
+            ImGui::Text(child_str, pair.child);
 
             ImGui::TableSetColumnIndex(1);
-            if (parent_str) {
-                ImGui::Text(parent_str);
-            } else {
-                ImGui::Text("[parent hash %d not found in list of tags]", pair.child);
-            }
+            ImGui::Text(parent_str, pair.parent);
 
             ImGui::TableSetColumnIndex(2);
-            ImGui::PushID(pair.child + pair.parent);
+            ImGui::PushID(pair.child ^ pair.parent); // Button needs a unique ID, this is good enough
             if (ImGui::Button("Delete pair") && parent_str && child_str) {
                 std::string sql;
-                char* errmsg;
                 unlink_tags_sql(parent_str, child_str, sql);
-                sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
+                sqlite3_exec(db, sql.c_str(), nullptr, nullptr, nullptr);
                 need_reload = true;
             }
             ImGui::PopID();
