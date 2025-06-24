@@ -32,6 +32,9 @@ struct tag_autocomplete {
     // A hint to the UI that it should refocus the text box
     bool should_refocus_input = false;
 
+    // A hint to call apply_selection() ASAP
+    bool need_apply = false;
+
     s32 cur_idx = 0;
     // String the user typed into the text box
     std::string user_str;
@@ -45,6 +48,9 @@ struct tag_autocomplete {
     /// kept, so any positive value adds 1, and any negative value subtracts 1.
     /// Automatically keeps the index in range for you.
     void update_selection(s8 diff) noexcept;
+
+    // @brief Method for when the user confirms they want to use the autocomplete result
+    void apply_selection() noexcept;
 
     /// @brief Get the current string that should be in the text box
     ///

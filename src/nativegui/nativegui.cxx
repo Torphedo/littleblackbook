@@ -166,12 +166,18 @@ bool nativegui::draw_song_editor(runtime_song& song) {
 
 static int autocomplete_update_selection(ImGuiInputTextCallbackData* data) {
     auto tac = (tag_autocomplete*) data->UserData;
-    if (data->EventFlag != ImGuiInputTextFlags_CallbackCompletion) {
-        return 0; // We only handle this flag
+    if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) {
+        // User edited buffer, it should become the new user input buffer
+        tac->need_apply = true;
+        return 0;
     }
 
-    const bool shift = ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift);
-    const s8 diff = shift ? -1 : 1;
+    if (data->EventFlag != ImGuiInputTextFlags_CallbackHistory) {
+        return 0;
+    }
+
+    // 1 if down, -1 if up, 0 if both.
+    const s8 diff = (data->EventKey == ImGuiKey_DownArrow) - (data->EventKey == ImGuiKey_UpArrow);
     const bool prefix_minus = data->Buf[0] == '-';
 
     tac->update_selection(diff);
@@ -187,13 +193,21 @@ static int autocomplete_update_selection(ImGuiInputTextCallbackData* data) {
 
 bool nativegui::InputTagAutocompleted(const char* label, const char* hint, ImGuiInputTextFlags flags, tag_autocomplete& tac) {
     bool result = false;
+    const std::string real_label = label + std::to_string(tac.cur_idx);
     const auto old_idx = tac.cur_idx;
 
     // We need a callback to make this work
-    flags |= ImGuiInputTextFlags_CallbackCompletion;
-    if (ImGui::InputTextWithHint(label, hint, &tac.get_current(), flags, autocomplete_update_selection, &tac)) {
+    flags |= ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackEdit;
+    if (ImGui::InputTextWithHint(real_label.c_str(), hint, &tac.get_current(), flags, autocomplete_update_selection, &tac)) {
         result = true;
         tac.should_refocus_input = true;
+    }
+
+    // This is done via flag since it can invalidate pointers, which is a problem
+    // in callbacks.
+    if (tac.need_apply) {
+        tac.apply_selection();
+        tac.need_apply = false;
     }
 
     if (tac.cur_idx != old_idx) {
@@ -225,20 +239,18 @@ void nativegui::draw_search_menu() noexcept {
     }
 
     // Focus text input so user can keep typing
-    if (search_focus_next_frame) {
-        search_focus_next_frame = false; // Reset flag
+    if (search.tac.should_refocus_input) {
+        search.tac.should_refocus_input = false; // Reset flag
         ImGui::SetKeyboardFocusHere();
     }
 
     // Input for next tag
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
     if (InputTagAutocompleted("##tag", "Input a tag", flags, search.tac)) {
-        search_focus_next_frame = true;
-
         const scope_timer main_timer(timer_map, "last_search");
         // This also executes the search and updates our state
         search.finalize_current_tag(db);
-        search.tac.reset();
+        search.tac.reset(); // Must come 2nd since it contains the current tag
     }
 
     // Display results

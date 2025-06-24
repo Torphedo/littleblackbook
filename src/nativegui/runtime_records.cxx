@@ -93,7 +93,13 @@ void tag_autocomplete::update_selection(s8 diff) noexcept {
         // Wrap overflows around
         cur_idx %= candidates.size() + 1;
     }
+}
 
+void tag_autocomplete::apply_selection() noexcept {
+    // User selected a result. Copy to user buffer and wipe results.
+    user_str = get_current();
+    candidates.clear();
+    cur_idx = 0;
 }
 
 std::string& tag_autocomplete::get_current() noexcept {
