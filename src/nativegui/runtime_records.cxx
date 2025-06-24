@@ -66,8 +66,10 @@ bool tag_autocomplete::update_results(sqlite3* db) noexcept {
     // Wipe previous results
     candidates.clear();
 
+    // We use this to skip the minus sign in the generated SQL
+    const bool minus = user_str.c_str()[0] == '-';
     std::string sql;
-    sqlgen(sql, "SELECT * FROM tag_search('\"%s\" *') ORDER BY rank LIMIT %d;", user_str.c_str(), AUTOCOMPLETE_SIZE);
+    sqlgen(sql, "SELECT * FROM tag_search('\"%s\" *') ORDER BY rank LIMIT %d;", user_str.c_str() + minus, AUTOCOMPLETE_SIZE);
 
     sqlite3_stmt* stmt = compile_sql(sql.c_str(), -1, db);
     if (stmt == nullptr) {
@@ -76,7 +78,8 @@ bool tag_autocomplete::update_results(sqlite3* db) noexcept {
 
     int res = SQLITE_OK;
     while ((res = sqlite3_step(stmt)) == SQLITE_ROW) {
-        const char* result = (const char*)sqlite3_column_text(stmt, 0);
+        std::string result = minus ? "-" : ""; // Use - prefix if needed
+        result += (const char*)sqlite3_column_text(stmt, 0);
         candidates.push_back(result);
     }
 

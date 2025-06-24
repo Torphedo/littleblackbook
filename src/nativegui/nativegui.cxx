@@ -183,11 +183,6 @@ static int autocomplete_update_selection(ImGuiInputTextCallbackData* data) {
     tac->update_selection(diff);
     tac->should_refocus_input = true;
 
-    // Restore user's "-" prefix if needed
-    if (prefix_minus) {
-        data->InsertChars(0, "-");
-    }
-
     return 0;
 }
 
