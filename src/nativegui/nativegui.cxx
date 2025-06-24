@@ -175,10 +175,7 @@ static int autocomplete_update_selection(ImGuiInputTextCallbackData* data) {
     const bool prefix_minus = data->Buf[0] == '-';
 
     tac->update_selection(diff);
-
-    // Replace with autocomplete result
-    data->DeleteChars(0, data->BufTextLen);
-    data->InsertChars(0, tac->get_current().c_str());
+    tac->should_refocus_input = true;
 
     // Restore user's "-" prefix if needed
     if (prefix_minus) {
@@ -190,11 +187,17 @@ static int autocomplete_update_selection(ImGuiInputTextCallbackData* data) {
 
 bool nativegui::InputTagAutocompleted(const char* label, const char* hint, ImGuiInputTextFlags flags, tag_autocomplete& tac) {
     bool result = false;
+    const auto old_idx = tac.cur_idx;
 
     // We need a callback to make this work
     flags |= ImGuiInputTextFlags_CallbackCompletion;
     if (ImGui::InputTextWithHint(label, hint, &tac.get_current(), flags, autocomplete_update_selection, &tac)) {
         result = true;
+        tac.should_refocus_input = true;
+    }
+
+    if (tac.cur_idx != old_idx) {
+        tac.should_refocus_input = true;
     }
 
     // Only refresh if the text being edited is the original user input, not an
@@ -311,9 +314,22 @@ void nativegui::draw_tag_parents() noexcept {
     }
 
     ImGui::Begin("Tag Parents");
-    InputTagAutocompleted("##c", "Child tag", 0, tag_parents.autocomp_child);
+    if (tag_parents.autocomp_child.should_refocus_input) {
+        tag_parents.autocomp_child.should_refocus_input = false;
+        ImGui::SetKeyboardFocusHere();
+    }
 
-    const ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
+    const ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
+    if (InputTagAutocompleted("##c", "Child tag", flags, tag_parents.autocomp_child)) {
+        // Child is done, focus next box
+        tag_parents.autocomp_child.should_refocus_input = false;
+        tag_parents.autocomp_parent.should_refocus_input = true;
+    }
+
+    if (tag_parents.autocomp_parent.should_refocus_input) {
+        tag_parents.autocomp_parent.should_refocus_input = false;
+        ImGui::SetKeyboardFocusHere();
+    }
     bool apply = InputTagAutocompleted("##p", "Parent tag", flags, tag_parents.autocomp_parent);
     // Let user apply by hitting Enter or using the button
     apply |= ImGui::Button("Apply");

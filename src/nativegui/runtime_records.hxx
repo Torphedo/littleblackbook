@@ -29,6 +29,9 @@ struct tag_autocomplete {
     // Number of results we show
     static const u8 AUTOCOMPLETE_SIZE = 5;
 
+    // A hint to the UI that it should refocus the text box
+    bool should_refocus_input = false;
+
     s32 cur_idx = 0;
     // String the user typed into the text box
     std::string user_str;

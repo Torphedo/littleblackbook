@@ -56,7 +56,6 @@ struct nativegui {
 
     // Set after the user enters a tag to keep keyboard focus in the text input
     bool show_search = false; // Toggle for search window
-    bool search_focus_next_frame = false;
     tag_search search;
 
     bool draw_song_editor(runtime_song& song);
