@@ -19,24 +19,6 @@
 #include "sqlgen.hxx"
 #include "tags.hxx"
 
-void song_record::print() const noexcept {
-    // We can't print the text fields directly because they may be UCS2
-    printf("\tTitle: ");
-    title.print();
-    printf("\n");
-
-    printf("\tArtist: ");
-    artist.print();
-    printf("\n");
-
-    printf("\tAlbum: ");
-    album.print();
-    printf("\n");
-
-    printf("\tReleased in: %d\n", release_year);
-    printf("\tCRC32 Hash: %d\n", crc32);
-}
-
 song_record::song_record(u8* mp3, u32 size) {
     assert(size >= sizeof(id3::header) && "MP3 file is impossibly small!");
 

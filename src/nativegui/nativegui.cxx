@@ -205,10 +205,6 @@ bool nativegui::InputTagAutocompleted(const char* label, const char* hint, ImGui
         tac.need_apply = false;
     }
 
-    if (tac.cur_idx != old_idx) {
-        tac.should_refocus_input = true;
-    }
-
     // Only refresh if the text being edited is the original user input, not an
     // autocomplete result.
     if (tac.cur_idx == 0) {

@@ -22,9 +22,6 @@ struct song_record {
     /// freed only once this structure is destroyed/unused.
     song_record(u8* mp3, u32 size);
 
-    // Print song fields in human-readable form to stdout
-    void print() const noexcept;
-
     /// @brief Generate an INSERT statement that will add the song to the database
     ///
     /// @param out A text buffer where the generated SQL should be stored
