@@ -84,10 +84,16 @@ bool tag_autocomplete::update_results(sqlite3* db) noexcept {
 }
 
 void tag_autocomplete::update_selection(s8 diff) noexcept {
-    diff /= abs(diff); // Clamp to -1 or 1
+    cur_idx += diff / abs(diff); // Add value clamped to -1 or 1
 
-    // Bounded addition
-    cur_idx = CLAMP(0, cur_idx + diff, candidates.size());
+    if (cur_idx < 0) {
+        // Wrap negatives around
+        cur_idx = candidates.size();
+    } else {
+        // Wrap overflows around
+        cur_idx %= candidates.size() + 1;
+    }
+
 }
 
 std::string& tag_autocomplete::get_current() noexcept {
