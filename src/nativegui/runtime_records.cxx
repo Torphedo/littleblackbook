@@ -4,27 +4,42 @@
 
 #include <common/crc32.h>
 
+#include <cstring>
 #include <sqlgen.hxx>
 #include <stringcase.hxx>
 #include <tags.hxx>
 #include <schema.hxx>
 
 void tag_search::finalize_current_tag(sqlite3* db) noexcept {
-    if (tac.get_current().empty()) {
+    std::string& tag = tac.get_current();
+
+    // Allows user to refresh by hitting enter in the text box. Otherwise, we'd
+    // try to add an empty string to our list of tags.
+    if (tag.empty()) {
         update_results(db);
         return;
     }
 
     // Go to lowercase to make it case-insensitive
-    str_tolower(tac.get_current());
+    str_tolower(tag);
 
-    // Remove the tag if it was already in the list
-    const auto iter = std::find(tags.begin(), tags.end(), tac.get_current());
-    if (iter != tags.end()) {
-        tags.erase(iter);
-    } else {
-        // Add the tag as normal
-        tags.push_back(tac.get_current());
+    bool is_negated = tag.c_str()[0] == '-';
+
+    bool found = false;
+    const char* user_tag = tag.c_str() + is_negated;
+    for (auto iter = tags.begin(); iter != tags.end(); iter++) {
+        // Ignore leading minus signs if present
+        const char* entry = iter->c_str() + (iter->c_str()[0] == '-');
+        found = strcmp(user_tag, entry) == 0;
+        if (found) {
+            tags.erase(iter);
+            break; // We're done here (and iterator is now invalidated anyway)
+        }
+    }
+
+    // Tag wasn't in the list, add it.
+    if (!found) {
+        tags.push_back(tag);
     }
 
     tac.reset();
