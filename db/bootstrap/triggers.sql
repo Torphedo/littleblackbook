@@ -1,14 +1,18 @@
 -- Automatically adds the album name to the song as a tag
-CREATE TRIGGER auto_album_tag AFTER INSERT ON songs
-BEGIN
-    -- Tag may already exist, so it's fine to ignore it in that case
-    INSERT OR IGNORE INTO tags (tag, hash) VALUES (lower(NEW.album), crc32(lower(NEW.album)));
-    INSERT INTO tagmap (tag_hash, song_hash) VALUES (crc32(lower(NEW.album)), NEW.hash);
+CREATE TRIGGER auto_album_tag AFTER INSERT ON songs BEGIN
+    -- Create album namespace if needed
+    INSERT OR IGNORE INTO namespaces (namespace, hash) VALUES('album', crc32('album'));
+    -- Create album tag if needed (with namespace)
+    INSERT OR IGNORE INTO tags (tag, hash, namespace_hash) VALUES
+        (lower(NEW.album), crc32('album:' || lower(NEW.album)), crc32('album'));
+
+    -- Attach the album tag to the song
+    INSERT INTO tagmap (tag_hash, song_hash) VALUES
+        (crc32('album:' || lower(NEW.album)), NEW.hash);
 END;
 
--- Automatically adds timestamps to newly inserted song records
-CREATE TRIGGER auto_timestamps AFTER INSERT ON songs
-BEGIN
+-- Automatically add timestamps to newly inserted song records
+CREATE TRIGGER auto_timestamps AFTER INSERT ON songs BEGIN
     UPDATE songs SET import_timestamp = unixepoch() WHERE hash = NEW.hash;
 END;
 
