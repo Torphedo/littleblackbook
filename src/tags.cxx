@@ -21,7 +21,7 @@ std::vector<std::string> parse_artists(const char* str) {
     while (true) {
         pos = str_lower.find(delim, pos);
 
-        const std::string temp = str_lower.substr(prev_pos, pos - prev_pos);
+        const std::string temp = "artist:" + str_lower.substr(prev_pos, pos - prev_pos);
         results.push_back(temp);
         if (pos == str_lower.npos) {
             break;
@@ -38,8 +38,21 @@ tag_hash_t create_tag_sql(const char* tag, std::string& sql_out, tag_hash_t hash
         // No hash provided, calculate it
         hash = crc32buf((const u8*)tag, strlen(tag));
     }
+    const char* colon = strchr(tag, ':');
 
-    sqlgen(sql_out, "INSERT INTO tags (tag, hash) VALUES ('%s', %d);\n", tag, hash);
+    if (colon == nullptr) {
+        // No namespace found, proceed as normal
+        sqlgen(sql_out, "INSERT INTO tags (tag, hash) VALUES ('%s', %d);\n", tag, hash);
+        return hash;
+    }
+
+    // This tag has a namespace, split it up.
+    const u32 namespace_len = colon - tag;
+    const char* tag_isolated = colon + 1;
+    const tag_hash_t namespace_hash = crc32buf((const u8*)tag, namespace_len);
+    sqlgen(sql_out, "INSERT OR IGNORE INTO namespaces (namespace, hash) VALUES ('%.*s', %d);\n", namespace_len, tag, namespace_hash);
+    sqlgen(sql_out, "INSERT INTO tags (tag, namespace_hash, hash) VALUES ('%s', %d, %d);\n", tag_isolated, namespace_hash, hash);
+
     return hash;
 }
 

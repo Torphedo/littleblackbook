@@ -19,6 +19,8 @@ struct nativegui {
     // Doubles as song storage, and a lookup by hash
     std::map<song_hash_t, runtime_song> song_map;
 
+    std::map<tag_hash_t, std::string> namespaces;
+
     // Doubles as tag storage, and a lookup by hash
     std::map<tag_hash_t, std::string> tags;
 

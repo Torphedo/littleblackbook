@@ -57,7 +57,8 @@ bool nativegui::load_from_db() {
     tags.clear();
     tag_parents.pairs.clear();
 
-    static const char tags_sql[] = "SELECT tag, hash FROM tags";
+    static const char namespaces_sql[] = "SELECT namespace, hash FROM namespaces";
+    static const char tags_sql[] = "SELECT tag, hash, namespace_hash FROM tags";
     // This ensures that tags displayed on each song include parents up to 3 layers deep
     static const char tagmap_sql[] = "SELECT tag_hash, song_hash FROM " RESOLVED_TAG_SONG_TABLE ";";
     static const char tagparents_sql[] = "SELECT parent_hash, child_hash FROM " TAG_PARENT_TABLE;
@@ -68,10 +69,12 @@ bool nativegui::load_from_db() {
     }
 
     // Compile all of our basic SQL queries
+    sqlite3_stmt* fetchnamespaces = compile_sql(namespaces_sql, ARRAY_SIZE(namespaces_sql) + 1, db);
     sqlite3_stmt* fetchtags = compile_sql(tags_sql, ARRAY_SIZE(tags_sql) + 1, db);
     sqlite3_stmt* fetchtagmap = compile_sql(tagmap_sql, ARRAY_SIZE(tagmap_sql) + 1, db);
     sqlite3_stmt* fetchtagparents = compile_sql(tagparents_sql, ARRAY_SIZE(tagparents_sql) + 1, db);
-    if (!fetchtags || !fetchtagmap || !fetchtagparents) {
+    if (!fetchnamespaces || !fetchtags || !fetchtagmap || !fetchtagparents) {
+        sqlite3_finalize(fetchnamespaces);
         sqlite3_finalize(fetchtags);
         sqlite3_finalize(fetchtagmap);
         sqlite3_finalize(fetchtagparents);
@@ -80,14 +83,29 @@ bool nativegui::load_from_db() {
 
     // TODO: Check for errors after each sqlite3_step() loop so we can get detailed error messages
 
-    // Load tags
+    // Load tag namespaces
     int exec_result = SQLITE_OK;
+    while ((exec_result = sqlite3_step(fetchnamespaces)) == SQLITE_ROW) {
+        const unsigned char* nspace = sqlite3_column_text(fetchnamespaces, 0);
+        const tag_hash_t hash = sqlite3_column_int(fetchnamespaces, 1);
+
+        namespaces[hash] = (char*)nspace;
+    }
+
+    // Load tags
     while ((exec_result = sqlite3_step(fetchtags)) == SQLITE_ROW) {
         const unsigned char* tag = sqlite3_column_text(fetchtags, 0);
         const tag_hash_t hash = sqlite3_column_int(fetchtags, 1);
+        const tag_hash_t namespace_hash = sqlite3_column_int(fetchtags, 2);
+        std::string nspace = "";
+        // We could probably handle this in SQL with a more complicated query
+        // doing a join, but this is fine. This also handles NULL ns hashes,
+        // since they return 0 and we won't have a hash of 0 (probably).
+        if (namespaces.count(namespace_hash)) {
+            nspace += namespaces[namespace_hash] + ":";
+        }
 
-        // Add to the map
-        tags[hash] = (char*)tag;
+        tags[hash] = nspace + std::string((char*)tag);
     }
 
     // Attach tags to their corresponding songs
@@ -111,6 +129,7 @@ bool nativegui::load_from_db() {
     }
 
     // Free our compiled SQL queries
+    sqlite3_finalize(fetchnamespaces);
     sqlite3_finalize(fetchtags);
     sqlite3_finalize(fetchtagmap);
     sqlite3_finalize(fetchtagparents);

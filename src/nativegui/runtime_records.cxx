@@ -69,7 +69,14 @@ bool tag_autocomplete::update_results(sqlite3* db) noexcept {
     // We use this to skip the minus sign in the generated SQL
     const bool minus = user_str.c_str()[0] == '-';
     std::string sql;
-    sqlgen(sql, "SELECT * FROM tag_search('\"%s\" *') ORDER BY rank LIMIT %d;", user_str.c_str() + minus, AUTOCOMPLETE_SIZE);
+    // This searches the tag table, then uses the result to find the namespace string
+    sqlgen(sql, R"(
+        SELECT DISTINCT ns.namespace, t.tag FROM
+        (SELECT * FROM tag_search('"%s" *') ORDER BY rank LIMIT %d) result
+        JOIN tags t ON t.tag = result.tag
+        JOIN namespaces ns ON ns.hash = t.namespace_hash;
+    )",
+    user_str.c_str() + minus, AUTOCOMPLETE_SIZE);
 
     sqlite3_stmt* stmt = compile_sql(sql.c_str(), -1, db);
     if (stmt == nullptr) {
@@ -79,7 +86,10 @@ bool tag_autocomplete::update_results(sqlite3* db) noexcept {
     int res = SQLITE_OK;
     while ((res = sqlite3_step(stmt)) == SQLITE_ROW) {
         std::string result = minus ? "-" : ""; // Use - prefix if needed
-        result += (const char*)sqlite3_column_text(stmt, 0);
+        const char* nspace = (const char*)sqlite3_column_text(stmt, 0);
+        const char* tag = (const char*)sqlite3_column_text(stmt, 1);
+
+        result += std::string(nspace) + ":" + tag;
         candidates.push_back(result);
     }
 
