@@ -18,13 +18,17 @@ END;
 
 -- Triggers to keep the tag search index in sync with the original table
 CREATE TRIGGER tag_search_insert AFTER INSERT ON tags BEGIN
-    INSERT INTO tag_search (tag) VALUES(NEW.tag);
+    INSERT INTO tag_search (tag, hash) VALUES(NEW.tag, NEW.hash);
 END;
 
 CREATE TRIGGER tag_search_update_tag AFTER UPDATE OF tag ON tags BEGIN
     UPDATE tag_search SET tag = NEW.tag WHERE tag_search.tag = NEW.tag;
 END;
 
+CREATE TRIGGER tag_search_update_hash AFTER UPDATE OF hash ON tags BEGIN
+    UPDATE tag_search SET hash = NEW.hash WHERE tag_search.hash = NEW.hash;
+END;
+
 CREATE TRIGGER tag_search_delete AFTER DELETE ON tags BEGIN
-    DELETE FROM tag_search WHERE tag_search.tag = OLD.tag;
+    DELETE FROM tag_search WHERE tag_search.hash = OLD.hash;
 END;

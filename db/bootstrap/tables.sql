@@ -1,3 +1,8 @@
+-- Just a place to store a version number
+CREATE TABLE IF NOT EXISTS db_meta (
+    version INTEGER NOT NULL UNIQUE DEFAULT 1
+)STRICT;
+
 CREATE TABLE IF NOT EXISTS songs (
     title  TEXT    NOT NULL,
     artist TEXT    NOT NULL,

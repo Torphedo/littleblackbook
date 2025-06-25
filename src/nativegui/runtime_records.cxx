@@ -73,7 +73,7 @@ bool tag_autocomplete::update_results(sqlite3* db) noexcept {
     sqlgen(sql, R"(
         SELECT DISTINCT ns.namespace, t.tag FROM
         (SELECT * FROM tag_search('"%s" *') ORDER BY rank LIMIT %d) result
-        JOIN tags t ON t.tag = result.tag
+        JOIN tags t ON t.hash = result.hash
         JOIN namespaces ns ON ns.hash = t.namespace_hash;
     )",
     user_str.c_str() + minus, AUTOCOMPLETE_SIZE);
