@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS tags (
 -- The set of tag namespaces
 CREATE TABLE IF NOT EXISTS namespaces (
     namespace TEXT NOT NULL UNIQUE ON CONFLICT IGNORE,
-    hash INTEGER NOT NULL UNIQUE ON CONFLICT IGNORE, -- crc32 of other column
+    hash INTEGER NOT NULL UNIQUE ON CONFLICT IGNORE -- crc32 of other column
 )STRICT;
 
 -- Many-to-many table for parent-child tag relationship.
