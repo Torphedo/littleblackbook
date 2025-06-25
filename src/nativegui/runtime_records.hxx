@@ -35,6 +35,9 @@ struct tag_autocomplete {
     // A hint to call apply_selection() ASAP
     bool need_apply = false;
 
+    // A hint to update the results ASAP
+    bool need_refresh = false;
+
     s32 cur_idx = 0;
     // String the user typed into the text box
     std::string user_str;

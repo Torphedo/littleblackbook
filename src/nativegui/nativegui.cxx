@@ -186,8 +186,11 @@ bool nativegui::draw_song_editor(runtime_song& song) {
 static int autocomplete_update_selection(ImGuiInputTextCallbackData* data) {
     auto tac = (tag_autocomplete*) data->UserData;
     if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) {
-        // User edited buffer, it should become the new user input buffer
-        tac->need_apply = true;
+        if (tac->cur_idx != 0) {
+            // User edited a different buffer, it should become the new main buffer
+            tac->need_apply = true;
+        }
+        tac->need_refresh = true; // Need to refresh results
         return 0;
     }
 
@@ -224,11 +227,11 @@ bool nativegui::InputTagAutocompleted(const char* label, const char* hint, ImGui
         tac.need_apply = false;
     }
 
-    // Only refresh if the text being edited is the original user input, not an
-    // autocomplete result.
-    if (tac.cur_idx == 0) {
+    // This is done via flag so we have the db ptr and access to timer output
+    if (tac.need_refresh) {
         const scope_timer main_timer(timer_map, "tag_autocomplete");
         tac.update_results(db);
+        tac.need_refresh = false;
     }
 
     // Draw results

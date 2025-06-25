@@ -71,7 +71,7 @@ bool tag_autocomplete::update_results(sqlite3* db) noexcept {
     std::string sql;
     // This searches the tag table, then uses the result to find the namespace string
     sqlgen(sql, R"(
-        SELECT DISTINCT ns.namespace, t.tag FROM
+        SELECT ns.namespace, t.tag FROM
         (SELECT * FROM tag_search('"%s" *') ORDER BY rank LIMIT %d) result
         JOIN tags t ON t.hash = result.hash
         JOIN namespaces ns ON ns.hash = t.namespace_hash;
