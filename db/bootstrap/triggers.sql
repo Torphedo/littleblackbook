@@ -17,14 +17,14 @@ CREATE TRIGGER auto_timestamps AFTER INSERT ON songs BEGIN
 END;
 
 -- Triggers to keep the tag search index in sync with the original table
-CREATE TRIGGER update_tag_search_insert AFTER INSERT ON tags BEGIN
+CREATE TRIGGER tag_search_insert AFTER INSERT ON tags BEGIN
     INSERT INTO tag_search (tag) VALUES(NEW.tag);
 END;
 
-CREATE TRIGGER update_tag_search_update AFTER UPDATE OF tag ON tags BEGIN
+CREATE TRIGGER tag_search_update_tag AFTER UPDATE OF tag ON tags BEGIN
     UPDATE tag_search SET tag = NEW.tag WHERE tag_search.tag = NEW.tag;
 END;
 
-CREATE TRIGGER update_tag_search_delete AFTER DELETE ON tags BEGIN
+CREATE TRIGGER tag_search_delete AFTER DELETE ON tags BEGIN
     DELETE FROM tag_search WHERE tag_search.tag = OLD.tag;
 END;
