@@ -99,3 +99,13 @@ sqlite3_stmt* compile_sql(const char* sql, s32 sql_len, sqlite3* db) {
 
     return stmt;
 }
+
+bool sql_handle_error(const char* msg_prefix, sqlite3* db, int errcode) {
+    if (errcode == SQLITE_OK || SQLITE_DONE) {
+        return true; // No errors to print
+    }
+
+    const char* msg = sqlite3_errmsg(db);
+    LOG_MSG(error, "%s: %s\n", msg_prefix, msg);
+    return false;
+}

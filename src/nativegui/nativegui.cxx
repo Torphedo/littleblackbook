@@ -91,6 +91,7 @@ bool nativegui::load_from_db() {
 
         namespaces[hash] = (char*)nspace;
     }
+    sql_handle_error("Error while loading namespaces:", db, exec_result);
 
     // Load tags
     while ((exec_result = sqlite3_step(fetchtags)) == SQLITE_ROW) {
@@ -107,6 +108,7 @@ bool nativegui::load_from_db() {
 
         tags[hash] = nspace + std::string((char*)tag);
     }
+    sql_handle_error("Error while loading tags:", db, exec_result);
 
     // Attach tags to their corresponding songs
     while ((exec_result = sqlite3_step(fetchtagmap)) == SQLITE_ROW) {
@@ -118,15 +120,17 @@ bool nativegui::load_from_db() {
             song_map[song_hash].tags.insert(tag_hash);
         }
     }
+    sql_handle_error("Error while loading songs:", db, exec_result);
 
     // Add parented tags to songs as needed
     while ((exec_result = sqlite3_step(fetchtagparents)) == SQLITE_ROW) {
         const tag_hash_t parent_hash = sqlite3_column_int(fetchtagparents, 0);
         const tag_hash_t child_hash = sqlite3_column_int(fetchtagparents, 1);
-        tag_parents.pairs.push_back((linked_tags){parent_hash, child_hash});
 
         // Our tag query handles parents up to 3 layers deep, no need to handle here.
+        tag_parents.pairs.push_back((linked_tags){parent_hash, child_hash});
     }
+    sql_handle_error("Error while loading tag parents:", db, exec_result);
 
     // Free our compiled SQL queries
     sqlite3_finalize(fetchnamespaces);
