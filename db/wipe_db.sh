@@ -16,6 +16,7 @@ rm files/*.mp3
 sqlite3 $DB_FILE "\
 DROP TABLE IF EXISTS songs;\
 DROP TABLE IF EXISTS tags;\
+DROP TABLE IF EXISTS namespaces;\
 DROP TABLE IF EXISTS tagmap;\
 DROP TABLE IF EXISTS tag_parents;\
 DROP TABLE IF EXISTS tag_search;\
