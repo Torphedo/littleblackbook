@@ -13,7 +13,7 @@
 static const char* version_string = "1.0.0";
 static const char* url = "https://github.com/Torphedo";
 
-int cli_main(const arguments& args, sqlite3* db, const char* db_path) {
+int cli_main(const arguments& args, sqlite3* db, const char* db_path, const std::string& db_files_folder) {
     // Parse arguments
     const char* flag = args.argv[1];
 
@@ -24,25 +24,14 @@ int cli_main(const arguments& args, sqlite3* db, const char* db_path) {
         printf("Written by Torphedo\n");
     }
 
-    std::string db_files_folder;
-    {
-        // Move the C-allocated path to a dynamic string we can append to.
-        // I don't know if .c_str() returns the actual backing string ptr. So
-        // just to be safe, we truncate a clone before turning to a C++ string.
-        char* db_folder_ptr = (char*)path_truncate_clone(db_path);
-        db_files_folder = db_folder_ptr;
-        db_files_folder += "files";
-        free(db_folder_ptr);
-    }
-    LOG_MSG(debug, "DB files folder: %s\n", db_files_folder.c_str());
-
     // There's more args that aren't settings flags...
     // Treat them as filenames.
 
     if (args.settings[SETTING_ARG_IMPORT]) {
         const u32 num_files = args.argc - args.first_non_flag;
         const char* const* files = &args.argv[args.first_non_flag];
-        import_many_files_many_threads(files, num_files, db_files_folder.c_str(), db);
+        import_stats_t stats;
+        import_many_files_many_threads(files, num_files, db_files_folder.c_str(), db, &stats);
     }
 
     if (args.settings[SETTING_ARG_SEARCH]) {

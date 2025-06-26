@@ -2,6 +2,7 @@
 #include <sqlite3.h>
 
 #include <common/logging.h>
+#include <common/path.h>
 
 #include "nativegui/nativegui.hxx"
 #include "nativegui/gui_bootstrap.hxx"
@@ -21,6 +22,18 @@ int main(int argc, char** argv) {
         db_path = args.values[VALUE_ARG_DB_PATH];
         LOG_MSG(debug, "Got database path \"%s\"\n", db_path);
     }
+    std::string db_files_folder;
+    {
+        // Move the C-allocated path to a dynamic string we can append to.
+        // I don't know if .c_str() returns the actual backing string ptr. So
+        // just to be safe, we truncate a clone before turning to a C++ string.
+        char* db_folder_ptr = (char*)path_truncate_clone(db_path);
+        db_files_folder = db_folder_ptr;
+        db_files_folder += "files";
+        free(db_folder_ptr);
+    }
+    LOG_MSG(debug, "DB files folder: %s\n", db_files_folder.c_str());
+
 
     sqlite3_initialize();
     sqlite3* db = nullptr;
@@ -50,9 +63,9 @@ int main(int argc, char** argv) {
 
     int result = EXIT_SUCCESS;
     if (args.cli_mode) {
-        result = cli_main(args, db, db_path);
+        result = cli_main(args, db, db_path, db_files_folder);
     } else {
-        nativegui gui(db);
+        nativegui gui(db, db_files_folder.c_str());
         if (!gui.initialized) {
             LOG_MSG(error, "Failed to start up the GUI!\n");
             return EXIT_FAILURE;

@@ -73,6 +73,7 @@ add_executable(blackbook
     src/nativegui/imgui_utils.cxx
     src/nativegui/nativegui.cxx
     src/nativegui/runtime_records.cxx
+    src/nativegui/nfde_wrapper.cxx
 
     lib/glad/src/glad.c
 )

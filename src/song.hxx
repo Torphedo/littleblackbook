@@ -30,7 +30,8 @@ struct song_record {
 };
 
 // Statistics about an in-progress import operation
-struct import_stats {
+struct import_stats_t {
+    std::atomic<u32> total_songs = 0;
     std::atomic<u32> num_skipped = 0;
     std::atomic<u32> num_loaded = 0;
     std::atomic<u32> num_metadata_grabbed = 0;
@@ -38,6 +39,17 @@ struct import_stats {
     std::atomic<u32> num_copied = 0;
     std::atomic<u32> num_generated_sql = 0;
     std::atomic<u32> sqlgen_time_us = 0; // SQL code generation time in microseconds
+
+    void reset() noexcept {
+        total_songs = 0;
+        num_skipped = 0;
+        num_loaded = 0;
+        num_metadata_grabbed = 0;
+        num_hashed = 0;
+        num_copied = 0;
+        num_generated_sql = 0;
+        sqlgen_time_us = 0;
+    }
 };
 
 /// @brief Import a set of audio files into the database
@@ -53,4 +65,4 @@ struct import_stats {
 ///        All imported files will be copied to this folder, renamed to
 ///        their hash.
 /// @param db The SQLite database connection to use for the import
-bool import_many_files_many_threads(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db);
+bool import_many_files_many_threads(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db, import_stats_t* stats);

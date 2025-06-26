@@ -81,7 +81,7 @@ void song_record::insert_sql(std::string& out) const noexcept {
 }
 
 // Generate SQL and gather some basic stats about the import process
-void import_many_files(const char* const* paths, u32 num_paths, const char* files_dir, std::string* sql, import_stats* stats) {
+void import_many_files(const char* const* paths, u32 num_paths, const char* files_dir, std::string* sql, import_stats_t* stats) {
     if (!file_exists(files_dir)) {
         std::filesystem::create_directory(files_dir);
     }
@@ -157,7 +157,7 @@ void import_many_files(const char* const* paths, u32 num_paths, const char* file
     // TODO: Try to figure out if any of the failed imports are real hash conflicts (not duplicates)
 }
 
-bool import_many_files_many_threads(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db, import_stats& stats) {
+bool import_many_files_many_threads(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db, import_stats_t* stats) {
     printf("Phase 1:\n");
     printf("\t- Extracting metadata\n");
     printf("\t- Generating SQL code\n");
@@ -173,13 +173,14 @@ bool import_many_files_many_threads(const char* const* paths, u32 num_paths, con
 
     std::thread threads[max_threads];
     const u32 paths_per_thread = num_paths / num_threads;
+    stats->total_songs = num_paths;
 
     // Dispatch a bunch of threads, assigning an even amount to each one
     u32 pos = 0;
     std::string thread_results[max_threads] = {};
     for (u32 i = 0; i < num_threads; i++) {
         const char* const* thread_paths = &paths[pos];
-        threads[i] = std::thread(import_many_files, thread_paths, paths_per_thread, files_dir, &thread_results[i], &stats);
+        threads[i] = std::thread(import_many_files, thread_paths, paths_per_thread, files_dir, &thread_results[i], stats);
         pos += paths_per_thread;
     }
 
@@ -200,18 +201,18 @@ bool import_many_files_many_threads(const char* const* paths, u32 num_paths, con
     const u32 remainder = num_paths % num_threads;
     if (remainder > 0) {
         std::string temp;
-        import_many_files(&paths[num_threads * paths_per_thread], remainder, files_dir, &temp, &stats);
+        import_many_files(&paths[num_threads * paths_per_thread], remainder, files_dir, &temp, stats);
         total += temp;
     }
     total.append("\nCOMMIT;\n");
 
-    LOG_MSG(info, "Finished Phase 1 in %.3fms\n", stats.sqlgen_time_us / 1000.0f);
+    LOG_MSG(info, "Finished Phase 1 in %.3fms\n", stats->sqlgen_time_us / 1000.0f);
 
-    if (stats.num_skipped > 0) {
+    if (stats->num_skipped > 0) {
         LOG_MSG(info, "I found %u new songs to import, but skipped %u that were already in the database.\n",
-                stats.num_generated_sql.load(), stats.num_skipped.load());
+                stats->num_generated_sql.load(), stats->num_skipped.load());
     } else {
-        LOG_MSG(info, "Importing %u new songs.\n", stats.num_generated_sql.load());
+        LOG_MSG(info, "Importing %u new songs.\n", stats->num_generated_sql.load());
     }
 
     printf("Phase 2: Importing data to SQLite\n");

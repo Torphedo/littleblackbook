@@ -1,10 +1,9 @@
 #include "nativegui.hxx"
-#include "nativegui/runtime_records.hxx"
-#include "tags.hxx"
 
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
+#include <nfd.h>
 
 #include <common/logging.h>
 #include <common/vfile.h>
@@ -13,6 +12,10 @@
 #include <sqlgen.hxx>
 #include <schema.hxx>
 #include <scope_timer.hxx>
+#include <song.hxx>
+#include "runtime_records.hxx"
+#include "tags.hxx"
+#include "nfde_wrapper.hxx"
 
 bool nativegui::load_songs_by_query(sqlite3* db, const char* query) {
     // We don't bother getting album/artist, since those are stored as tags.
@@ -145,7 +148,7 @@ bool nativegui::load_from_db() {
     return true;
 }
 
-nativegui::nativegui(sqlite3* db) {
+nativegui::nativegui(sqlite3* db, const char* files_dir) : files_dir(files_dir) {
     this->db = db;
 
     bool result = true;
@@ -443,7 +446,27 @@ void nativegui::draw_toolbar() noexcept {
 
 
     if (import_files) {
-        // TODO: Implement file import
+        import_stats.reset();
+        import_path_ptrs.clear();
+        import_paths.clear();
+
+        const nfdu8filteritem_t filters[] = { { "Song files", "mp3"} };
+        nfdresult_t res = NFD_OpenDialogMultipleAutoFree(import_paths, filters, ARRAY_SIZE(filters), nullptr);
+
+        // Import function requires a pointer array and I can't be bothered to
+        // refactor right now - torph
+        for (const auto& path : import_paths) {
+            import_path_ptrs.push_back(path.c_str());
+        }
+
+        if (res == NFD_OKAY && import_path_ptrs.size() > 0) {
+            const char* const* paths = import_path_ptrs.data();
+            const u32 num_paths = import_path_ptrs.size();
+            // Run imports on another thread so UI doesn't lock up
+            import_thread = std::thread(import_many_files_many_threads, paths, num_paths, files_dir, db, &import_stats);
+            import_thread.detach();
+            show_import_window = true;
+        }
     }
 }
 
@@ -459,6 +482,34 @@ void nativegui::draw_timers() noexcept {
     ImGui::End();
 }
 
+void nativegui::draw_import_progress() noexcept {
+    if (!show_import_window) {
+        return;
+    }
+
+    const import_stats_t& s = import_stats; // Shorthand
+    ImGui::Begin("Import");
+
+    ImGui::Text("Phase 1:");
+    ImGui::Separator();
+    ImGui::Text("Songs loaded: %d \nSongs hashed: %d \n", s.num_loaded.load(), s.num_hashed.load());
+    ImGui::Text("Songs scraped: %d \nSongs copied: %d \n", s.num_metadata_grabbed.load(), s.num_copied.load());
+    ImGui::Text("Songs skipped: %d \n\n", s.num_skipped.load());
+
+    ImGui::Text("Phase 2:");
+    ImGui::Separator();
+    ImGui::Text("SQL entries generated: %d \nSongs total: %d \n", s.num_generated_sql.load(), s.total_songs.load());
+
+    // All done
+    if (s.total_songs == s.num_generated_sql + s.num_skipped) {
+        if (ImGui::Button("Close")) {
+            show_import_window = false;
+        }
+    }
+
+    ImGui::End();
+}
+
 bool gui_main(void* ctx, GLFWwindow* window) {
     nativegui* gui = (nativegui*)ctx;
     const scope_timer main_timer(gui->timer_map, "main_draw");
@@ -471,6 +522,7 @@ bool gui_main(void* ctx, GLFWwindow* window) {
     gui->draw_timers();
     gui->draw_song_list();
     gui->draw_search_menu();
+    gui->draw_import_progress();
 
     std::vector<song_hash_t> editors_to_close(0); // Reserve 0 since this is rare
     for (song_hash_t song_hash : gui->song_editors) {

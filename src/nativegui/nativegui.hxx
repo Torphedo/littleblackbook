@@ -4,10 +4,12 @@
 #include <imgui.h>
 
 #include <map>
+#include <thread>
 #include <unordered_map>
 
+#include <schema.hxx>
+#include <song.hxx>
 #include "runtime_records.hxx"
-#include "schema.hxx"
 
 // Struct for all GUI state
 struct nativegui {
@@ -15,6 +17,7 @@ struct nativegui {
     bool initialized = false;
 
     sqlite3* db = nullptr;
+    const char* files_dir;
 
     // Doubles as song storage, and a lookup by hash
     std::map<song_hash_t, runtime_song> song_map;
@@ -60,6 +63,15 @@ struct nativegui {
     bool show_search = false; // Toggle for search window
     tag_search search;
 
+
+    bool show_import_window = false;
+    import_stats_t import_stats;
+    std::thread import_thread;
+
+    // Temporary storage for import process
+    std::vector<std::string> import_paths;
+    std::vector<const char*> import_path_ptrs;
+
     bool draw_song_editor(runtime_song& song);
 
     bool InputTagAutocompleted(const char* label, const char* hint, ImGuiInputTextFlags flags, tag_autocomplete& tac);
@@ -71,10 +83,12 @@ struct nativegui {
 
     void draw_toolbar() noexcept;
 
+    void draw_import_progress() noexcept;
+
     void draw_timers() noexcept;
 
     /// @brief Load everything needed to start the GUI from the database
-    nativegui(sqlite3* db);
+    nativegui(sqlite3* db, const char* files_dir);
 };
 
 /// @brief Main function for the native PC frontend
