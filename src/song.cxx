@@ -2,6 +2,7 @@
 #include <cstdio>
 
 #include <filesystem>
+#include <thread>
 #include <vector>
 #include <threads.h>
 
@@ -79,31 +80,15 @@ void song_record::insert_sql(std::string& out) const noexcept {
     }
 }
 
-// Container for results of a single import thread
-struct import_result {
-    u32 num_imported = 0;
-    u32 num_skipped = 0;
-    float sqlgen_time = 0.0f;
-    std::string sql;
-
-    import_result& operator+=(const import_result& other) {
-        sql.append(other.sql);
-        num_imported += other.num_imported;
-        num_skipped += other.num_skipped;
-        sqlgen_time += other.sqlgen_time;
-        return *this;
-    }
-};
-
 // Generate SQL and gather some basic stats about the import process
-import_result import_many_files(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db) {
+void import_many_files(const char* const* paths, u32 num_paths, const char* files_dir, std::string* sql, import_stats* stats) {
     if (!file_exists(files_dir)) {
         std::filesystem::create_directory(files_dir);
     }
 
-    import_result out;
+    float sqlgen_time = 0.0f;
     { // Scope to control timer
-    const scope_timer generator_timer(out.sqlgen_time);
+    const scope_timer generator_timer(sqlgen_time);
 
     std::vector<u8> file_buf(5 * 1024 * 1024); // Buffer is reused for many files
 
@@ -113,10 +98,12 @@ import_result import_many_files(const char* const* paths, u32 num_paths, const c
         // Early exit for simple errors
         if (!path_has_extension(paths[i], ".mp3")) {
             LOG_MSG(debug, "Skipping \"%s\" (not an MP3)\n", paths[i]);
+            stats->num_skipped++;
             continue;
         }
         if (!file_exists(paths[i])) {
             LOG_MSG(debug, "Skipping \"%s\" (it doesn't exist)\n", paths[i]);
+            stats->num_skipped++;
             continue;
         }
 
@@ -126,9 +113,12 @@ import_result import_many_files(const char* const* paths, u32 num_paths, const c
             file_buf.reserve(size + 1);
         }
         file_load_existing(paths[i], file_buf.data(), size);
+        stats->num_loaded++;
 
         // Extract metadata & hash the file
         const song_record song(file_buf.data(), size);
+        stats->num_hashed++;
+        stats->num_metadata_grabbed++;
 
         // Copy file into database folder with hash for its name
 
@@ -146,60 +136,28 @@ import_result import_many_files(const char* const* paths, u32 num_paths, const c
             // File with this hash already exists in the database. Either a
             // duplicate (very likely) or a hash conflict.
             import_conflicts.push_back(i);
-            out.num_skipped++;
+            stats->num_skipped++;
         } else {
             // TODO: Don't copy until the SQL inserts finish successfully.
             // If SQL can't insert the data, we don't want to copy the file.
 
             // Copy file into the database folder for import
             std::filesystem::copy_file(paths[i], destpath);
+            stats->num_copied++;
 
             // Generate INSERT statement
-            song.insert_sql(out.sql);
-            out.num_imported++;
+            song.insert_sql(*sql);
+            stats->num_generated_sql++;
         }
     }
 
     } // Timer scope
+    stats->sqlgen_time_us += sqlgen_time * 1000.0f; // Convert to microseconds
 
     // TODO: Try to figure out if any of the failed imports are real hash conflicts (not duplicates)
-
-    return out;
 }
 
-// C11 threading library only allows functions with a single void* argument, so
-// we need a struct for all our arguments
-typedef struct {
-    const char* const* paths;
-    u32 num_paths;
-    const char* files_dir;
-    sqlite3* db;
-    import_result result;
-}import_args;
-
-int import_many_files_thread_wrapper(import_args* args) {
-    args->result = import_many_files(args->paths, args->num_paths, args->files_dir, args->db);
-    return 0;
-}
-
-bool import_many_files_many_threads(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db) {
-    static const u32 max_threads = 256;
-    const u32 num_threads = 16;
-
-    import_args thread_args[max_threads] = {};
-    thrd_t threads[max_threads] = {};
-
-    const u32 paths_per_thread = num_paths / num_threads;
-
-    // Assign an even amount to each thread
-    for (u32 i = 0; i < num_threads; i++) {
-        thread_args[i] = {
-            &paths[paths_per_thread * i],
-            paths_per_thread,
-            files_dir, db,
-        };
-    }
-
+bool import_many_files_many_threads(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db, import_stats& stats) {
     printf("Phase 1:\n");
     printf("\t- Extracting metadata\n");
     printf("\t- Generating SQL code\n");
@@ -210,37 +168,50 @@ bool import_many_files_many_threads(const char* const* paths, u32 num_paths, con
     }
     printf("\n");
 
-    // Dispatch a bunch of threads
+    static const u32 max_threads = 64;
+    const u32 num_threads = 16;
+
+    std::thread threads[max_threads];
+    const u32 paths_per_thread = num_paths / num_threads;
+
+    // Dispatch a bunch of threads, assigning an even amount to each one
+    u32 pos = 0;
+    std::string thread_results[max_threads] = {};
     for (u32 i = 0; i < num_threads; i++) {
-        thrd_create(&threads[i], (thrd_start_t)import_many_files_thread_wrapper, &thread_args[i]);
+        const char* const* thread_paths = &paths[pos];
+        threads[i] = std::thread(import_many_files, thread_paths, paths_per_thread, files_dir, &thread_results[i], &stats);
+        pos += paths_per_thread;
     }
 
     for (u32 i = 0; i < num_threads; i++) {
-        int res = 0;
-        thrd_join(threads[i], &res);
+        if (threads[i].joinable()) {
+            threads[i].join();
+        }
+    }
+
+    std::string total = "BEGIN TRANSACTION;\n";
+
+    // Accumulate results
+    for (u32 i = 0; i < num_threads; i++) {
+        total += thread_results[i];
     }
 
     // Do the remainder sequentially
     const u32 remainder = num_paths % num_threads;
-    import_result total = {
-        .sql = "BEGIN TRANSACTION;\n",
-    };
-    total += import_many_files(&paths[num_threads * paths_per_thread], remainder, files_dir, db);
-
-    // Accumulate results
-    for (u32 i = 0; i < num_threads; i++) {
-        const import_result& result = thread_args[i].result;
-        total += result;
+    if (remainder > 0) {
+        std::string temp;
+        import_many_files(&paths[num_threads * paths_per_thread], remainder, files_dir, &temp, &stats);
+        total += temp;
     }
-    total.sql.append("\nCOMMIT;\n");
+    total.append("\nCOMMIT;\n");
 
-    LOG_MSG(info, "Finished Phase 1 in %.3fms\n", total.sqlgen_time);
+    LOG_MSG(info, "Finished Phase 1 in %.3fms\n", stats.sqlgen_time_us / 1000.0f);
 
-    if (total.num_skipped > 0) {
+    if (stats.num_skipped > 0) {
         LOG_MSG(info, "I found %u new songs to import, but skipped %u that were already in the database.\n",
-                total.num_imported, total.num_skipped);
+                stats.num_generated_sql.load(), stats.num_skipped.load());
     } else {
-        LOG_MSG(info, "Importing %u new songs.\n", total.num_imported);
+        LOG_MSG(info, "Importing %u new songs.\n", stats.num_generated_sql.load());
     }
 
     printf("Phase 2: Importing data to SQLite\n");
@@ -251,7 +222,7 @@ bool import_many_files_many_threads(const char* const* paths, u32 num_paths, con
     int sql_result = SQLITE_OK;
     {
         scope_timer exectimer(sqlexec_time);
-        sql_result = sqlite3_exec(db, total.sql.c_str(), nullptr, nullptr, &errmsg);
+        sql_result = sqlite3_exec(db, total.c_str(), nullptr, nullptr, &errmsg);
     }
     if (sql_result != SQLITE_OK) {
         result = false;

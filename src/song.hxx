@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <atomic>
 #include <sqlite3.h>
 
 #include <common/int.h>
@@ -26,6 +27,17 @@ struct song_record {
     ///
     /// @param out A text buffer where the generated SQL should be stored
     void insert_sql(std::string& out) const noexcept;
+};
+
+// Statistics about an in-progress import operation
+struct import_stats {
+    std::atomic<u32> num_skipped = 0;
+    std::atomic<u32> num_loaded = 0;
+    std::atomic<u32> num_metadata_grabbed = 0;
+    std::atomic<u32> num_hashed = 0;
+    std::atomic<u32> num_copied = 0;
+    std::atomic<u32> num_generated_sql = 0;
+    std::atomic<u32> sqlgen_time_us = 0; // SQL code generation time in microseconds
 };
 
 /// @brief Import a set of audio files into the database
