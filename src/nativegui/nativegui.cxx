@@ -419,11 +419,14 @@ void nativegui::draw_toolbar() noexcept {
 
     const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl);
     bool import_files = ctrl_pressed && ImGui::IsKeyPressed(ImGuiKey_I, false);
+    need_reload |= ImGui::IsKeyPressed(ImGuiKey_F5, false);
+    need_reload |= ctrl_pressed && ImGui::IsKeyPressed(ImGuiKey_R, false);
 
     if (ImGui::BeginViewportSideBar("MainMenu", viewport, ImGuiDir_Up, height, flags)) {
         if (ImGui::BeginMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 import_files |= ImGui::MenuItem("Import files", "Ctrl-I");
+                need_reload |= ImGui::MenuItem("Reload from database", "F5 / Ctrl-R");
                 ImGui::EndMenu();
             }
 
