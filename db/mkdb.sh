@@ -18,7 +18,4 @@ fi
 # caught by a wildcard are sent as a single stream of text, so it won't know
 # where statements start and end without them.
 
-cat bootstrap/tables.sql   | sqlite3 $DB_FILE
-cat bootstrap/triggers.sql | sqlite3 $DB_FILE
-cat bootstrap/views.sql    | sqlite3 $DB_FILE
-cat bootstrap/vtable_*.sql | sqlite3 $DB_FILE
+cat bootstrap/*.sql   | sqlite3 $DB_FILE

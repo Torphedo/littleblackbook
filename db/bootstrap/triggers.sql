@@ -25,10 +25,19 @@ CREATE TRIGGER tag_search_update_tag AFTER UPDATE OF tag ON tags BEGIN
     UPDATE tag_search SET tag = NEW.tag WHERE tag_search.tag = NEW.tag;
 END;
 
-CREATE TRIGGER tag_search_update_hash AFTER UPDATE OF hash ON tags BEGIN
-    UPDATE tag_search SET hash = NEW.hash WHERE tag_search.hash = NEW.hash;
-END;
-
 CREATE TRIGGER tag_search_delete AFTER DELETE ON tags BEGIN
     DELETE FROM tag_search WHERE tag_search.hash = OLD.hash;
+END;
+
+-- Triggers to keep the lyric search index in sync with the original table
+CREATE TRIGGER lyric_search_insert AFTER INSERT ON songs BEGIN
+    INSERT INTO lyric_search (letra, song_hash) VALUES(NEW.lyrics, NEW.hash);
+END;
+
+CREATE TRIGGER lyric_search_update_tag AFTER UPDATE OF lyrics ON songs BEGIN
+    UPDATE lyric_search SET letra = NEW.lyrics;
+END;
+
+CREATE TRIGGER lyric_search_delete AFTER DELETE ON songs BEGIN
+    DELETE FROM lyric_search WHERE lyric_search.song_hash = OLD.hash;
 END;
