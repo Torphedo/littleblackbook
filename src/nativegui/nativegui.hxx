@@ -30,12 +30,6 @@ struct nativegui {
     // Set this flag to trigger a reload at the start of the next frame
     bool need_reload = false;
 
-    bool show_tag_parents = false;
-    tag_parents_t tag_parents;
-
-    // Add the tags the user typed to the database as a parent/child pair
-    void apply_parent_child_pair() noexcept;
-
     /// @brief Load songs from database, optionally with a custom query
     bool load_songs_by_query(sqlite3* db, const char* query = nullptr);
 
@@ -59,11 +53,11 @@ struct nativegui {
     // All song hashes that need their editing window drawn
     std::set<song_hash_t> song_editors;
 
-    // Set after the user enters a tag to keep keyboard focus in the text input
+    // Search window state
     bool show_search = false; // Toggle for search window
     tag_search search;
 
-
+    // Import window state
     bool show_import_window = false;
     import_stats_t import_stats;
     std::thread import_thread;
@@ -71,6 +65,10 @@ struct nativegui {
     // Temporary storage for import process
     std::vector<std::string> import_paths;
     std::vector<const char*> import_path_ptrs;
+
+    // Tag parent window state
+    bool show_tag_parents = false;
+    tag_parents_t tag_parents;
 
     bool draw_song_editor(runtime_song& song);
 

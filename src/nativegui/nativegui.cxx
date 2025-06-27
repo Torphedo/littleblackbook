@@ -318,28 +318,6 @@ void nativegui::draw_song_list() noexcept {
     ImGui::End();
 }
 
-// This was made a nativegui method instead of going in runtime_records.hxx
-// because it needs set the database reload flag. I guess we could do that
-// manually in the one place we use this, but whatever. - torph
-void nativegui::apply_parent_child_pair() noexcept {
-    const auto& child = tag_parents.autocomp_child.get_current();
-    const auto& parent = tag_parents.autocomp_parent.get_current();
-
-    std::string sql;
-    link_tags_sql(parent.c_str(), child.c_str(), sql);
-
-    char* errmsg = nullptr;
-    int result = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
-    if (result != SQLITE_OK && errmsg != nullptr) {
-        LOG_MSG(error, "SQLite error: %s\n", errmsg);
-    }
-
-    // Reset and reload
-    tag_parents.autocomp_child.reset();
-    tag_parents.autocomp_parent.reset();
-    this->need_reload = true;
-}
-
 void nativegui::draw_tag_parents() noexcept {
     if (!show_tag_parents) {
         return;
@@ -366,7 +344,7 @@ void nativegui::draw_tag_parents() noexcept {
     // Let user apply by hitting Enter or using the button
     apply |= ImGui::Button("Apply");
     if (apply) {
-        apply_parent_child_pair();
+        need_reload |= tag_parents.apply_current_pair(db);
     }
 
     if (ImGui::BeginTable("tag parent table", 3, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {

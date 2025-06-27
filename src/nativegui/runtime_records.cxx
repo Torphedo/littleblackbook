@@ -1,14 +1,33 @@
 #include "runtime_records.hxx"
-#include <algorithm>
 #include <cassert>
 
 #include <common/crc32.h>
+#include <common/logging.h>
 
 #include <cstring>
 #include <sqlgen.hxx>
 #include <stringcase.hxx>
 #include <tags.hxx>
 #include <schema.hxx>
+
+bool tag_parents_t::apply_current_pair(sqlite3* db) noexcept {
+    const auto& child = autocomp_child.get_current();
+    const auto& parent = autocomp_parent.get_current();
+
+    std::string sql;
+    link_tags_sql(parent.c_str(), child.c_str(), sql);
+
+    char* errmsg = nullptr;
+    int result = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
+    if (result != SQLITE_OK && errmsg != nullptr) {
+        LOG_MSG(error, "SQLite error: %s\n", errmsg);
+    }
+
+    // Reset and reload
+    autocomp_child.reset();
+    autocomp_parent.reset();
+    return result == SQLITE_OK;
+}
 
 void tag_search::finalize_current_tag(sqlite3* db) noexcept {
     std::string& tag = tac.get_current();

@@ -98,4 +98,7 @@ struct tag_parents_t {
     // Tag input fields the user will submit
     tag_autocomplete autocomp_child;
     tag_autocomplete autocomp_parent;
+
+    // Add the tags the user typed to the database as a parent/child pair
+    bool apply_current_pair(sqlite3* db) noexcept;
 };
