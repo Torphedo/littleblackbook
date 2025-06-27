@@ -1,14 +1,15 @@
 #include "runtime_records.hxx"
+#include <cstring>
 #include <cassert>
 
 #include <common/crc32.h>
 #include <common/logging.h>
 
-#include <cstring>
 #include <sqlgen.hxx>
 #include <stringcase.hxx>
 #include <tags.hxx>
 #include <schema.hxx>
+#include <scope_timer.hxx>
 
 bool tag_parents_t::apply_current_pair(sqlite3* db) noexcept {
     const auto& child = autocomp_child.get_current();
@@ -163,4 +164,146 @@ void tag_autocomplete::reset() noexcept {
     candidates.clear();
     user_str = "";
     cur_idx = 0;
+}
+bool blackbook_core::load_from_db() {
+    { // Scope for timer
+    const scope_timer load_timer(timer_map, "db_load");
+
+    // Wipe current state
+    song_map.clear();
+    tags.clear();
+    tag_parents.pairs.clear();
+
+    static const char namespaces_sql[] = "SELECT namespace, hash FROM namespaces";
+    static const char tags_sql[] = "SELECT tag, hash, namespace_hash FROM tags";
+    // This ensures that tags displayed on each song include parents up to 3 layers deep
+    static const char tagmap_sql[] = "SELECT tag_hash, song_hash FROM " RESOLVED_TAG_SONG_TABLE ";";
+    static const char tagparents_sql[] = "SELECT parent_hash, child_hash FROM " TAG_PARENT_TABLE;
+
+    // Try to load songs
+    if (!load_songs_by_query(db)) {
+        return false; // Error printed for us
+    }
+
+    // Compile all of our basic SQL queries
+    sqlite3_stmt* fetchnamespaces = compile_sql(namespaces_sql, ARRAY_SIZE(namespaces_sql) + 1, db);
+    sqlite3_stmt* fetchtags = compile_sql(tags_sql, ARRAY_SIZE(tags_sql) + 1, db);
+    sqlite3_stmt* fetchtagmap = compile_sql(tagmap_sql, ARRAY_SIZE(tagmap_sql) + 1, db);
+    sqlite3_stmt* fetchtagparents = compile_sql(tagparents_sql, ARRAY_SIZE(tagparents_sql) + 1, db);
+    if (!fetchnamespaces || !fetchtags || !fetchtagmap || !fetchtagparents) {
+        sqlite3_finalize(fetchnamespaces);
+        sqlite3_finalize(fetchtags);
+        sqlite3_finalize(fetchtagmap);
+        sqlite3_finalize(fetchtagparents);
+        return false; // Error already printed for us
+    }
+
+    // TODO: Check for errors after each sqlite3_step() loop so we can get detailed error messages
+
+    // Load tag namespaces
+    int exec_result = SQLITE_OK;
+    while ((exec_result = sqlite3_step(fetchnamespaces)) == SQLITE_ROW) {
+        const unsigned char* nspace = sqlite3_column_text(fetchnamespaces, 0);
+        const tag_hash_t hash = sqlite3_column_int(fetchnamespaces, 1);
+
+        namespaces[hash] = (char*)nspace;
+    }
+    sql_handle_error("Error while loading namespaces:", db, exec_result);
+
+    // Load tags
+    while ((exec_result = sqlite3_step(fetchtags)) == SQLITE_ROW) {
+        const unsigned char* tag = sqlite3_column_text(fetchtags, 0);
+        const tag_hash_t hash = sqlite3_column_int(fetchtags, 1);
+        const tag_hash_t namespace_hash = sqlite3_column_int(fetchtags, 2);
+        std::string nspace = "";
+        // We could probably handle this in SQL with a more complicated query
+        // doing a join, but this is fine. This also handles NULL ns hashes,
+        // since they return 0 and we won't have a hash of 0 (probably).
+        if (namespaces.count(namespace_hash)) {
+            nspace += namespaces[namespace_hash] + ":";
+        }
+
+        tags[hash] = nspace + std::string((char*)tag);
+    }
+    sql_handle_error("Error while loading tags:", db, exec_result);
+
+    // Attach tags to their corresponding songs
+    while ((exec_result = sqlite3_step(fetchtagmap)) == SQLITE_ROW) {
+        const tag_hash_t tag_hash = sqlite3_column_int(fetchtagmap, 0);
+        const song_hash_t song_hash = sqlite3_column_int(fetchtagmap, 1);
+
+        // Add the tag to the song
+        if (song_map.count(song_hash)) {
+            song_map[song_hash].tags.insert(tag_hash);
+        }
+    }
+    sql_handle_error("Error while loading songs:", db, exec_result);
+
+    // Add parented tags to songs as needed
+    while ((exec_result = sqlite3_step(fetchtagparents)) == SQLITE_ROW) {
+        const tag_hash_t parent_hash = sqlite3_column_int(fetchtagparents, 0);
+        const tag_hash_t child_hash = sqlite3_column_int(fetchtagparents, 1);
+
+        // Our tag query handles parents up to 3 layers deep, no need to handle here.
+        tag_parents.pairs.push_back((linked_tags){parent_hash, child_hash});
+    }
+    sql_handle_error("Error while loading tag parents:", db, exec_result);
+
+    // Free our compiled SQL queries
+    sqlite3_finalize(fetchnamespaces);
+    sqlite3_finalize(fetchtags);
+    sqlite3_finalize(fetchtagmap);
+    sqlite3_finalize(fetchtagparents);
+
+    need_reload = false; // Reset reload flag
+
+    } // Scope for timer
+    LOG_MSG(info, "Finished loading from database in %.3fms\n", timer_map["db_load"]);
+    return true;
+}
+
+bool blackbook_core::load_songs_by_query(sqlite3* db, const char* query) {
+    // We don't bother getting album/artist, since those are stored as tags.
+    static const char fetchsongs_sql[] = "SELECT title, year, lyrics, hash, import_timestamp, duration_secs FROM songs";
+    if (!query) {
+        query = fetchsongs_sql;
+    }
+
+    sqlite3_stmt* fetchsongs = compile_sql(fetchsongs_sql, ARRAY_SIZE(fetchsongs_sql) + 1, db);
+    if (!fetchsongs) {
+        sqlite3_finalize(fetchsongs);
+        return false; // Error already printed for us
+    }
+
+    // Load songs
+    int exec_result = 0;
+    while ((exec_result = sqlite3_step(fetchsongs)) == SQLITE_ROW) {
+        const unsigned char* title = sqlite3_column_text(fetchsongs, 0);
+        const u32 year = sqlite3_column_int(fetchsongs, 1);
+        const song_hash_t hash = sqlite3_column_int(fetchsongs, 3);
+        const time_t time = sqlite3_column_int(fetchsongs, 4);
+
+        // Construct in-place to encourage use of the move ctor, to avoid cloning strings
+        song_map[hash] = (runtime_song) {
+            .name = (char*)title,
+            .import_timestamp = time,
+            .hash = hash,
+            .release_year = year,
+        };
+    }
+
+    sqlite3_finalize(fetchsongs);
+    return true;
+}
+
+blackbook_core::blackbook_core(sqlite3* db, const char* files_dir) : files_dir(files_dir) {
+    this->db = db;
+
+    bool result = true;
+    if (!load_from_db()) {
+        db = nullptr;
+        result = false;
+    }
+
+    initialized = result;
 }

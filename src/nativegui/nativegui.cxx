@@ -13,151 +13,12 @@
 #include <schema.hxx>
 #include <scope_timer.hxx>
 #include <song.hxx>
+#include <tags.hxx>
 #include "runtime_records.hxx"
-#include "tags.hxx"
 #include "nfde_wrapper.hxx"
 
-bool nativegui::load_songs_by_query(sqlite3* db, const char* query) {
-    // We don't bother getting album/artist, since those are stored as tags.
-    static const char fetchsongs_sql[] = "SELECT title, year, lyrics, hash, import_timestamp, duration_secs FROM songs";
-    if (!query) {
-        query = fetchsongs_sql;
-    }
-
-    sqlite3_stmt* fetchsongs = compile_sql(fetchsongs_sql, ARRAY_SIZE(fetchsongs_sql) + 1, db);
-    if (!fetchsongs) {
-        sqlite3_finalize(fetchsongs);
-        return false; // Error already printed for us
-    }
-
-    // Load songs
-    int exec_result = 0;
-    while ((exec_result = sqlite3_step(fetchsongs)) == SQLITE_ROW) {
-        const unsigned char* title = sqlite3_column_text(fetchsongs, 0);
-        const u32 year = sqlite3_column_int(fetchsongs, 1);
-        const song_hash_t hash = sqlite3_column_int(fetchsongs, 3);
-        const time_t time = sqlite3_column_int(fetchsongs, 4);
-
-        // Construct in-place to encourage use of the move ctor, to avoid cloning strings
-        song_map[hash] = (runtime_song) {
-            .name = (char*)title,
-            .import_timestamp = time,
-            .hash = hash,
-            .release_year = year,
-        };
-    }
-
-    sqlite3_finalize(fetchsongs);
-    return true;
-}
-
-bool nativegui::load_from_db() {
-    { // Scope for timer
-    const scope_timer load_timer(timer_map, "db_load");
-
-    // Wipe current state
-    song_map.clear();
-    tags.clear();
-    tag_parents.pairs.clear();
-
-    static const char namespaces_sql[] = "SELECT namespace, hash FROM namespaces";
-    static const char tags_sql[] = "SELECT tag, hash, namespace_hash FROM tags";
-    // This ensures that tags displayed on each song include parents up to 3 layers deep
-    static const char tagmap_sql[] = "SELECT tag_hash, song_hash FROM " RESOLVED_TAG_SONG_TABLE ";";
-    static const char tagparents_sql[] = "SELECT parent_hash, child_hash FROM " TAG_PARENT_TABLE;
-
-    // Try to load songs
-    if (!load_songs_by_query(db)) {
-        return false; // Error printed for us
-    }
-
-    // Compile all of our basic SQL queries
-    sqlite3_stmt* fetchnamespaces = compile_sql(namespaces_sql, ARRAY_SIZE(namespaces_sql) + 1, db);
-    sqlite3_stmt* fetchtags = compile_sql(tags_sql, ARRAY_SIZE(tags_sql) + 1, db);
-    sqlite3_stmt* fetchtagmap = compile_sql(tagmap_sql, ARRAY_SIZE(tagmap_sql) + 1, db);
-    sqlite3_stmt* fetchtagparents = compile_sql(tagparents_sql, ARRAY_SIZE(tagparents_sql) + 1, db);
-    if (!fetchnamespaces || !fetchtags || !fetchtagmap || !fetchtagparents) {
-        sqlite3_finalize(fetchnamespaces);
-        sqlite3_finalize(fetchtags);
-        sqlite3_finalize(fetchtagmap);
-        sqlite3_finalize(fetchtagparents);
-        return false; // Error already printed for us
-    }
-
-    // TODO: Check for errors after each sqlite3_step() loop so we can get detailed error messages
-
-    // Load tag namespaces
-    int exec_result = SQLITE_OK;
-    while ((exec_result = sqlite3_step(fetchnamespaces)) == SQLITE_ROW) {
-        const unsigned char* nspace = sqlite3_column_text(fetchnamespaces, 0);
-        const tag_hash_t hash = sqlite3_column_int(fetchnamespaces, 1);
-
-        namespaces[hash] = (char*)nspace;
-    }
-    sql_handle_error("Error while loading namespaces:", db, exec_result);
-
-    // Load tags
-    while ((exec_result = sqlite3_step(fetchtags)) == SQLITE_ROW) {
-        const unsigned char* tag = sqlite3_column_text(fetchtags, 0);
-        const tag_hash_t hash = sqlite3_column_int(fetchtags, 1);
-        const tag_hash_t namespace_hash = sqlite3_column_int(fetchtags, 2);
-        std::string nspace = "";
-        // We could probably handle this in SQL with a more complicated query
-        // doing a join, but this is fine. This also handles NULL ns hashes,
-        // since they return 0 and we won't have a hash of 0 (probably).
-        if (namespaces.count(namespace_hash)) {
-            nspace += namespaces[namespace_hash] + ":";
-        }
-
-        tags[hash] = nspace + std::string((char*)tag);
-    }
-    sql_handle_error("Error while loading tags:", db, exec_result);
-
-    // Attach tags to their corresponding songs
-    while ((exec_result = sqlite3_step(fetchtagmap)) == SQLITE_ROW) {
-        const tag_hash_t tag_hash = sqlite3_column_int(fetchtagmap, 0);
-        const song_hash_t song_hash = sqlite3_column_int(fetchtagmap, 1);
-
-        // Add the tag to the song
-        if (song_map.count(song_hash)) {
-            song_map[song_hash].tags.insert(tag_hash);
-        }
-    }
-    sql_handle_error("Error while loading songs:", db, exec_result);
-
-    // Add parented tags to songs as needed
-    while ((exec_result = sqlite3_step(fetchtagparents)) == SQLITE_ROW) {
-        const tag_hash_t parent_hash = sqlite3_column_int(fetchtagparents, 0);
-        const tag_hash_t child_hash = sqlite3_column_int(fetchtagparents, 1);
-
-        // Our tag query handles parents up to 3 layers deep, no need to handle here.
-        tag_parents.pairs.push_back((linked_tags){parent_hash, child_hash});
-    }
-    sql_handle_error("Error while loading tag parents:", db, exec_result);
-
-    // Free our compiled SQL queries
-    sqlite3_finalize(fetchnamespaces);
-    sqlite3_finalize(fetchtags);
-    sqlite3_finalize(fetchtagmap);
-    sqlite3_finalize(fetchtagparents);
-
-    need_reload = false; // Reset reload flag
-
-    } // Scope for timer
-    LOG_MSG(info, "Finished loading from database in %.3fms\n", timer_map["db_load"]);
-    return true;
-}
-
-nativegui::nativegui(sqlite3* db, const char* files_dir) : files_dir(files_dir) {
-    this->db = db;
-
-    bool result = true;
-    if (!load_from_db()) {
-        db = nullptr;
-        result = false;
-    }
-
-    initialized = result;
+nativegui::nativegui(sqlite3* db, const char* files_dir) : core(blackbook_core(db, files_dir)) {
+    initialized = core.initialized;
 }
 
 bool nativegui::draw_song_editor(runtime_song& song) {
@@ -177,7 +38,7 @@ bool nativegui::draw_song_editor(runtime_song& song) {
     if (song.tags.size() > 0) {
         ImGui::Text("Tags:");
         for (song_hash_t hash : song.tags) {
-            const std::string& tag = tags[hash];
+            const std::string& tag = core.tags[hash];
             ImGui::Text("%s", tag.c_str());
         }
         ImGui::Text("\n");
@@ -236,8 +97,8 @@ bool nativegui::InputTagAutocompleted(const char* label, const char* hint, ImGui
 
     // This is done via flag so we have the db ptr and access to timer output
     if (tac.need_refresh) {
-        const scope_timer main_timer(timer_map, "tag_autocomplete");
-        tac.update_results(db);
+        const scope_timer main_timer(core.timer_map, "tag_autocomplete");
+        tac.update_results(core.db);
         tac.need_refresh = false;
     }
 
@@ -254,28 +115,28 @@ void nativegui::draw_search_menu() noexcept {
     ImGui::Begin("Search");
 
     // Show current tags and input box
-    for (const std::string& tag : search.tags) {
+    for (const std::string& tag : core.search.tags) {
         ImGui::Text("%s", tag.c_str());
     }
 
     // Focus text input so user can keep typing
-    if (search.tac.should_refocus_input) {
-        search.tac.should_refocus_input = false; // Reset flag
+    if (core.search.tac.should_refocus_input) {
+        core.search.tac.should_refocus_input = false; // Reset flag
         ImGui::SetKeyboardFocusHere();
     }
 
     // Input for next tag
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
-    if (InputTagAutocompleted("##tag", "Input a tag", flags, search.tac)) {
-        const scope_timer main_timer(timer_map, "last_search");
+    if (InputTagAutocompleted("##tag", "Input a tag", flags, core.search.tac)) {
+        const scope_timer main_timer(core.timer_map, "last_search");
         // This also executes the search and updates our state
-        search.finalize_current_tag(db);
-        search.tac.reset(); // Must come 2nd since it contains the current tag
+        core.search.finalize_current_tag(core.db);
+        core.search.tac.reset(); // Must come 2nd since it contains the current tag
     }
 
     // Display results
-    for (song_hash_t hash : search.result_hashes) {
-        const runtime_song& s = song_map[hash];
+    for (song_hash_t hash : core.search.result_hashes) {
+        const runtime_song& s = core.song_map[hash];
         if (ImGui::Selectable(s.name.c_str())) {
             song_editors.insert(s.hash);
         }
@@ -296,7 +157,7 @@ void nativegui::draw_song_list() noexcept {
         ImGui::TableHeadersRow();
 
         // Draw a row for each chunk
-        for (const auto& pair : song_map) {
+        for (const auto& pair : core.song_map) {
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
 
@@ -324,27 +185,28 @@ void nativegui::draw_tag_parents() noexcept {
     }
 
     ImGui::Begin("Tag Parents");
-    if (tag_parents.autocomp_child.should_refocus_input) {
-        tag_parents.autocomp_child.should_refocus_input = false;
+    // TODO: This is deranged.
+    if (core.tag_parents.autocomp_child.should_refocus_input) {
+        core.tag_parents.autocomp_child.should_refocus_input = false;
         ImGui::SetKeyboardFocusHere();
     }
 
     const ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
-    if (InputTagAutocompleted("##c", "Child tag", flags, tag_parents.autocomp_child)) {
+    if (InputTagAutocompleted("##c", "Child tag", flags, core.tag_parents.autocomp_child)) {
         // Child is done, focus next box
-        tag_parents.autocomp_child.should_refocus_input = false;
-        tag_parents.autocomp_parent.should_refocus_input = true;
+        core.tag_parents.autocomp_child.should_refocus_input = false;
+        core.tag_parents.autocomp_parent.should_refocus_input = true;
     }
 
-    if (tag_parents.autocomp_parent.should_refocus_input) {
-        tag_parents.autocomp_parent.should_refocus_input = false;
+    if (core.tag_parents.autocomp_parent.should_refocus_input) {
+        core.tag_parents.autocomp_parent.should_refocus_input = false;
         ImGui::SetKeyboardFocusHere();
     }
-    bool apply = InputTagAutocompleted("##p", "Parent tag", flags, tag_parents.autocomp_parent);
+    bool apply = InputTagAutocompleted("##p", "Parent tag", flags, core.tag_parents.autocomp_parent);
     // Let user apply by hitting Enter or using the button
     apply |= ImGui::Button("Apply");
     if (apply) {
-        need_reload |= tag_parents.apply_current_pair(db);
+        core.need_reload |= core.tag_parents.apply_current_pair(core.db);
     }
 
     if (ImGui::BeginTable("tag parent table", 3, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {
@@ -357,14 +219,14 @@ void nativegui::draw_tag_parents() noexcept {
         ImGui::TableHeadersRow();
 
         // Draw a row for each pair
-        for (const auto& pair : tag_parents.pairs) {
+        for (const auto& pair : core.tag_parents.pairs) {
             const char* parent_str = "[hash %d]";
             const char* child_str = parent_str;
-            if (tags.count(pair.child)) {
-                child_str = tags[pair.child].c_str();
+            if (core.tags.count(pair.child)) {
+                child_str = core.tags[pair.child].c_str();
             }
-            if (tags.count(pair.parent)) {
-                parent_str = tags[pair.parent].c_str();
+            if (core.tags.count(pair.parent)) {
+                parent_str = core.tags[pair.parent].c_str();
             }
 
             ImGui::TableNextRow();
@@ -380,8 +242,8 @@ void nativegui::draw_tag_parents() noexcept {
             if (ImGui::Button("Delete pair") && parent_str && child_str) {
                 std::string sql;
                 unlink_tags_sql(parent_str, child_str, sql);
-                sqlite3_exec(db, sql.c_str(), nullptr, nullptr, nullptr);
-                need_reload = true;
+                sqlite3_exec(core.db, sql.c_str(), nullptr, nullptr, nullptr);
+                core.need_reload = true;
             }
             ImGui::PopID();
         }
@@ -397,14 +259,14 @@ void nativegui::draw_toolbar() noexcept {
 
     const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl);
     bool import_files = ctrl_pressed && ImGui::IsKeyPressed(ImGuiKey_I, false);
-    need_reload |= ImGui::IsKeyPressed(ImGuiKey_F5, false);
-    need_reload |= ctrl_pressed && ImGui::IsKeyPressed(ImGuiKey_R, false);
+    core.need_reload |= ImGui::IsKeyPressed(ImGuiKey_F5, false);
+    core.need_reload |= ctrl_pressed && ImGui::IsKeyPressed(ImGuiKey_R, false);
 
     if (ImGui::BeginViewportSideBar("MainMenu", viewport, ImGuiDir_Up, height, flags)) {
         if (ImGui::BeginMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 import_files |= ImGui::MenuItem("Import files", "Ctrl-I");
-                need_reload |= ImGui::MenuItem("Reload from database", "F5 / Ctrl-R");
+                core.need_reload |= ImGui::MenuItem("Reload from database", "F5 / Ctrl-R");
                 ImGui::EndMenu();
             }
 
@@ -444,7 +306,7 @@ void nativegui::draw_toolbar() noexcept {
             const char* const* paths = import_path_ptrs.data();
             const u32 num_paths = import_path_ptrs.size();
             // Run imports on another thread so UI doesn't lock up
-            import_thread = std::thread(import_many_files_many_threads, paths, num_paths, files_dir, db, &import_stats);
+            import_thread = std::thread(import_many_files_many_threads, paths, num_paths, core.files_dir, core.db, &import_stats);
             import_thread.detach();
             show_import_window = true;
         }
@@ -457,7 +319,7 @@ void nativegui::draw_timers() noexcept {
     }
 
     ImGui::Begin("Performance Timers", &show_timers);
-    for (const auto& entry : timer_map) {
+    for (const auto& entry : core.timer_map) {
         ImGui::Text("%s: %.2lfms", entry.first, entry.second);
     }
     ImGui::End();
@@ -493,9 +355,9 @@ void nativegui::draw_import_progress() noexcept {
 
 bool gui_main(void* ctx, GLFWwindow* window) {
     nativegui* gui = (nativegui*)ctx;
-    const scope_timer main_timer(gui->timer_map, "main_draw");
-    if (gui->need_reload) {
-        gui->load_from_db();
+    const scope_timer main_timer(gui->core.timer_map, "main_draw");
+    if (gui->core.need_reload) {
+        gui->core.load_from_db();
     }
 
     gui->draw_toolbar();
@@ -507,7 +369,7 @@ bool gui_main(void* ctx, GLFWwindow* window) {
 
     std::vector<song_hash_t> editors_to_close(0); // Reserve 0 since this is rare
     for (song_hash_t song_hash : gui->song_editors) {
-        if (!gui->draw_song_editor(gui->song_map[song_hash])) {
+        if (!gui->draw_song_editor(gui->core.song_map[song_hash])) {
             editors_to_close.push_back(song_hash);
         }
     }

@@ -16,59 +16,24 @@ struct nativegui {
     // Set by ctor to indicate results (instead of an exception)
     bool initialized = false;
 
-    sqlite3* db = nullptr;
-    const char* files_dir;
-
-    // Doubles as song storage, and a lookup by hash
-    std::map<song_hash_t, runtime_song> song_map;
-
-    std::map<tag_hash_t, std::string> namespaces;
-
-    // Doubles as tag storage, and a lookup by hash
-    std::map<tag_hash_t, std::string> tags;
-
-    // Set this flag to trigger a reload at the start of the next frame
-    bool need_reload = false;
-
-    /// @brief Load songs from database, optionally with a custom query
-    bool load_songs_by_query(sqlite3* db, const char* query = nullptr);
-
-    /// @brief Load songs and tags from the database
-    ///
-    /// Loads from scratch all songs and tags, the tag<->song mapping, and
-    /// parent-child tag mappings. Automatically reloads all open searches using
-    /// the new data
-    bool load_from_db();
-    // Maybe also add a "lazy" version that only loads new songs whose hash we
-    // don't recognize
-
-    /* ======================================================================= */
-    /*                   ImGui Drawing Functions & UI State                    */
-    /* ======================================================================= */
-
-    // Debug performance timers
-    bool show_timers = false;
-    std::unordered_map<const char*, float> timer_map;
+    blackbook_core core;
 
     // All song hashes that need their editing window drawn
     std::set<song_hash_t> song_editors;
 
-    // Search window state
-    bool show_search = false; // Toggle for search window
-    tag_search search;
-
-    // Import window state
+    // Window visibility states
+    bool show_search = false;
+    bool show_tag_parents = false;
     bool show_import_window = false;
+    bool show_timers = false;
+
+    // File import state
     import_stats_t import_stats;
     std::thread import_thread;
 
     // Temporary storage for import process
     std::vector<std::string> import_paths;
     std::vector<const char*> import_path_ptrs;
-
-    // Tag parent window state
-    bool show_tag_parents = false;
-    tag_parents_t tag_parents;
 
     bool draw_song_editor(runtime_song& song);
 

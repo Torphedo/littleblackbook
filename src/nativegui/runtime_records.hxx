@@ -1,11 +1,17 @@
 #pragma once
 // This file is for structures representing database records, in the format most
-// convenient for use at runtime. Class methods are meant to isolate application
-// logic without being tied to any GUI code.
+// convenient for use at runtime. We almost always sacrifice memory for speed and
+// rendering simplicity (unless it creates duplicate state).
+//
+// The goal here is to make all the behaviour "headless" and separate from GUI
+// code. That way, we can easily expose features on CLI or write a new frontend
+// as a thin shell around this API.
 
 #include <string>
 #include <vector>
 #include <set>
+#include <map>
+#include <unordered_map>
 
 #include <sqlite3.h>
 
@@ -25,6 +31,7 @@ struct runtime_song {
     std::set<tag_hash_t> tags;
 };
 
+// Implementation for a tag input box with autocomplete
 struct tag_autocomplete {
     // Number of results we show
     static const u8 AUTOCOMPLETE_SIZE = 5;
@@ -61,15 +68,17 @@ struct tag_autocomplete {
     std::string& get_current() noexcept;
 
     /// @brief Update the autocomplete candidates using the contents of @ref [user_str].
-    /// @param db The database to query for results
+    /// @param db The database to query for results. The database won't be modified.
     bool update_results(sqlite3* db) noexcept;
 
     // Wipe all text/state
     void reset() noexcept;
 };
 
+// A headless search menu
 struct tag_search {
     // The tags currently being searched for
+    // TODO: Can we make this a set of hashes? How do we deal with negated tags?
     std::vector<std::string> tags;
 
     // Autocomplete results and tag input buffer
@@ -92,6 +101,7 @@ struct tag_search {
     void update_results(sqlite3* db) noexcept;
 };
 
+// Headless logic for a tag parent editing window
 struct tag_parents_t {
     std::vector<linked_tags> pairs;
 
@@ -101,4 +111,45 @@ struct tag_parents_t {
 
     // Add the tags the user typed to the database as a parent/child pair
     bool apply_current_pair(sqlite3* db) noexcept;
+};
+
+// Container for all "core" application state (all non-UI state). Some text box
+// state is here too, but only those that involve autocomplete.
+struct blackbook_core {
+    bool initialized = false;
+    sqlite3* db = nullptr;
+    const char* files_dir;
+
+    // Doubles as song storage, and a lookup by hash
+    std::map<song_hash_t, runtime_song> song_map;
+
+    std::map<tag_hash_t, std::string> namespaces;
+
+    // Doubles as tag storage, and a lookup by hash
+    std::map<tag_hash_t, std::string> tags;
+
+    tag_search search;
+
+    tag_parents_t tag_parents;
+
+    // Debug performance timers
+    std::unordered_map<const char*, float> timer_map;
+
+    // Set this flag to trigger a reload at the start of the next frame
+    bool need_reload = false;
+
+    /// @brief Load songs from database, optionally with a custom query
+    bool load_songs_by_query(sqlite3* db, const char* query = nullptr);
+
+    /// @brief Load songs and tags from the database
+    ///
+    /// Loads from scratch all songs and tags, the tag<->song mapping, and
+    /// parent-child tag mappings. Automatically reloads all open searches using
+    /// the new data
+    bool load_from_db();
+    // Maybe also add a "lazy" version that only loads new songs whose hash we
+    // don't recognize
+
+    /// @brief Load everything from the database
+    blackbook_core(sqlite3* db, const char* files_dir);
 };

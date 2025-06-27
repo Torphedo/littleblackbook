@@ -1,6 +1,8 @@
 #pragma once
+/// @file id3.hxx
+/// Parsing for ID3 metadata tags used in MP3 files
+
 #include <cassert>
-#include <memory>
 #include <string>
 #include <common/int.h>
 #include <common/file.h>
