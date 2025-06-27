@@ -31,13 +31,14 @@ struct runtime_song {
     std::set<tag_hash_t> tags;
 };
 
-// Implementation for a tag input box with autocomplete
+// Implementation for a tag input box with autocomplete.
+// Often abbreviated as "TAC" / "tac" (looks a lot like "tag", sorry... - torph)
 struct tag_autocomplete {
     // Number of results we show
     static const u8 AUTOCOMPLETE_SIZE = 5;
 
     // A hint to the UI that it should refocus the text box
-    bool should_refocus_input = false;
+    bool need_refocus = false;
 
     // A hint to call apply_selection() ASAP
     bool need_apply = false;
@@ -65,7 +66,7 @@ struct tag_autocomplete {
     /// @brief Get the current string that should be in the text box
     ///
     /// The only reason this isn't const is that it returns a mutable reference.
-    std::string& get_current() noexcept;
+    std::string& current() noexcept;
 
     /// @brief Update the autocomplete candidates using the contents of @ref [user_str].
     /// @param db The database to query for results. The database won't be modified.
@@ -106,8 +107,8 @@ struct tag_parents_t {
     std::vector<linked_tags> pairs;
 
     // Tag input fields the user will submit
-    tag_autocomplete autocomp_child;
-    tag_autocomplete autocomp_parent;
+    tag_autocomplete tac_child;
+    tag_autocomplete tac_parent;
 
     // Add the tags the user typed to the database as a parent/child pair
     bool apply_current_pair(sqlite3* db) noexcept;

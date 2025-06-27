@@ -12,8 +12,8 @@
 #include <scope_timer.hxx>
 
 bool tag_parents_t::apply_current_pair(sqlite3* db) noexcept {
-    const auto& child = autocomp_child.get_current();
-    const auto& parent = autocomp_parent.get_current();
+    const auto& child = tac_child.current();
+    const auto& parent = tac_parent.current();
 
     std::string sql;
     link_tags_sql(parent.c_str(), child.c_str(), sql);
@@ -25,13 +25,13 @@ bool tag_parents_t::apply_current_pair(sqlite3* db) noexcept {
     }
 
     // Reset and reload
-    autocomp_child.reset();
-    autocomp_parent.reset();
+    tac_child.reset();
+    tac_parent.reset();
     return result == SQLITE_OK;
 }
 
 void tag_search::finalize_current_tag(sqlite3* db) noexcept {
-    std::string& tag = tac.get_current();
+    std::string& tag = tac.current();
 
     // Allows user to refresh by hitting enter in the text box. Otherwise, we'd
     // try to add an empty string to our list of tags.
@@ -145,12 +145,12 @@ void tag_autocomplete::update_selection(s8 diff) noexcept {
 
 void tag_autocomplete::apply_selection() noexcept {
     // User selected a result. Copy to user buffer and wipe results.
-    user_str = get_current();
+    user_str = current();
     candidates.clear();
     cur_idx = 0;
 }
 
-std::string& tag_autocomplete::get_current() noexcept {
+std::string& tag_autocomplete::current() noexcept {
     assert(cur_idx <= candidates.size() && cur_idx >= 0 && "Autocomplete index out of bounds!");
 
     if (cur_idx == 0) {

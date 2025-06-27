@@ -71,7 +71,7 @@ static int autocomplete_update_selection(ImGuiInputTextCallbackData* data) {
     const bool prefix_minus = data->Buf[0] == '-';
 
     tac->update_selection(diff);
-    tac->should_refocus_input = true;
+    tac->need_refocus = true;
 
     return 0;
 }
@@ -83,9 +83,9 @@ bool nativegui::InputTagAutocompleted(const char* label, const char* hint, ImGui
 
     // We need a callback to make this work
     flags |= ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackEdit;
-    if (ImGui::InputTextWithHint(real_label.c_str(), hint, &tac.get_current(), flags, autocomplete_update_selection, &tac)) {
+    if (ImGui::InputTextWithHint(real_label.c_str(), hint, &tac.current(), flags, autocomplete_update_selection, &tac)) {
         result = true;
-        tac.should_refocus_input = true;
+        tac.need_refocus = true;
     }
 
     // This is done via flag since it can invalidate pointers, which is a problem
@@ -120,8 +120,8 @@ void nativegui::draw_search_menu() noexcept {
     }
 
     // Focus text input so user can keep typing
-    if (core.search.tac.should_refocus_input) {
-        core.search.tac.should_refocus_input = false; // Reset flag
+    if (core.search.tac.need_refocus) {
+        core.search.tac.need_refocus = false; // Reset flag
         ImGui::SetKeyboardFocusHere();
     }
 
@@ -184,28 +184,29 @@ void nativegui::draw_tag_parents() noexcept {
         return;
     }
 
-    ImGui::Begin("Tag Parents");
-    // TODO: This is deranged.
-    if (core.tag_parents.autocomp_child.should_refocus_input) {
-        core.tag_parents.autocomp_child.should_refocus_input = false;
+    ImGui::Begin("Tag Parents", &show_tag_parents);
+    // TODO: This is too many layers.
+    if (core.tag_parents.tac_child.need_refocus) {
+        core.tag_parents.tac_child.need_refocus = false;
         ImGui::SetKeyboardFocusHere();
     }
 
-    const ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
-    if (InputTagAutocompleted("##c", "Child tag", flags, core.tag_parents.autocomp_child)) {
+    ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
+    if (InputTagAutocompleted("##c", "Child tag", flags, core.tag_parents.tac_child)) {
         // Child is done, focus next box
-        core.tag_parents.autocomp_child.should_refocus_input = false;
-        core.tag_parents.autocomp_parent.should_refocus_input = true;
+        core.tag_parents.tac_child.need_refocus = false;
+        core.tag_parents.tac_parent.need_refocus = true;
     }
 
-    if (core.tag_parents.autocomp_parent.should_refocus_input) {
-        core.tag_parents.autocomp_parent.should_refocus_input = false;
+    if (core.tag_parents.tac_parent.need_refocus) {
+        core.tag_parents.tac_parent.need_refocus = false;
         ImGui::SetKeyboardFocusHere();
     }
-    bool apply = InputTagAutocompleted("##p", "Parent tag", flags, core.tag_parents.autocomp_parent);
+    bool apply = InputTagAutocompleted("##p", "Parent tag", flags, core.tag_parents.tac_parent);
     // Let user apply by hitting Enter or using the button
     apply |= ImGui::Button("Apply");
     if (apply) {
+        // TODO: This is all on core now, it should be handling the reload flag behaviour.
         core.need_reload |= core.tag_parents.apply_current_pair(core.db);
     }
 
@@ -288,6 +289,7 @@ void nativegui::draw_toolbar() noexcept {
     }
 
 
+    // This should probably be its own method, right? - torph
     if (import_files) {
         import_stats.reset();
         import_path_ptrs.clear();
@@ -307,7 +309,7 @@ void nativegui::draw_toolbar() noexcept {
             const u32 num_paths = import_path_ptrs.size();
             // Run imports on another thread so UI doesn't lock up
             import_thread = std::thread(import_many_files_many_threads, paths, num_paths, core.files_dir, core.db, &import_stats);
-            import_thread.detach();
+            import_thread.detach(); // Otherwise dtor will try to kill it later and crash
             show_import_window = true;
         }
     }
