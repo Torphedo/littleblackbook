@@ -59,23 +59,23 @@ add_subdirectory(lib/sqlite)
 add_executable(blackbook
     src/main.cxx
     src/id3.cxx
-    src/song.cxx
+    src/import.cxx
     src/tags.cxx
     src/sqlgen.cxx
+    src/blackbook_core.cxx
 
-    src/arguments.cxx
-    src/scope_timer.cxx
-    src/stringcase.cxx
+    src/nativegui/gui_bootstrap.cxx
+    src/nativegui/nativegui.cxx
+    src/nativegui/nfde_wrapper.cxx
 
     src/cli/cli_main.cxx
 
-    src/nativegui/gui_bootstrap.cxx
-    src/nativegui/imgui_utils.cxx
-    src/nativegui/nativegui.cxx
-    src/nativegui/runtime_records.cxx
-    src/nativegui/nfde_wrapper.cxx
+    # Generic sources
+    src/arguments.cxx
+    src/scope_timer.cxx
+    src/text_i8n.cxx
 
-    lib/glad/src/glad.c
+    lib/glad/src/glad.c # Can't be bothered to make this its own target
 )
 
 # We dynamically load this in SQLite to add CRC32 support for SQL code

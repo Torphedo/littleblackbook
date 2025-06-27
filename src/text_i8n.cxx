@@ -1,4 +1,4 @@
-#include "stringcase.hxx"
+#include "text_i8n.hxx"
 #include <algorithm>
 
 // TODO: This will break for any non-ASCII characters. We need to use the ICU

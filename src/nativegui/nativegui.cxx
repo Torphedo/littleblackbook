@@ -3,19 +3,14 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
-#include <nfd.h>
+#include "nfde_wrapper.hxx"
 
 #include <common/logging.h>
 #include <common/vfile.h>
 #include <common/crc32.h>
 
-#include <sqlgen.hxx>
-#include <schema.hxx>
-#include <scope_timer.hxx>
-#include <song.hxx>
 #include <tags.hxx>
-#include "runtime_records.hxx"
-#include "nfde_wrapper.hxx"
+#include <scope_timer.hxx>
 
 nativegui::nativegui(sqlite3* db, const char* files_dir) : core(blackbook_core(db, files_dir)) {
     initialized = core.initialized;

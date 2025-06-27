@@ -6,7 +6,7 @@
 #include <common/path.h>
 #include "sqlgen.hxx"
 #include "schema.hxx"
-#include "stringcase.hxx"
+#include "text_i8n.hxx"
 
 // TODO: This could return an array of positions instead, which would be a lot simpler
 std::vector<std::string> parse_artists(const char* str) {

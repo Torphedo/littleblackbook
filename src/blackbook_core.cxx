@@ -1,4 +1,4 @@
-#include "runtime_records.hxx"
+#include "blackbook_core.hxx"
 #include <cstring>
 #include <cassert>
 
@@ -6,7 +6,7 @@
 #include <common/logging.h>
 
 #include <sqlgen.hxx>
-#include <stringcase.hxx>
+#include <text_i8n.hxx>
 #include <tags.hxx>
 #include <schema.hxx>
 #include <scope_timer.hxx>

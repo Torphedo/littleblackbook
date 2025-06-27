@@ -1,5 +1,7 @@
 #pragma once
-#include <string>
+/// @file import.hxx
+/// An interface to import song files into the database. MP3-only for now.
+
 #include <atomic>
 #include <sqlite3.h>
 
@@ -8,7 +10,7 @@
 #include "id3.hxx"
 #include "schema.hxx"
 
-// C++ representation of a row in the song table
+// Representation of a row in the song table used during metadata parsing
 struct song_record {
     id3::text title; // Song title
     id3::text album;

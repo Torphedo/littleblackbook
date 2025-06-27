@@ -3,13 +3,11 @@
 #include <sqlite3.h>
 #include <imgui.h>
 
-#include <map>
 #include <thread>
-#include <unordered_map>
 
+#include <blackbook_core.hxx>
+#include <import.hxx>
 #include <schema.hxx>
-#include <song.hxx>
-#include "runtime_records.hxx"
 
 // Struct for all GUI state
 struct nativegui {

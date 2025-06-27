@@ -5,7 +5,7 @@
 #include <common/path.h>
 #include <cstdlib>
 
-#include <song.hxx>
+#include <import.hxx>
 #include <tags.hxx>
 #include <sqlgen.hxx>
 #include <schema.hxx>
