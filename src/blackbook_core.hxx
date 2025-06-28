@@ -102,18 +102,6 @@ struct tag_search {
     void update_results(sqlite3* db) noexcept;
 };
 
-// Headless logic for a tag parent editing window
-struct tag_parents_t {
-    std::vector<linked_tags> pairs;
-
-    // Tag input fields the user will submit
-    tag_autocomplete tac_child;
-    tag_autocomplete tac_parent;
-
-    // Add the tags the user typed to the database as a parent/child pair
-    bool apply_current_pair(sqlite3* db) noexcept;
-};
-
 // Container for all "core" application state (all non-UI state). Some text box
 // state is here too, but only those that involve autocomplete.
 struct blackbook_core {
@@ -131,13 +119,21 @@ struct blackbook_core {
 
     tag_search search;
 
-    tag_parents_t tag_parents;
+    // Tag parent input / display
+    std::vector<linked_tags> parent_pairs;
+
+    // Tag input fields the user will submit
+    tag_autocomplete tac_child;
+    tag_autocomplete tac_parent;
 
     // Debug performance timers
     std::unordered_map<const char*, float> timer_map;
 
     // Set this flag to trigger a reload at the start of the next frame
     bool need_reload = false;
+
+    // Apply the current tags in the parent/child inputs as a pair in the DB
+    bool apply_tag_pair() noexcept;
 
     /// @brief Load songs from database, optionally with a custom query
     bool load_songs_by_query(sqlite3* db, const char* query = nullptr);

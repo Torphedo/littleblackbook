@@ -187,28 +187,27 @@ void nativegui::draw_tag_parents() noexcept {
 
     ImGui::Begin("Tag Parents", &show_tag_parents);
     // TODO: This is too many layers.
-    if (core.tag_parents.tac_child.need_refocus) {
-        core.tag_parents.tac_child.need_refocus = false;
+    if (core.tac_child.need_refocus) {
+        core.tac_child.need_refocus = false;
         ImGui::SetKeyboardFocusHere();
     }
 
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
-    if (InputTagAutocompleted("##c", "Child tag", flags, core.tag_parents.tac_child)) {
+    if (InputTagAutocompleted("##c", "Child tag", flags, core.tac_child)) {
         // Child is done, focus next box
-        core.tag_parents.tac_child.need_refocus = false;
-        core.tag_parents.tac_parent.need_refocus = true;
+        core.tac_child.need_refocus = false;
+        core.tac_parent.need_refocus = true;
     }
 
-    if (core.tag_parents.tac_parent.need_refocus) {
-        core.tag_parents.tac_parent.need_refocus = false;
+    if (core.tac_parent.need_refocus) {
+        core.tac_parent.need_refocus = false;
         ImGui::SetKeyboardFocusHere();
     }
-    bool apply = InputTagAutocompleted("##p", "Parent tag", flags, core.tag_parents.tac_parent);
+    bool apply = InputTagAutocompleted("##p", "Parent tag", flags, core.tac_parent);
     // Let user apply by hitting Enter or using the button
     apply |= ImGui::Button("Apply");
     if (apply) {
-        // TODO: This is all on core now, it should be handling the reload flag behaviour.
-        core.need_reload |= core.tag_parents.apply_current_pair(core.db);
+        core.apply_tag_pair();
     }
 
     if (ImGui::BeginTable("tag parent table", 3, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {
@@ -221,7 +220,7 @@ void nativegui::draw_tag_parents() noexcept {
         ImGui::TableHeadersRow();
 
         // Draw a row for each pair
-        for (const auto& pair : core.tag_parents.pairs) {
+        for (const auto& pair : core.parent_pairs) {
             const char* parent_str = "[hash %d]";
             const char* child_str = parent_str;
             if (core.tags.count(pair.child)) {

@@ -11,7 +11,7 @@
 #include <schema.hxx>
 #include <scope_timer.hxx>
 
-bool tag_parents_t::apply_current_pair(sqlite3* db) noexcept {
+bool blackbook_core::apply_tag_pair() noexcept {
     const auto& child = tac_child.current();
     const auto& parent = tac_parent.current();
     if (child.empty() || parent.empty()) {
@@ -22,15 +22,16 @@ bool tag_parents_t::apply_current_pair(sqlite3* db) noexcept {
     link_tags_sql(parent.c_str(), child.c_str(), sql);
 
     char* errmsg = nullptr;
-    int result = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
-    if (result != SQLITE_OK && errmsg != nullptr) {
+    int sql_res = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
+    if (sql_res != SQLITE_OK && errmsg != nullptr) {
         LOG_MSG(error, "SQLite error: %s\n", errmsg);
     }
 
     // Reset and reload
     tac_child.reset();
     tac_parent.reset();
-    return result == SQLITE_OK;
+    need_reload = (sql_res == SQLITE_OK);
+    return (sql_res == SQLITE_OK);
 }
 
 void tag_search::finalize_current_tag(sqlite3* db) noexcept {
@@ -175,7 +176,7 @@ bool blackbook_core::load_from_db() {
     // Wipe current state
     song_map.clear();
     tags.clear();
-    tag_parents.pairs.clear();
+    parent_pairs.clear();
 
     static const char namespaces_sql[] = "SELECT namespace, hash FROM namespaces";
     static const char tags_sql[] = "SELECT tag, hash, namespace_hash FROM tags";
@@ -248,7 +249,7 @@ bool blackbook_core::load_from_db() {
         const tag_hash_t child_hash = sqlite3_column_int(fetchtagparents, 1);
 
         // Our tag query handles parents up to 3 layers deep, no need to handle here.
-        tag_parents.pairs.push_back((linked_tags){parent_hash, child_hash});
+        parent_pairs.push_back((linked_tags){parent_hash, child_hash});
     }
     sql_handle_error("Error while loading tag parents:", db, exec_result);
 
