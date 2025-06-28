@@ -4,6 +4,7 @@
 #include <common/int.h>
 #include <common/crc32.h>
 #include <common/path.h>
+
 #include "sqlgen.hxx"
 #include "schema.hxx"
 #include "text_i8n.hxx"
@@ -90,10 +91,40 @@ void unlink_tags_sql(const char* parent, const char* child, std::string& sql_out
 }
 
 void search_tag(const char* tag, std::string& sql_out, bool standalone_query) {
-    const tag_hash_t tag_hash = crc32buf((u8*)tag, strlen(tag));
+    const char* colon = strchr(tag, ':');
+    const ptrdiff_t namespace_len = ptrdiff_t(colon) - ptrdiff_t(tag);
 
-    // Generate the SQL
-    sqlgen(sql_out, "SELECT song_hash FROM " RESOLVED_TAG_SONG_TABLE " WHERE tag_hash = %d", tag_hash);
+    bool is_year = false;
+    if (colon != nullptr) {
+        // This tag has a namespace, split it up.
+        if (strncmp(tag, "year", namespace_len) == 0) {
+            is_year = true;
+        }
+    }
+
+    if (!is_year) {
+        // Generate the normal SQL
+        const tag_hash_t tag_hash = crc32buf((u8*)tag, strlen(tag));
+        sqlgen(sql_out, "SELECT song_hash FROM " RESOLVED_TAG_SONG_TABLE " WHERE tag_hash = %d", tag_hash);
+
+        if (standalone_query) {
+            // Terminate the statement
+            sql_out.append(";\n");
+        }
+        return;
+    }
+
+    const char* tag_isolated = colon + 1;
+    char* endptr = nullptr;
+    const long year = strtol(tag_isolated, &endptr, 10);
+    if (endptr != nullptr && strcmp(endptr, "s") == 0) {
+        // This is a decade, do a range check
+        const long decade = year - (year % 10);
+        sqlgen(sql_out, "SELECT hash FROM songs WHERE year >= %ld AND year <= %ld", decade, decade + 9);
+    } else {
+        // Normal year query
+        sqlgen(sql_out, "SELECT hash FROM songs WHERE year = %ld", year);
+    }
 
     if (standalone_query) {
         // Terminate the statement
