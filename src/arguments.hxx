@@ -36,7 +36,7 @@ struct arguments {
     const char* values[VALUE_ARG_ENUM_MAX] = {0};
 
     // Whether the user provided the specified setting flag
-    bool settings[VALUE_ARG_ENUM_MAX] = {0};
+    bool settings[SETTING_ARG_ENUM_MAX] = {0};
 
     // The index of the first argument after the last known command-line flag.
     // All arguments from this index on should be filenames or other non-flag strings

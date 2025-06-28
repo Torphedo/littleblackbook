@@ -101,7 +101,7 @@ sqlite3_stmt* compile_sql(const char* sql, s32 sql_len, sqlite3* db) {
 }
 
 bool sql_handle_error(const char* msg_prefix, sqlite3* db, int errcode) {
-    if (errcode == SQLITE_OK || SQLITE_DONE) {
+    if (errcode == SQLITE_OK || errcode == SQLITE_DONE) {
         return true; // No errors to print
     }
 
