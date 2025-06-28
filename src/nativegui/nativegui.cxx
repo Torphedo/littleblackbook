@@ -119,7 +119,7 @@ bool nativegui::draw_song_editor(runtime_song& song) {
         bool found = false;
         for (auto iter = song.tags.begin(); iter != song.tags.end(); iter++) {
             // Ignore leading minus signs if present
-            found = (*iter == tag_hash);
+            found |= (*iter == tag_hash);
             if (found) {
                 song.tags.erase(iter);
                 break; // We're done here (and iterator is now invalidated anyway)
