@@ -14,6 +14,9 @@
 bool tag_parents_t::apply_current_pair(sqlite3* db) noexcept {
     const auto& child = tac_child.current();
     const auto& parent = tac_parent.current();
+    if (child.empty() || parent.empty()) {
+        return false;
+    }
 
     std::string sql;
     link_tags_sql(parent.c_str(), child.c_str(), sql);
