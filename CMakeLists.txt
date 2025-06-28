@@ -49,7 +49,6 @@ add_subdirectory(lib/glfw)
 set(ENABLE_STATIC ON)
 set(ENABLE_SHARED OFF)
 set(BUILD_SHELL OFF)
-set(ENABLE_STATIC_SHELL ON)
 set(ENABLE_FTS4 OFF) # We only use FTS5
 set(ENABLE_RTREE OFF)
 set(OMIT_JSON OFF)

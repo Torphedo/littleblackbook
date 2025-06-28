@@ -49,11 +49,12 @@ struct nativegui {
     void draw_timers() noexcept;
 
     /// @brief Load everything needed to start the GUI from the database
-    nativegui(sqlite3* db, const char* files_dir);
-};
+    nativegui(sqlite3* db, const char* files_dir) noexcept;
 
-/// @brief Main function for the native PC frontend
-///
-/// Don't call this function directly. Pass it as a function pointer to
-/// gui_loop(), along with a nativegui* for the context.
-bool gui_main(void* ctx, GLFWwindow* window);
+
+    /// @brief Main function for the native PC frontend
+    ///
+    /// Don't call this function directly. Pass it as a function pointer to
+    /// gui_loop(), along with an instance of this class as the context pointer.
+    static bool gui_main(void* ctx, GLFWwindow* window) noexcept;
+};
