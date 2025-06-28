@@ -5,6 +5,8 @@ project(blackbook
 )
 # We need compile_commands.json for the include paths in some editors
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
+# Enable LTO
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
@@ -84,4 +86,5 @@ add_library(sqlite_crc32 SHARED
 )
 target_link_libraries(sqlite_crc32 PUBLIC bobtail)
 
-target_link_libraries(blackbook PUBLIC bobtail sqlite3-static glfw imgui nfd)
+# For some reason linking on Clang requires explicitly adding "stdc++"...
+target_link_libraries(blackbook PUBLIC bobtail sqlite3-static glfw imgui nfd stdc++)
