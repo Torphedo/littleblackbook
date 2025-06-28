@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
     sqlite3_extended_result_codes(db, true);
 
     // Enable extension loading (from C only, not SQL) and try to load CRC32 module
-    sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION);
+    sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, nullptr);
     char* errmsg = nullptr;
     if (sqlite3_load_extension(db, "./libsqlite_crc32", nullptr, &errmsg) != SQLITE_OK) {
         if (errmsg) {

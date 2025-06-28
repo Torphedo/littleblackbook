@@ -48,6 +48,7 @@ add_subdirectory(lib/glfw)
 # We turn off as many SQLite options as we can to reduce compile time
 set(ENABLE_STATIC ON)
 set(ENABLE_SHARED OFF)
+set(ENABLE_DYNAMIC_EXTENSIONS ON)
 set(BUILD_SHELL OFF)
 set(ENABLE_FTS4 OFF) # We only use FTS5
 set(ENABLE_RTREE OFF)
