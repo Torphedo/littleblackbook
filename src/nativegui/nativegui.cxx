@@ -361,17 +361,28 @@ void nativegui::draw_import_progress() noexcept {
     }
 
     const import_stats_t& s = import_stats; // Shorthand
+    const u32 total = s.total_songs.load();
+    const u32 skipped = s.num_skipped.load();
+    const u32 total_unskipped = total - skipped;
+
+    const float progress_hashed = s.num_hashed.load() / (float)total_unskipped;
+    const float progress_copy   = s.num_copied.load() / (float)total_unskipped;
+    const float progress_sql    = s.num_generated_sql.load() / (float)total_unskipped;
+    const float progress_total  = (s.num_generated_sql.load() + skipped) / (float)total;
+
     ImGui::Begin("Import");
 
     ImGui::Text("Phase 1:");
     ImGui::Separator();
-    ImGui::Text("Songs loaded: %d \nSongs hashed: %d \n", s.num_loaded.load(), s.num_hashed.load());
-    ImGui::Text("Songs scraped: %d \nSongs copied: %d \n", s.num_metadata_grabbed.load(), s.num_copied.load());
-    ImGui::Text("Songs skipped: %d \n\n", s.num_skipped.load());
+    ImGui::ProgressBar(progress_hashed, ImVec2(0, 0), "Hashing");
+    ImGui::ProgressBar(progress_copy, ImVec2(0, 0), "Copying");
+    ImGui::Text("Songs skipped: %d \n\n", skipped);
 
     ImGui::Text("Phase 2:");
     ImGui::Separator();
-    ImGui::Text("SQL entries generated: %d \nSongs total: %d \n", s.num_generated_sql.load(), s.total_songs.load());
+    ImGui::ProgressBar(progress_sql, ImVec2(0, 0), "Generating SQL");
+    ImGui::ProgressBar(progress_total, ImVec2(0, 0), "Overall Progress");
+    ImGui::Text("Songs imported: %d\n", s.num_generated_sql.load());
 
     // All done
     if (s.total_songs == s.num_generated_sql + s.num_skipped) {
