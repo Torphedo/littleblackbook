@@ -56,12 +56,19 @@ tag_hash_t create_tag_sql(const char* tag, std::string& sql_out, tag_hash_t hash
     return hash;
 }
 
-void add_tag_sql(const char* tag, song_hash_t song_hash, std::string& sql_out) {
+void add_tag_to_song_sql(const char* tag, song_hash_t song_hash, std::string& sql_out) {
     // We need to create the tag if it doesn't exist
     const tag_hash_t tag_hash = create_tag_sql(tag, sql_out);
 
     // Actually add the tag association
     sqlgen(sql_out, "INSERT INTO " TAG_SONG_TABLE " (song_hash, tag_hash) VALUES (%d, %d);\n", song_hash, tag_hash);
+}
+
+void del_tag_from_song_sql(const char* tag, song_hash_t song_hash, std::string& sql_out) {
+    const tag_hash_t tag_hash = crc32buf((const u8*)tag, strlen(tag));
+    sqlgen(sql_out,
+           "DELETE FROM " TAG_SONG_TABLE " WHERE " TAG_SONG_TABLE ".song_hash = %d AND " TAG_SONG_TABLE ".tag_hash = %d;\n",
+           song_hash, tag_hash);
 }
 
 void link_tags_sql(const char* parent, const char* child, std::string& sql_out) {

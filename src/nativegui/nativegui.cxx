@@ -4,12 +4,14 @@
 #include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
 #include "nfde_wrapper.hxx"
+#include "schema.hxx"
 
 #include <common/logging.h>
 #include <common/vfile.h>
 #include <common/crc32.h>
 
 #include <tags.hxx>
+#include <sqlgen.hxx>
 #include <scope_timer.hxx>
 
 // Autocomplete callback for ImGui::InputText() and related functions.
@@ -83,7 +85,7 @@ bool nativegui::InputTagAutocompleted(const char* label, const char* hint, ImGui
 }
 
 bool nativegui::draw_song_editor(runtime_song& song) {
-    char win_title_buf[512] = {0};
+    char win_title_buf[64] = {0};
     snprintf(win_title_buf, sizeof(win_title_buf), "Song editor [%d]", song.hash);
     bool open = true;
     open &= ImGui::Begin(win_title_buf, &open);
@@ -107,6 +109,32 @@ bool nativegui::draw_song_editor(runtime_song& song) {
 
     ImGui::Text("Hash: %d", song.hash);
     ImGui::Text("Imported @ %lu", song.import_timestamp);
+
+    ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
+    if (InputTagAutocompleted(win_title_buf, "Input a tag", flags, song.tac)) {
+        const std::string& tag = song.tac.current();
+        const tag_hash_t tag_hash = crc32buf((const u8*)tag.c_str(), tag.size());
+
+        bool found = false;
+        for (auto iter = song.tags.begin(); iter != song.tags.end(); iter++) {
+            // Ignore leading minus signs if present
+            found = (*iter == tag_hash);
+            if (found) {
+                song.tags.erase(iter);
+                break; // We're done here (and iterator is now invalidated anyway)
+            }
+        }
+
+        std::string sql;
+        if (found) {
+            del_tag_from_song_sql(tag.c_str(), song.hash, sql);
+        } else {
+            add_tag_to_song_sql(tag.c_str(), song.hash, sql);
+        }
+        int result = sqlite3_exec(core.db, sql.c_str(), nullptr, nullptr, nullptr);
+        sql_handle_error("Failed to add/remove tag", core.db, result);
+        core.load_from_db(); // Reload
+    }
 
     ImGui::End();
     return true;

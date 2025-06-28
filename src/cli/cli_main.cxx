@@ -58,7 +58,7 @@ int cli_main(const arguments& args, sqlite3* db, const char* db_path, const std:
         // Temporary hardcoded value, eventually should take this on command-line
         const song_hash_t song_hash = 347807049;
         std::string sqlbuf;
-        add_tag_sql(tag, song_hash, sqlbuf);
+        add_tag_to_song_sql(tag, song_hash, sqlbuf);
         sqlgen_exec(db, sqlbuf.data());
     }
 

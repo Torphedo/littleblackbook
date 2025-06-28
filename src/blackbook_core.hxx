@@ -18,19 +18,6 @@
 #include <common/int.h>
 #include <schema.hxx>
 
-struct runtime_song {
-    std::string name; // Song name
-    time_t import_timestamp = 0;
-    song_hash_t hash = 0; // Hash of the underlying audio file
-    u32 release_year = 0;
-
-    // @brief All tags attached to the song (by hash)
-    // These are "pre-calculated", in that implied tags (parents) in the database
-    // are included.
-    // This is intended for immediate display.
-    std::set<tag_hash_t> tags;
-};
-
 // Implementation for a tag input box with autocomplete.
 // Often abbreviated as "TAC" / "tac" (looks a lot like "tag", sorry... - torph)
 struct tag_autocomplete {
@@ -74,6 +61,22 @@ struct tag_autocomplete {
 
     // Wipe all text/state
     void reset() noexcept;
+};
+
+struct runtime_song {
+    std::string name; // Song name
+    time_t import_timestamp = 0;
+    song_hash_t hash = 0; // Hash of the underlying audio file
+    u32 release_year = 0;
+
+    // @brief All tags attached to the song (by hash)
+    // These are "pre-calculated", in that implied tags (parents) in the database
+    // are included.
+    // This is intended for immediate display.
+    std::set<tag_hash_t> tags;
+
+    // Text input for the user to add tags to a song
+    tag_autocomplete tac;
 };
 
 // A headless search menu
