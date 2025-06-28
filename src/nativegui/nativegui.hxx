@@ -36,7 +36,7 @@ struct nativegui {
     bool draw_song_editor(runtime_song& song);
 
     bool InputTagAutocompleted(const char* label, const char* hint, ImGuiInputTextFlags flags, tag_autocomplete& tac);
-    void draw_search_menu() noexcept;
+    void draw_search_menu(const char* win_title, tag_search& search) noexcept;
 
     void draw_song_list() noexcept;
 

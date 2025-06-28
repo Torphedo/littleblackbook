@@ -120,7 +120,7 @@ struct blackbook_core {
     // Doubles as tag storage, and a lookup by hash
     std::map<tag_hash_t, std::string> tags;
 
-    tag_search search;
+    std::vector<tag_search> searches;
 
     // Tag parent input / display
     std::vector<linked_tags> parent_pairs;

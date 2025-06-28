@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
+#include "blackbook_core.hxx"
 #include "nfde_wrapper.hxx"
 #include "schema.hxx"
 
@@ -140,31 +141,31 @@ bool nativegui::draw_song_editor(runtime_song& song) {
     return true;
 }
 
-void nativegui::draw_search_menu() noexcept {
-    ImGui::Begin("Search");
+void nativegui::draw_search_menu(const char* win_title, tag_search& search) noexcept {
+    ImGui::Begin(win_title);
 
     // Show current tags and input box
-    for (const std::string& tag : core.search.tags) {
+    for (const std::string& tag : search.tags) {
         ImGui::Text("%s", tag.c_str());
     }
 
     // Focus text input so user can keep typing
-    if (core.search.tac.need_refocus) {
-        core.search.tac.need_refocus = false; // Reset flag
+    if (search.tac.need_refocus) {
+        search.tac.need_refocus = false; // Reset flag
         ImGui::SetKeyboardFocusHere();
     }
 
     // Input for next tag
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
-    if (InputTagAutocompleted("##tag", "Input a tag", flags, core.search.tac)) {
+    if (InputTagAutocompleted("##tag", "Input a tag", flags, search.tac)) {
         const scope_timer main_timer(core.timer_map, "last_search");
         // This also executes the search and updates our state
-        core.search.finalize_current_tag(core.db);
-        core.search.tac.reset();
+        search.finalize_current_tag(core.db);
+        search.tac.reset();
     }
 
     // Display results
-    for (song_hash_t hash : core.search.result_hashes) {
+    for (song_hash_t hash : search.result_hashes) {
         const runtime_song& s = core.song_map[hash];
         if (ImGui::Selectable(s.name.c_str())) {
             song_editors.insert(s.hash);
@@ -288,6 +289,7 @@ void nativegui::draw_toolbar() noexcept {
 
     const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl);
     bool import_files = ctrl_pressed && ImGui::IsKeyPressed(ImGuiKey_I, false);
+    bool new_search = ctrl_pressed && ImGui::IsKeyPressed(ImGuiKey_T, false);
     core.need_reload |= ImGui::IsKeyPressed(ImGuiKey_F5, false);
     core.need_reload |= ctrl_pressed && ImGui::IsKeyPressed(ImGuiKey_R, false);
 
@@ -316,6 +318,9 @@ void nativegui::draw_toolbar() noexcept {
         ImGui::End();
     }
 
+    if (new_search) {
+        core.searches.push_back(tag_search());
+    }
 
     // This should probably be its own method, right? - torph
     if (import_files) {
@@ -384,11 +389,9 @@ void nativegui::draw_import_progress() noexcept {
     ImGui::ProgressBar(progress_total, ImVec2(0, 0), "Overall Progress");
     ImGui::Text("Songs imported: %d\n", s.num_generated_sql.load());
 
-    // All done
-    if (s.total_songs == s.num_generated_sql + s.num_skipped) {
-        if (ImGui::Button("Close")) {
-            show_import_window = false;
-        }
+    // All done, hopefully
+    if (ImGui::Button("Close")) {
+        show_import_window = false;
     }
 
     ImGui::End();
@@ -405,7 +408,13 @@ bool nativegui::gui_main(void* ctx, GLFWwindow* window) noexcept {
     gui->draw_tag_parents();
     gui->draw_timers();
     gui->draw_song_list();
-    gui->draw_search_menu();
+
+    u32 idx = 0;
+    for (tag_search& entry : gui->core.searches) {
+        char win_title_buf[64] = {0};
+        snprintf(win_title_buf, sizeof(win_title_buf), "Search ##%d", idx++);
+        gui->draw_search_menu(win_title_buf, entry);
+    }
     gui->draw_import_progress();
 
     std::vector<song_hash_t> editors_to_close(0); // Reserve 0 since this is rare
