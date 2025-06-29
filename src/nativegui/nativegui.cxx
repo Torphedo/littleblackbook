@@ -310,6 +310,7 @@ void nativegui::draw_toolbar() noexcept {
             if (ImGui::BeginMenu("Windows")) {
                 ImGui::MenuItem("Tag Parents", nullptr, &this->show_tag_parents);
                 ImGui::MenuItem("Performance Timers", nullptr, &this->show_timers);
+                ImGui::MenuItem("Lyric search", nullptr, &this->show_lyric_search);
                 ImGui::EndMenu();
             }
 
@@ -397,17 +398,54 @@ void nativegui::draw_import_progress() noexcept {
     ImGui::End();
 }
 
-bool nativegui::gui_main(void* ctx, GLFWwindow* window) noexcept {
-    nativegui* gui = (nativegui*)ctx;
-    const scope_timer main_timer(gui->core.timer_map, "main_draw");
-    if (gui->core.need_reload) {
-        gui->core.load_from_db();
+void nativegui::draw_lyric_search() noexcept {
+    if (!show_lyric_search) {
+        return;
+    }
+    ImGui::Begin("Lyric Search", &show_lyric_search);
+
+    ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
+    if (ImGui::InputText("##lsearch", &lyric_search_input, flags)) {
+        const scope_timer lyric_timer(core.timer_map, "lyric_search");
+        lyric_search_results.clear();
+        std::string sql;
+        sqlgen(sql, "SELECT song_hash FROM lyric_search('\"%s\" *') ORDER BY rank LIMIT %d;",
+                    lyric_search_input.c_str(), 10);
+        sqlite3_stmt* stmt = compile_sql(sql.c_str(), -1, core.db);
+        if (stmt == nullptr) {
+            return; // Error printed for us
+        }
+
+        int res = SQLITE_OK;
+        while ((res = sqlite3_step(stmt)) == SQLITE_ROW) {
+            const song_hash_t hash = sqlite3_column_int(stmt, 0);
+
+            lyric_search_results.insert(hash);
+        }
+    }
+
+    // Draw results
+    for (song_hash_t hash : lyric_search_results) {
+        const runtime_song& s = core.song_map[hash];
+        if (ImGui::Selectable(s.name.c_str())) {
+            song_editors.insert(s.hash);
+        }
+    }
+
+    ImGui::End();
+}
+
+bool nativegui::gui_main(GLFWwindow *window) noexcept {
+    const scope_timer main_timer(core.timer_map, "main_draw");
+    if (core.need_reload) {
+        core.load_from_db();
     }
 
     draw_toolbar();
     draw_tag_parents();
     draw_timers();
     draw_song_list();
+    draw_lyric_search();
 
     u32 idx = 0;
     for (tag_search& entry : core.searches) {

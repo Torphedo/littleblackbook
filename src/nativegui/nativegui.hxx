@@ -19,11 +19,15 @@ struct nativegui {
     // All song hashes that need their editing window drawn
     std::set<song_hash_t> song_editors;
 
+    std::string lyric_search_input;
+    std::set<song_hash_t> lyric_search_results;
+
     // Window visibility states
     bool show_search = false;
     bool show_tag_parents = false;
     bool show_import_window = false;
     bool show_timers = false;
+    bool show_lyric_search = false;
 
     // File import state
     import_stats_t import_stats;
@@ -47,6 +51,8 @@ struct nativegui {
     void draw_import_progress() noexcept;
 
     void draw_timers() noexcept;
+
+    void draw_lyric_search() noexcept;
 
     /// @brief Load everything needed to start the GUI from the database
     nativegui(sqlite3* db, const char* files_dir) noexcept;

@@ -34,8 +34,8 @@ CREATE TRIGGER lyric_search_insert AFTER INSERT ON songs BEGIN
     INSERT INTO lyric_search (letra, song_hash) VALUES(NEW.lyrics, NEW.hash);
 END;
 
-CREATE TRIGGER lyric_search_update_tag AFTER UPDATE OF lyrics ON songs BEGIN
-    UPDATE lyric_search SET letra = NEW.lyrics;
+CREATE TRIGGER lyric_search_update AFTER UPDATE OF lyrics ON songs BEGIN
+    UPDATE lyric_search SET letra = NEW.lyrics WHERE lyric_search.song_hash = OLD.hash;
 END;
 
 CREATE TRIGGER lyric_search_delete AFTER DELETE ON songs BEGIN
