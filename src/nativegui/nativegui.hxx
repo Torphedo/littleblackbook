@@ -53,8 +53,11 @@ struct nativegui {
 
 
     /// @brief Main function for the native PC frontend
-    ///
-    /// Don't call this function directly. Pass it as a function pointer to
-    /// gui_loop(), along with an instance of this class as the context pointer.
-    static bool gui_main(void* ctx, GLFWwindow* window) noexcept;
+    bool gui_main(GLFWwindow* window) noexcept;
+
+    /// This is a simple wrapper to be used as a C function pointer for
+    /// gui_loop(). The [void* ctx] should be an instance of this class.
+    static bool gui_main_static(void* ctx, GLFWwindow* window) noexcept {
+        return ((nativegui*)ctx)->gui_main(window);
+    }
 };

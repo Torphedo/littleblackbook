@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
         }
 
         // We invert the return value since exit code 0 == false == EXIT_SUCCESS
-        result = !gui_loop(nativegui::gui_main, &gui);
+        result = !gui_loop(nativegui::gui_main_static, &gui);
     }
 
     sqlite3_close(db);

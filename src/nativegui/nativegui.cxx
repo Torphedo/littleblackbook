@@ -404,29 +404,29 @@ bool nativegui::gui_main(void* ctx, GLFWwindow* window) noexcept {
         gui->core.load_from_db();
     }
 
-    gui->draw_toolbar();
-    gui->draw_tag_parents();
-    gui->draw_timers();
-    gui->draw_song_list();
+    draw_toolbar();
+    draw_tag_parents();
+    draw_timers();
+    draw_song_list();
 
     u32 idx = 0;
-    for (tag_search& entry : gui->core.searches) {
+    for (tag_search& entry : core.searches) {
         char win_title_buf[64] = {0};
         snprintf(win_title_buf, sizeof(win_title_buf), "Search ##%d", idx++);
-        gui->draw_search_menu(win_title_buf, entry);
+        draw_search_menu(win_title_buf, entry);
     }
-    gui->draw_import_progress();
+    draw_import_progress();
 
     std::vector<song_hash_t> editors_to_close(0); // Reserve 0 since this is rare
-    for (song_hash_t song_hash : gui->song_editors) {
-        if (!gui->draw_song_editor(gui->core.song_map[song_hash])) {
+    for (song_hash_t song_hash : song_editors) {
+        if (!draw_song_editor(core.song_map[song_hash])) {
             editors_to_close.push_back(song_hash);
         }
     }
 
     // We can't edit the set while iterating over it
     for (song_hash_t hash : editors_to_close) {
-        gui->song_editors.erase(hash);
+        song_editors.erase(hash);
     }
 
     ImGui::ShowDemoWindow();
