@@ -22,12 +22,49 @@ struct nativegui {
     std::string lyric_search_input;
     std::set<song_hash_t> lyric_search_results;
 
-    // Window visibility states
-    bool show_search = false;
-    bool show_tag_parents = false;
-    bool show_import_window = false;
-    bool show_timers = false;
-    bool show_lyric_search = false;
+    struct window_def {
+        const char* window_name;
+        bool (nativegui::*draw)();
+    };
+
+    bool draw_song_editor(runtime_song& song);
+
+    bool draw_search_menu(const char* win_title, tag_search& search) noexcept;
+
+    bool draw_song_list() noexcept;
+
+    bool draw_tag_parents() noexcept;
+
+    bool draw_toolbar() noexcept;
+
+    bool draw_import_progress() noexcept;
+
+    bool draw_timers() noexcept;
+
+    bool draw_lyric_search() noexcept;
+
+    static constexpr window_def windows[] = {
+        {   .window_name = "Song List",
+            .draw = &nativegui::draw_song_list,
+        },
+        {   .window_name = "Tag Parents",
+            .draw = &nativegui::draw_tag_parents,
+        },
+        {   .window_name = "Import Progress",
+            .draw = &nativegui::draw_import_progress,
+        },
+        {   .window_name = "Performance Timers",
+            .draw = &nativegui::draw_timers,
+        },
+        {   .window_name = "Lyric Search",
+            .draw = &nativegui::draw_lyric_search,
+        },
+    };
+    bool windows_active[ARRAY_SIZE(windows)] = {};
+
+    // We need to toggle this window from another function
+    static constexpr u8 IMPORT_WINDOW_IDX = 2;
+    static_assert(windows[IMPORT_WINDOW_IDX].draw == &nativegui::draw_import_progress);
 
     // File import state
     import_stats_t import_stats;
@@ -37,22 +74,7 @@ struct nativegui {
     std::vector<std::string> import_paths;
     std::vector<const char*> import_path_ptrs;
 
-    bool draw_song_editor(runtime_song& song);
-
     bool InputTagAutocompleted(const char* label, const char* hint, ImGuiInputTextFlags flags, tag_autocomplete& tac);
-    void draw_search_menu(const char* win_title, tag_search& search) noexcept;
-
-    void draw_song_list() noexcept;
-
-    void draw_tag_parents() noexcept;
-
-    void draw_toolbar() noexcept;
-
-    void draw_import_progress() noexcept;
-
-    void draw_timers() noexcept;
-
-    void draw_lyric_search() noexcept;
 
     /// @brief Load everything needed to start the GUI from the database
     nativegui(sqlite3* db, const char* files_dir) noexcept;

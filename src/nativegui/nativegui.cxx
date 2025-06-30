@@ -141,9 +141,7 @@ bool nativegui::draw_song_editor(runtime_song& song) {
     return true;
 }
 
-void nativegui::draw_search_menu(const char* win_title, tag_search& search) noexcept {
-    ImGui::Begin(win_title);
-
+bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noexcept {
     // Show current tags and input box
     for (const std::string& tag : search.tags) {
         ImGui::Text("%s", tag.c_str());
@@ -171,12 +169,10 @@ void nativegui::draw_search_menu(const char* win_title, tag_search& search) noex
             song_editors.insert(s.hash);
         }
     }
-
-    ImGui::End();
+    return true;
 }
 
-void nativegui::draw_song_list() noexcept {
-    ImGui::Begin("Song List");
+bool nativegui::draw_song_list() noexcept {
     if (ImGui::BeginTable("song table", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {
         // Make header row that never scrolls away
         ImGui::TableSetupScrollFreeze(0, 1);
@@ -191,9 +187,6 @@ void nativegui::draw_song_list() noexcept {
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
 
-            // TODO: Maybe we should have the open windows determined by a flag
-            // on each song (like on Polaris ALR chunks)? Easier to store.
-            // Although, that could suck on reloads since we wipe the vector...
             const runtime_song& s = pair.second;
             // The 2nd arg is whether the row is selected (for highlighting)
             if (ImGui::Selectable(s.name.c_str(), false, ImGuiSelectableFlags_SpanAllColumns)) {
@@ -205,16 +198,10 @@ void nativegui::draw_song_list() noexcept {
         }
         ImGui::EndTable();
     }
-
-    ImGui::End();
+    return true;
 }
 
-void nativegui::draw_tag_parents() noexcept {
-    if (!show_tag_parents) {
-        return;
-    }
-
-    ImGui::Begin("Tag Parents", &show_tag_parents);
+bool nativegui::draw_tag_parents() noexcept {
     // TODO: This is too many layers.
     if (core.tac_child.need_refocus) {
         core.tac_child.need_refocus = false;
@@ -279,10 +266,10 @@ void nativegui::draw_tag_parents() noexcept {
         }
         ImGui::EndTable();
     }
-    ImGui::End();
+    return true;
 }
 
-void nativegui::draw_toolbar() noexcept {
+bool nativegui::draw_toolbar() noexcept {
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     const float height = ImGui::GetFrameHeight();
     const ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_MenuBar;
@@ -308,9 +295,9 @@ void nativegui::draw_toolbar() noexcept {
             }
 
             if (ImGui::BeginMenu("Windows")) {
-                ImGui::MenuItem("Tag Parents", nullptr, &this->show_tag_parents);
-                ImGui::MenuItem("Performance Timers", nullptr, &this->show_timers);
-                ImGui::MenuItem("Lyric search", nullptr, &this->show_lyric_search);
+                for (u32 i = 0; i < ARRAY_SIZE(windows); i++) {
+                   ImGui::MenuItem(windows[i].window_name, nullptr, &windows_active[i]);
+                }
                 ImGui::EndMenu();
             }
 
@@ -344,28 +331,21 @@ void nativegui::draw_toolbar() noexcept {
             // Run imports on another thread so UI doesn't lock up
             import_thread = std::thread(import_many_files_many_threads, paths, num_paths, core.files_dir, core.db, &import_stats);
             import_thread.detach(); // Otherwise dtor will try to kill it later and crash
-            show_import_window = true;
+            windows_active[IMPORT_WINDOW_IDX] = true;
         }
     }
+
+    return true;
 }
 
-void nativegui::draw_timers() noexcept {
-    if (!show_timers) {
-        return;
-    }
-
-    ImGui::Begin("Performance Timers", &show_timers);
+bool nativegui::draw_timers() noexcept {
     for (const auto& entry : core.timer_map) {
         ImGui::Text("%s: %.2lfms", entry.first, entry.second);
     }
-    ImGui::End();
+    return true;
 }
 
-void nativegui::draw_import_progress() noexcept {
-    if (!show_import_window) {
-        return;
-    }
-
+bool nativegui::draw_import_progress() noexcept {
     const import_stats_t& s = import_stats; // Shorthand
     const u32 total = s.total_songs.load();
     const u32 skipped = s.num_skipped.load();
@@ -375,8 +355,6 @@ void nativegui::draw_import_progress() noexcept {
     const float progress_copy   = s.num_copied.load() / (float)total_unskipped;
     const float progress_sql    = s.num_generated_sql.load() / (float)total_unskipped;
     const float progress_total  = (s.num_generated_sql.load() + skipped) / (float)total;
-
-    ImGui::Begin("Import");
 
     ImGui::Text("Phase 1:");
     ImGui::Separator();
@@ -392,18 +370,13 @@ void nativegui::draw_import_progress() noexcept {
 
     // All done, hopefully
     if (ImGui::Button("Close")) {
-        show_import_window = false;
+        return false;
+    } else {
+        return true;
     }
-
-    ImGui::End();
 }
 
-void nativegui::draw_lyric_search() noexcept {
-    if (!show_lyric_search) {
-        return;
-    }
-    ImGui::Begin("Lyric Search", &show_lyric_search);
-
+bool nativegui::draw_lyric_search() noexcept {
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
     if (ImGui::InputText("##lsearch", &lyric_search_input, flags)) {
         const scope_timer lyric_timer(core.timer_map, "lyric_search");
@@ -413,7 +386,7 @@ void nativegui::draw_lyric_search() noexcept {
                     lyric_search_input.c_str(), 10);
         sqlite3_stmt* stmt = compile_sql(sql.c_str(), -1, core.db);
         if (stmt == nullptr) {
-            return; // Error printed for us
+            return true; // Error printed for us
         }
 
         int res = SQLITE_OK;
@@ -431,8 +404,7 @@ void nativegui::draw_lyric_search() noexcept {
             song_editors.insert(s.hash);
         }
     }
-
-    ImGui::End();
+    return true;
 }
 
 bool nativegui::gui_main(GLFWwindow *window) noexcept {
@@ -442,19 +414,30 @@ bool nativegui::gui_main(GLFWwindow *window) noexcept {
     }
 
     draw_toolbar();
-    draw_tag_parents();
-    draw_timers();
-    draw_song_list();
-    draw_lyric_search();
 
+    for (u32 i = 0; i < ARRAY_SIZE(windows); i++) {
+        if (!windows_active[i]) {
+            continue;
+        }
+        // This returns false when it's safe to skip rendering for any reason
+        if (ImGui::Begin(windows[i].window_name, &windows_active[i])) {
+            // Allow the window to close itself by returning false (but don't
+            // let it override a false value set by clicking the X button).
+            windows_active[i] &= (this->*windows[i].draw)();
+        }
+        ImGui::End();
+    }
+
+    // Search windows each need a unique ID and special handling to access their
+    // context, so we handle them differently than "one-off" windows.
     u32 idx = 0;
     for (tag_search& entry : core.searches) {
         char win_title_buf[64] = {0};
         snprintf(win_title_buf, sizeof(win_title_buf), "Search ##%d", idx++);
         draw_search_menu(win_title_buf, entry);
     }
-    draw_import_progress();
 
+    // Same as above is true for song editor windows
     std::vector<song_hash_t> editors_to_close(0); // Reserve 0 since this is rare
     for (song_hash_t song_hash : song_editors) {
         if (!draw_song_editor(core.song_map[song_hash])) {
