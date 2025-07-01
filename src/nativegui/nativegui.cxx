@@ -142,6 +142,8 @@ bool nativegui::draw_song_editor(runtime_song& song) {
 }
 
 bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noexcept {
+    // TODO: Make this have a working X button
+    ImGui::Begin(win_title);
     // Show current tags and input box
     for (const std::string& tag : search.tags) {
         ImGui::Text("%s", tag.c_str());
@@ -169,6 +171,7 @@ bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noex
             song_editors.insert(s.hash);
         }
     }
+    ImGui::End();
     return true;
 }
 
