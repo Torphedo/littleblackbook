@@ -1,0 +1,11 @@
+#!/bin/sh
+# Prepends an extra reminder to the commit message editor.
+# Copy this file to .git/hooks to have it trigger on every commit.
+
+COMMIT_MSG_FILE=$1
+COMMIT_SOURCE=$2
+SHA1=$3
+
+MESSAGE="# Prefix your commit with 'GUI:', 'CLI:', 'DB:', 'META', or 'BUILD'."
+cat <(echo "") <(echo $MESSAGE) $COMMIT_MSG_FILE > TMP_MSG
+mv TMP_MSG $COMMIT_MSG_FILE
