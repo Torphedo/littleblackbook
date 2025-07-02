@@ -186,6 +186,7 @@ bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noex
 
 bool nativegui::draw_song_list() noexcept {
     if (ImGui::Button("Add to playlist")) {
+        // TODO: Have the playlist append function take a generic C++ iterator/collection to reduce duplication
         const bool need_init = core.playlist.empty();
         core.playlist.reserve(core.playlist.size() + core.song_map.size());
         for (const auto& pair : core.song_map) {
@@ -229,10 +230,27 @@ bool nativegui::draw_player() noexcept {
     }
     const u32 cur_hash = core.playlist.at(core.playlist_pos);
 
-    if (IsMusicStreamPlaying(core.audio_stream)) {
+    const bool playing = IsMusicStreamPlaying(core.audio_stream);
+    if (ImGui::Button("<")) {
+        core.playlist_change_song(-1);
+    }
+    ImGui::SameLine();
+    if (playing) {
         if (ImGui::Button("Pause")) {
             PauseMusicStream(core.audio_stream);
         }
+    } else {
+        if (ImGui::Button("Play")) {
+            ResumeMusicStream(core.audio_stream);
+        }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button(">")) {
+        core.playlist_change_song(1);
+    }
+    ImGui::Text("Playlist pos %d, size %ld", core.playlist_pos, core.playlist.size());
+
+    if (playing) {
         float progress = GetMusicTimePlayed(core.audio_stream);
         float total = GetMusicTimeLength(core.audio_stream);
         if (ImGui::SliderFloat("Progress", &progress, 0.0f, total)) {
@@ -244,11 +262,23 @@ bool nativegui::draw_player() noexcept {
         }
 
         UpdateMusicStream(core.audio_stream);
-    } else {
-        if (ImGui::Button("Play")) {
-            ResumeMusicStream(core.audio_stream);
-        }
     }
+
+    ImGui::Separator();
+
+    const runtime_song& song = core.song_map[core.playlist.at(core.playlist_pos)];
+    ImGui::Text("Title: %s", song.name.c_str());
+    ImGui::Text("Released: %u", song.release_year);
+
+    if (song.tags.size() > 0) {
+        ImGui::Text("Tags:");
+        for (song_hash_t hash : song.tags) {
+            const std::string& tag = core.tags[hash];
+            ImGui::Text("%s", tag.c_str());
+        }
+        ImGui::Text("\n");
+    }
+    ImGui::Text("Hash: %d", song.hash);
 
     return true;
 }

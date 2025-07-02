@@ -126,7 +126,7 @@ struct blackbook_core {
     // State for music player features
     Music audio_stream;
     std::vector<song_hash_t> playlist;
-    u32 playlist_pos = 0;
+    s32 playlist_pos = 0;
 
     // Tag parent input / display
     std::vector<linked_tags> parent_pairs;
