@@ -7,6 +7,7 @@
 class scope_timer {
     float& elapsed_output;
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
+    bool sum = false;
 
 public:
     // Elapsed time is written to the specified location on destroy
@@ -15,6 +16,7 @@ public:
     /// @brief Elapsed time is saved into the map with the specified key on destroy.
     ///
     /// If the specified key doesn't exist, it'll be inserted automatically.
-    scope_timer(std::unordered_map<const char*, float>& map, const char* name);
+    /// @param sum Whether to add to the existing value, or overwrite it.
+    scope_timer(std::unordered_map<const char*, float>& map, const char* name, bool sum = false);
     ~scope_timer(); // Ends timer
 };
