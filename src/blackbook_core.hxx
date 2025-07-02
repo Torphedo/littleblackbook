@@ -14,6 +14,7 @@
 #include <unordered_map>
 
 #include <sqlite3.h>
+#include <raudio.h>
 
 #include <common/int.h>
 #include <schema.hxx>
@@ -77,6 +78,8 @@ struct runtime_song {
 
     // Text input for the user to add tags to a song
     tag_autocomplete tac;
+
+    Music stream;
 };
 
 // A headless search menu

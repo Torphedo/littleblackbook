@@ -90,6 +90,6 @@ target_link_libraries(sqlite_crc32 PUBLIC bobtail)
 target_link_libraries(blackbook PUBLIC
     bobtail
     sqlite_crc32 # We link with this at runtime, so this ensures it gets built
-    sqlite3-static glfw imgui nfd
+    sqlite3-static glfw imgui nfd raudio
     stdc++
 )

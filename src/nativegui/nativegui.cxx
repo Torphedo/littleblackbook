@@ -1,16 +1,19 @@
 #include "nativegui.hxx"
 
+#include <cstdio>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
+#include <raudio.h>
+
 #include "blackbook_core.hxx"
 #include "nfde_wrapper.hxx"
-#include "schema.hxx"
 
 #include <common/logging.h>
 #include <common/vfile.h>
 #include <common/crc32.h>
 
+#include <schema.hxx>
 #include <tags.hxx>
 #include <sqlgen.hxx>
 #include <scope_timer.hxx>
@@ -112,6 +115,7 @@ bool nativegui::draw_song_editor(runtime_song& song) {
     ImGui::Text("Imported @ %lu", song.import_timestamp);
 
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
+    snprintf(win_title_buf, sizeof(win_title_buf), "##editor_input%d", song.hash);
     if (InputTagAutocompleted(win_title_buf, "Input a tag", flags, song.tac)) {
         const std::string& tag = song.tac.current();
         const tag_hash_t tag_hash = crc32buf((const u8*)tag.c_str(), tag.size());
@@ -135,6 +139,28 @@ bool nativegui::draw_song_editor(runtime_song& song) {
         int result = sqlite3_exec(core.db, sql.c_str(), nullptr, nullptr, nullptr);
         sql_handle_error("Failed to add/remove tag", core.db, result);
         core.load_from_db(); // Reload
+    }
+
+    if (ImGui::Button("Play")) {
+        const scope_timer load_song(core.timer_map, "load_song");
+        char pathbuf[512] = {0};
+        snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s/%d.mp3", core.files_dir, song.hash);
+        song.stream = LoadMusicStream(pathbuf);
+        PlayMusicStream(song.stream);
+    }
+    if (ImGui::Button("Stop")) {
+        const scope_timer load_song(core.timer_map, "unload_song");
+        UnloadMusicStream(song.stream);
+        song.stream = {0};
+    }
+
+    if (IsMusicStreamPlaying(song.stream)) {
+        float progress = GetMusicTimePlayed(song.stream);
+        float total = GetMusicTimeLength(song.stream);
+        if (ImGui::SliderFloat("Progress", &progress, 0.0f, total)) {
+            SeekMusicStream(song.stream, progress);
+        }
+        UpdateMusicStream(song.stream);
     }
 
     ImGui::End();
@@ -461,5 +487,6 @@ bool nativegui::gui_main(GLFWwindow *window) noexcept {
 nativegui::nativegui(sqlite3* db, const char* files_dir) noexcept
     : core(blackbook_core(db, files_dir))
 {
+    InitAudioDevice();
     initialized = core.initialized;
 }
