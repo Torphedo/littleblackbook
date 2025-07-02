@@ -27,49 +27,51 @@ struct nativegui {
         bool (nativegui::*draw)();
     };
 
-    bool draw_song_editor(runtime_song& song);
-
     bool draw_search_menu(const char* win_title, tag_search& search) noexcept;
 
-    bool draw_song_list() noexcept;
+    // Draw a standalone window (with Begin/End) that may edit the song (in memory and DB)
+    bool window_song_editor(runtime_song& song);
 
-    bool draw_tag_parents() noexcept;
+    // Standalone windows (minus Begin/End, but intended to be a window)
+    bool window_songs() noexcept;
+
+    bool window_tag_parents() noexcept;
 
     bool draw_toolbar() noexcept;
 
-    bool draw_import_progress() noexcept;
+    bool window_draw_import_progress() noexcept;
 
-    bool draw_timers() noexcept;
+    bool window_timers() noexcept;
 
-    bool draw_lyric_search() noexcept;
+    bool window_lyric_search() noexcept;
 
-    bool draw_player() noexcept;
+    bool window_player() noexcept;
 
     static constexpr window_def windows[] = {
         {   .window_name = "Song List",
-            .draw = &nativegui::draw_song_list,
+            .draw = &nativegui::window_songs,
         },
         {   .window_name = "Tag Parents",
-            .draw = &nativegui::draw_tag_parents,
+            .draw = &nativegui::window_tag_parents,
         },
         {   .window_name = "Import Progress",
-            .draw = &nativegui::draw_import_progress,
+            .draw = &nativegui::window_draw_import_progress,
         },
         {   .window_name = "Performance Timers",
-            .draw = &nativegui::draw_timers,
+            .draw = &nativegui::window_timers,
         },
         {   .window_name = "Lyric Search",
-            .draw = &nativegui::draw_lyric_search,
+            .draw = &nativegui::window_lyric_search,
         },
         {   .window_name = "Music Player",
-            .draw = &nativegui::draw_player,
+            .draw = &nativegui::window_player,
         },
     };
     bool windows_active[ARRAY_SIZE(windows)] = {};
 
     // We need to toggle this window from another function
     static constexpr u8 IMPORT_WINDOW_IDX = 2;
-    static_assert(windows[IMPORT_WINDOW_IDX].draw == &nativegui::draw_import_progress);
+    static_assert(windows[IMPORT_WINDOW_IDX].draw == &nativegui::window_draw_import_progress);
 
     // File import state
     import_stats_t import_stats;

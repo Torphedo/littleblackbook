@@ -88,7 +88,7 @@ bool nativegui::InputTagAutocompleted(const char* label, const char* hint, ImGui
     return result;
 }
 
-bool nativegui::draw_song_editor(runtime_song& song) {
+bool nativegui::window_song_editor(runtime_song& song) {
     char win_title_buf[64] = {0};
     snprintf(win_title_buf, sizeof(win_title_buf), "Song editor [%d]", song.hash);
     bool open = true;
@@ -184,7 +184,7 @@ bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noex
     return true;
 }
 
-bool nativegui::draw_song_list() noexcept {
+bool nativegui::window_songs() noexcept {
     if (ImGui::Button("Add to playlist")) {
         // TODO: Have the playlist append function take a generic C++ iterator/collection to reduce duplication
         const bool need_init = core.playlist.empty();
@@ -223,7 +223,7 @@ bool nativegui::draw_song_list() noexcept {
     return true;
 }
 
-bool nativegui::draw_player() noexcept {
+bool nativegui::window_player() noexcept {
     if (core.playlist.empty()) {
         ImGui::Text("Playlist is empty.");
         return true;
@@ -283,7 +283,7 @@ bool nativegui::draw_player() noexcept {
     return true;
 }
 
-bool nativegui::draw_tag_parents() noexcept {
+bool nativegui::window_tag_parents() noexcept {
     // TODO: This is too many layers.
     if (core.tac_child.need_refocus) {
         core.tac_child.need_refocus = false;
@@ -420,14 +420,14 @@ bool nativegui::draw_toolbar() noexcept {
     return true;
 }
 
-bool nativegui::draw_timers() noexcept {
+bool nativegui::window_timers() noexcept {
     for (const auto& entry : core.timer_map) {
         ImGui::Text("%s: %.2lfms", entry.first, entry.second);
     }
     return true;
 }
 
-bool nativegui::draw_import_progress() noexcept {
+bool nativegui::window_draw_import_progress() noexcept {
     const import_stats_t& s = import_stats; // Shorthand
     const u32 total = s.total_songs.load();
     const u32 skipped = s.num_skipped.load();
@@ -458,7 +458,7 @@ bool nativegui::draw_import_progress() noexcept {
     }
 }
 
-bool nativegui::draw_lyric_search() noexcept {
+bool nativegui::window_lyric_search() noexcept {
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
     if (ImGui::InputText("##lsearch", &lyric_search_input, flags)) {
         const scope_timer lyric_timer(core.timer_map, "lyric_search");
@@ -522,7 +522,7 @@ bool nativegui::gui_main(GLFWwindow *window) noexcept {
     // Same as above is true for song editor windows
     std::vector<song_hash_t> editors_to_close(0); // Reserve 0 since this is rare
     for (song_hash_t song_hash : song_editors) {
-        if (!draw_song_editor(core.song_map[song_hash])) {
+        if (!window_song_editor(core.song_map[song_hash])) {
             editors_to_close.push_back(song_hash);
         }
     }
