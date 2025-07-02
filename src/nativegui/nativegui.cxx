@@ -88,6 +88,24 @@ bool nativegui::InputTagAutocompleted(const char* label, const char* hint, ImGui
     return result;
 }
 
+void nativegui::draw_song_info(const runtime_song& song) const noexcept {
+    ImGui::Text("Title: %s", song.name.c_str());
+    ImGui::Text("Released: %u", song.release_year);
+
+    if (song.tags.size() > 0) {
+        ImGui::Text("Tags:");
+        for (song_hash_t hash : song.tags) {
+            const std::string& tag = core.tags.at(hash); // operator[] isn't const
+            ImGui::Text("%s", tag.c_str());
+        }
+        ImGui::Text("\n");
+    }
+
+    ImGui::Text("Hash: %d", song.hash);
+    ImGui::Text("Imported @ %lu", song.import_timestamp);
+
+}
+
 bool nativegui::window_song_editor(runtime_song& song) {
     char win_title_buf[64] = {0};
     snprintf(win_title_buf, sizeof(win_title_buf), "Song editor [%d]", song.hash);
@@ -98,21 +116,7 @@ bool nativegui::window_song_editor(runtime_song& song) {
         ImGui::End();
         return false;
     }
-
-    ImGui::Text("Title: %s", song.name.c_str());
-    ImGui::Text("Released: %u", song.release_year);
-
-    if (song.tags.size() > 0) {
-        ImGui::Text("Tags:");
-        for (song_hash_t hash : song.tags) {
-            const std::string& tag = core.tags[hash];
-            ImGui::Text("%s", tag.c_str());
-        }
-        ImGui::Text("\n");
-    }
-
-    ImGui::Text("Hash: %d", song.hash);
-    ImGui::Text("Imported @ %lu", song.import_timestamp);
+    draw_song_info(song);
 
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
     snprintf(win_title_buf, sizeof(win_title_buf), "##editor_input%d", song.hash);
@@ -267,18 +271,7 @@ bool nativegui::window_player() noexcept {
     ImGui::Separator();
 
     const runtime_song& song = core.song_map[core.playlist.at(core.playlist_pos)];
-    ImGui::Text("Title: %s", song.name.c_str());
-    ImGui::Text("Released: %u", song.release_year);
-
-    if (song.tags.size() > 0) {
-        ImGui::Text("Tags:");
-        for (song_hash_t hash : song.tags) {
-            const std::string& tag = core.tags[hash];
-            ImGui::Text("%s", tag.c_str());
-        }
-        ImGui::Text("\n");
-    }
-    ImGui::Text("Hash: %d", song.hash);
+    draw_song_info(song);
 
     return true;
 }

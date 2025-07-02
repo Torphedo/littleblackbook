@@ -27,6 +27,9 @@ struct nativegui {
         bool (nativegui::*draw)();
     };
 
+    // Draw read-only song metadata using ImGui::Text
+    void draw_song_info(const runtime_song& song) const noexcept;
+
     bool draw_search_menu(const char* win_title, tag_search& search) noexcept;
 
     // Draw a standalone window (with Begin/End) that may edit the song (in memory and DB)
