@@ -141,28 +141,6 @@ bool nativegui::draw_song_editor(runtime_song& song) {
         core.load_from_db(); // Reload
     }
 
-    if (ImGui::Button("Play")) {
-        const scope_timer load_song(core.timer_map, "load_song");
-        char pathbuf[512] = {0};
-        snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s/%d.mp3", core.files_dir, song.hash);
-        song.stream = LoadMusicStream(pathbuf);
-        PlayMusicStream(song.stream);
-    }
-    if (ImGui::Button("Stop")) {
-        const scope_timer load_song(core.timer_map, "unload_song");
-        UnloadMusicStream(song.stream);
-        song.stream = {0};
-    }
-
-    if (IsMusicStreamPlaying(song.stream)) {
-        float progress = GetMusicTimePlayed(song.stream);
-        float total = GetMusicTimeLength(song.stream);
-        if (ImGui::SliderFloat("Progress", &progress, 0.0f, total)) {
-            SeekMusicStream(song.stream, progress);
-        }
-        UpdateMusicStream(song.stream);
-    }
-
     ImGui::End();
     return true;
 }
@@ -190,6 +168,11 @@ bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noex
         search.tac.reset();
     }
 
+    if (ImGui::Button("Add to playlist")) {
+        const auto& results = search.result_hashes;
+        core.add_search_to_playlist(results.data(), results.size());
+    }
+
     // Display results
     for (song_hash_t hash : search.result_hashes) {
         const runtime_song& s = core.song_map[hash];
@@ -202,6 +185,15 @@ bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noex
 }
 
 bool nativegui::draw_song_list() noexcept {
+    if (ImGui::Button("Add to playlist")) {
+        const bool need_init = core.playlist.empty();
+        core.playlist.reserve(core.playlist.size() + core.song_map.size());
+        for (const auto& pair : core.song_map) {
+            core.playlist.push_back(pair.first);
+        }
+        core.playlist_change_song(0);
+    }
+
     if (ImGui::BeginTable("song table", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {
         // Make header row that never scrolls away
         ImGui::TableSetupScrollFreeze(0, 1);
@@ -227,6 +219,37 @@ bool nativegui::draw_song_list() noexcept {
         }
         ImGui::EndTable();
     }
+    return true;
+}
+
+bool nativegui::draw_player() noexcept {
+    if (core.playlist.empty()) {
+        ImGui::Text("Playlist is empty.");
+        return true;
+    }
+    const u32 cur_hash = core.playlist.at(core.playlist_pos);
+
+    if (IsMusicStreamPlaying(core.audio_stream)) {
+        if (ImGui::Button("Pause")) {
+            PauseMusicStream(core.audio_stream);
+        }
+        float progress = GetMusicTimePlayed(core.audio_stream);
+        float total = GetMusicTimeLength(core.audio_stream);
+        if (ImGui::SliderFloat("Progress", &progress, 0.0f, total)) {
+            SeekMusicStream(core.audio_stream, progress);
+        }
+
+        if (total - progress < 0.1f) {
+            core.playlist_change_song(1);
+        }
+
+        UpdateMusicStream(core.audio_stream);
+    } else {
+        if (ImGui::Button("Play")) {
+            ResumeMusicStream(core.audio_stream);
+        }
+    }
+
     return true;
 }
 

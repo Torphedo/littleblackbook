@@ -78,8 +78,6 @@ struct runtime_song {
 
     // Text input for the user to add tags to a song
     tag_autocomplete tac;
-
-    Music stream;
 };
 
 // A headless search menu
@@ -125,6 +123,11 @@ struct blackbook_core {
 
     std::vector<tag_search> searches;
 
+    // State for music player features
+    Music audio_stream;
+    std::vector<song_hash_t> playlist;
+    u32 playlist_pos = 0;
+
     // Tag parent input / display
     std::vector<linked_tags> parent_pairs;
 
@@ -137,6 +140,11 @@ struct blackbook_core {
 
     // Set this flag to trigger a reload at the start of the next frame
     bool need_reload = false;
+
+    // Add the results of a search to the current playlist
+    void add_search_to_playlist(const song_hash_t* songs, u32 num_songs, bool clear_first = false);
+
+    void playlist_change_song(s8 diff);
 
     // Apply the current tags in the parent/child inputs as a pair in the DB
     bool apply_tag_pair() noexcept;

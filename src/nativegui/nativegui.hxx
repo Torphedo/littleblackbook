@@ -43,6 +43,8 @@ struct nativegui {
 
     bool draw_lyric_search() noexcept;
 
+    bool draw_player() noexcept;
+
     static constexpr window_def windows[] = {
         {   .window_name = "Song List",
             .draw = &nativegui::draw_song_list,
@@ -58,6 +60,9 @@ struct nativegui {
         },
         {   .window_name = "Lyric Search",
             .draw = &nativegui::draw_lyric_search,
+        },
+        {   .window_name = "Music Player",
+            .draw = &nativegui::draw_player,
         },
     };
     bool windows_active[ARRAY_SIZE(windows)] = {};

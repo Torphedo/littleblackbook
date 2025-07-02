@@ -11,6 +11,43 @@
 #include <schema.hxx>
 #include <scope_timer.hxx>
 
+void blackbook_core::add_search_to_playlist(const song_hash_t* songs, u32 num_songs, bool clear_first) {
+    if (clear_first) {
+        playlist.clear();
+    }
+
+    const bool need_init = playlist.empty();
+
+    // Append results to playlist
+    playlist.reserve(playlist.size() + num_songs);
+    for (u32 i = 0; i < num_songs; i++) {
+        playlist.push_back(songs[i]);
+    }
+
+    // Load a stream for the first song if needed
+    if (need_init) {
+        playlist_change_song(0);
+    }
+}
+
+void blackbook_core::playlist_change_song(s8 diff) {
+    if (diff == 0) {
+        // This special value resets playlist position
+        playlist_pos = 0;
+    } else {
+        diff /= abs(diff); // Force to 1 or -1
+
+        playlist_pos++;
+        playlist_pos %= playlist.size();
+    }
+
+    const song_hash_t cur_hash = playlist.at(playlist_pos);
+    char pathbuf[512] = {0};
+    snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s/%d.mp3", files_dir, cur_hash);
+    audio_stream = LoadMusicStream(pathbuf);
+    PlayMusicStream(audio_stream);
+}
+
 bool blackbook_core::apply_tag_pair() noexcept {
     const auto& child = tac_child.current();
     const auto& parent = tac_parent.current();
