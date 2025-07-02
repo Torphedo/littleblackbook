@@ -254,19 +254,17 @@ bool nativegui::window_player() noexcept {
     }
     ImGui::Text("Playlist pos %d, size %ld", core.playlist_pos, core.playlist.size());
 
-    if (playing) {
-        float progress = GetMusicTimePlayed(core.audio_stream);
-        float total = GetMusicTimeLength(core.audio_stream);
-        if (ImGui::SliderFloat("Progress", &progress, 0.0f, total)) {
-            SeekMusicStream(core.audio_stream, progress);
-        }
-
-        if (total - progress < 0.1f) {
-            core.playlist_change_song(1);
-        }
-
-        UpdateMusicStream(core.audio_stream);
+    float progress = GetMusicTimePlayed(core.audio_stream);
+    float total = GetMusicTimeLength(core.audio_stream);
+    if (ImGui::SliderFloat("Progress", &progress, 0.0f, total)) {
+        SeekMusicStream(core.audio_stream, progress);
     }
+
+    if (total - progress < 0.1f) {
+        core.playlist_change_song(1);
+    }
+
+    UpdateMusicStream(core.audio_stream);
 
     ImGui::Separator();
 
