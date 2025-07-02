@@ -12,6 +12,10 @@
 #include <scope_timer.hxx>
 
 void blackbook_core::add_search_to_playlist(const song_hash_t* songs, u32 num_songs, bool clear_first) {
+    if (num_songs == 0) {
+        return;
+    }
+
     if (clear_first) {
         playlist.clear();
     }
