@@ -36,6 +36,9 @@ add_library(imgui STATIC
     lib/imgui/backends/imgui_impl_glfw.cpp
     lib/imgui/misc/cpp/imgui_stdlib.cpp
 )
+add_library(stb_image STATIC
+    lib/stb_image.c
+)
 
 # Dependencies
 set(BOBTAIL_OPENGL ON)
@@ -86,10 +89,10 @@ add_library(sqlite_crc32 SHARED
 )
 target_link_libraries(sqlite_crc32 PUBLIC bobtail)
 
-# For some reason linking on Clang requires explicitly adding "stdc++"...
 target_link_libraries(blackbook PUBLIC
     bobtail
     sqlite_crc32 # We link with this at runtime, so this ensures it gets built
-    sqlite3-static glfw imgui nfd raudio
+    sqlite3-static glfw imgui nfd raudio stb_image
+# For some reason linking on Clang requires explicitly adding "stdc++"...
     stdc++
 )

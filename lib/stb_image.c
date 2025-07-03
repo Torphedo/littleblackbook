@@ -1,0 +1,5 @@
+#define STB_ONLY_JPEG
+#define STBI_WINDOWS_UTF8
+#define STBI_MAX_DIMENSIONS 8192
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
