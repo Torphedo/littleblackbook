@@ -52,6 +52,9 @@ void blackbook_core::playlist_change_song(s8 diff) {
     const song_hash_t cur_hash = playlist.at(playlist_pos);
     char pathbuf[512] = {0};
     snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s/%d.mp3", files_dir, cur_hash);
+    if (IsMusicReady(audio_stream)) {
+        UnloadMusicStream(audio_stream);
+    }
     audio_stream = LoadMusicStream(pathbuf);
     PlayMusicStream(audio_stream);
 }
@@ -355,4 +358,9 @@ blackbook_core::blackbook_core(sqlite3* db, const char* files_dir) : files_dir(f
     }
 
     initialized = result;
+}
+
+blackbook_core::~blackbook_core() {
+   UnloadMusicStream(audio_stream);
+   CloseAudioDevice();
 }

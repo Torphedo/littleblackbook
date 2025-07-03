@@ -1,22 +1,23 @@
+#include <glad/glad.h>
 #include "nativegui.hxx"
-
 #include <cstdio>
+
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
 #include <raudio.h>
 
-#include "blackbook_core.hxx"
-#include "nfde_wrapper.hxx"
-
 #include <common/logging.h>
 #include <common/vfile.h>
 #include <common/crc32.h>
+#include <common/int.h>
 
+#include <blackbook_core.hxx>
 #include <schema.hxx>
 #include <tags.hxx>
 #include <sqlgen.hxx>
 #include <scope_timer.hxx>
+#include "nfde_wrapper.hxx"
 
 // Autocomplete callback for ImGui::InputText() and related functions.
 static int autocomplete_update_selection(ImGuiInputTextCallbackData* data) {
@@ -542,4 +543,13 @@ nativegui::nativegui(sqlite3* db, const char* files_dir) noexcept
 {
     InitAudioDevice();
     initialized = core.initialized;
+}
+
+nativegui::~nativegui() noexcept {
+    // Gather up texture IDs to be deleted in 1 call
+    std::vector<gl_obj> textures(thumbnails.thumbnails.size());
+    for (const auto& pair : thumbnails.thumbnails) {
+        textures.push_back(pair.second);
+    }
+    glDeleteTextures(textures.size(), textures.data());
 }

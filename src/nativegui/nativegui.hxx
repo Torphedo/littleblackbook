@@ -1,5 +1,4 @@
 #pragma once
-#include "nativegui/thumbnails.hxx"
 #include <GLFW/glfw3.h>
 #include <sqlite3.h>
 #include <imgui.h>
@@ -9,6 +8,7 @@
 #include <blackbook_core.hxx>
 #include <import.hxx>
 #include <schema.hxx>
+#include "thumbnails.hxx"
 
 // Struct for all GUI state
 struct nativegui {
@@ -91,6 +91,7 @@ struct nativegui {
     /// @brief Load everything needed to start the GUI from the database
     nativegui(sqlite3* db, const char* files_dir) noexcept;
 
+    ~nativegui() noexcept;
 
     /// @brief Main function for the native PC frontend
     bool gui_main(GLFWwindow* window) noexcept;

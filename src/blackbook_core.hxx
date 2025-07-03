@@ -124,7 +124,7 @@ struct blackbook_core {
     std::vector<tag_search> searches;
 
     // State for music player features
-    Music audio_stream;
+    Music audio_stream = {0};
     std::vector<song_hash_t> playlist;
     s32 playlist_pos = 0;
 
@@ -163,4 +163,5 @@ struct blackbook_core {
 
     /// @brief Load everything from the database
     blackbook_core(sqlite3* db, const char* files_dir);
+    ~blackbook_core();
 };
