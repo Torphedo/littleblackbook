@@ -1,4 +1,5 @@
 #pragma once
+#include "nativegui/thumbnails.hxx"
 #include <GLFW/glfw3.h>
 #include <sqlite3.h>
 #include <imgui.h>
@@ -15,6 +16,7 @@ struct nativegui {
     bool initialized = false;
 
     blackbook_core core;
+    thumbnail_storage thumbnails;
 
     // All song hashes that need their editing window drawn
     std::set<song_hash_t> song_editors;

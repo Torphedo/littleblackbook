@@ -104,6 +104,10 @@ void nativegui::draw_song_info(const runtime_song& song) const noexcept {
     ImGui::Text("Hash: %d", song.hash);
     ImGui::Text("Imported @ %lu", song.import_timestamp);
 
+    gl_obj thumbnail = thumbnails[song.hash];
+    if (thumbnail != 0) {
+        ImGui::Image(thumbnail, ImVec2(512, 512));
+    }
 }
 
 bool nativegui::window_song_editor(runtime_song& song) {
@@ -115,6 +119,11 @@ bool nativegui::window_song_editor(runtime_song& song) {
         // User closed the window or it's not visible
         ImGui::End();
         return false;
+    }
+    if (ImGui::Button("Load thumbnail")) {
+        char pathbuf[512] = {0};
+        snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s/%d.mp3", core.files_dir, song.hash);
+        thumbnails.load_from_mp3(pathbuf, song.hash);
     }
     draw_song_info(song);
 

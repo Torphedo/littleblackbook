@@ -13,6 +13,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 include_directories(
     src
+    lib
     lib/bobtail
 
     # We don't actually need this, but bobtail::setup_opengl() relies on input.h,
@@ -71,6 +72,7 @@ add_executable(blackbook
 
     src/nativegui/gui_bootstrap.cxx
     src/nativegui/nativegui.cxx
+    src/nativegui/thumbnails.cxx
     src/nativegui/nfde_wrapper.cxx
 
     src/cli/cli_main.cxx
