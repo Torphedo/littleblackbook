@@ -142,7 +142,7 @@ bool thumbnail_storage::load_from_mp3(const char* path, song_hash_t song_hash) n
     fclose(f);
 
     const image_hash_t ihash = crc32buf(buf, image_size);
-    if (thumbnails.count(song_hash)) {
+    if (thumbnails.count(ihash)) {
         this->song_map[song_hash] = ihash;
         return true; // Already loaded
     }
