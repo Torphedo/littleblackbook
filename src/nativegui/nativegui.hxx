@@ -17,6 +17,7 @@ struct nativegui {
 
     blackbook_core core;
     thumbnail_storage thumbnails;
+    bool need_thumbnail_reload = true;
 
     // All song hashes that need their editing window drawn
     std::set<song_hash_t> song_editors;

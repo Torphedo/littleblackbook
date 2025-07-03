@@ -75,7 +75,6 @@ void song_record::insert_sql(std::string& out) const noexcept {
         title_str.c_str(), artist_str.c_str(), album_str.c_str(), release_year, crc32
     );
 
-    // TODO: Should this be part of this method or a new one like tags_sql()?
     std::vector<std::string> artist_tags = parse_artists(artist_str.c_str());
     for (const std::string& tag : artist_tags) {
         create_tag_sql(tag.c_str(), out);

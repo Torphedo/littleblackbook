@@ -210,6 +210,7 @@ bool nativegui::window_songs() noexcept {
         core.playlist_change_song(0);
     }
 
+    const u32 thumb_size = 100;
     if (ImGui::BeginTable("song table", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {
         // Make header row that never scrolls away
         ImGui::TableSetupScrollFreeze(0, 1);
@@ -221,12 +222,14 @@ bool nativegui::window_songs() noexcept {
 
         // Draw a row for each chunk
         for (const auto& pair : core.song_map) {
-            ImGui::TableNextRow();
+            ImGui::TableNextRow(0, thumb_size);
             ImGui::TableSetColumnIndex(0);
 
             const runtime_song& s = pair.second;
+            ImGui::Image(thumbnails[s.hash], ImVec2(thumb_size, thumb_size));
+            ImGui::SameLine();
             // The 2nd arg is whether the row is selected (for highlighting)
-            if (ImGui::Selectable(s.name.c_str(), false, ImGuiSelectableFlags_SpanAllColumns)) {
+            if (ImGui::Selectable(s.name.c_str(), false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(0, thumb_size))) {
                 song_editors.insert(s.hash);
             }
 
@@ -495,6 +498,15 @@ bool nativegui::gui_main(GLFWwindow *window) noexcept {
     const scope_timer main_timer(core.timer_map, "main_draw");
     if (core.need_reload) {
         core.load_from_db();
+    }
+    if (need_thumbnail_reload) {
+        // Load thumbnails
+        const scope_timer thumbnail_reload(core.timer_map, "thumbnail_reload");
+        for (const auto& pair : core.song_map) {
+            char pathbuf[512] = {0};
+            snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s/%d.mp3", core.files_dir, pair.first);
+            thumbnails.load_from_mp3(pathbuf, pair.first);
+        }
     }
 
     draw_toolbar();
