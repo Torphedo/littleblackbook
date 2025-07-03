@@ -122,6 +122,7 @@ bool nativegui::window_song_editor(runtime_song& song) {
         return false;
     }
     if (ImGui::Button("Load thumbnail")) {
+        const scope_timer load_timer(core.timer_map, "load_thumbnail");
         char pathbuf[512] = {0};
         snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s/%d.mp3", core.files_dir, song.hash);
         thumbnails.load_from_mp3(pathbuf, song.hash);
@@ -547,6 +548,7 @@ nativegui::nativegui(sqlite3* db, const char* files_dir) noexcept
 
 nativegui::~nativegui() noexcept {
     // Gather up texture IDs to be deleted in 1 call
+    // TODO: Should this be done in a thumbnail object dtor?
     std::vector<gl_obj> textures(thumbnails.thumbnails.size());
     for (const auto& pair : thumbnails.thumbnails) {
         textures.push_back(pair.second);

@@ -107,7 +107,8 @@ struct tag_search {
 };
 
 // Container for all "core" application state (all non-UI state). Some text box
-// state is here too, but only those that involve autocomplete.
+// state is here too, but only those that involve autocomplete. Playlist
+// functionality is also included, since a CLI frontend may want to play music.
 struct blackbook_core {
     bool initialized = false;
     sqlite3* db = nullptr;

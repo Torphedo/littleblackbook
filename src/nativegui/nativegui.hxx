@@ -24,9 +24,11 @@ struct nativegui {
     std::string lyric_search_input;
     std::set<song_hash_t> lyric_search_results;
 
+    // This struct lets us loop over known windows, which makes it easy to add
+    // new ones without any other boilerplate.
     struct window_def {
         const char* window_name;
-        bool (nativegui::*draw)();
+        bool (nativegui::*draw)(); // Pointer to member function
     };
 
     // Draw read-only song metadata using ImGui::Text
@@ -37,21 +39,16 @@ struct nativegui {
     // Draw a standalone window (with Begin/End) that may edit the song (in memory and DB)
     bool window_song_editor(runtime_song& song);
 
-    // Standalone windows (minus Begin/End, but intended to be a window)
+    // Standalone windows (minus Begin/End, which is handled by the caller)
     bool window_songs() noexcept;
-
     bool window_tag_parents() noexcept;
-
+    bool window_draw_import_progress() noexcept;
+    bool window_timers() noexcept;
+    bool window_lyric_search() noexcept;
+    bool window_player() noexcept;
     bool draw_toolbar() noexcept;
 
-    bool window_draw_import_progress() noexcept;
-
-    bool window_timers() noexcept;
-
-    bool window_lyric_search() noexcept;
-
-    bool window_player() noexcept;
-
+    // Used to automatically draw windows, create window toggles in the toolbar, etc.
     static constexpr window_def windows[] = {
         {   .window_name = "Song List",
             .draw = &nativegui::window_songs,
@@ -74,18 +71,21 @@ struct nativegui {
     };
     bool windows_active[ARRAY_SIZE(windows)] = {};
 
-    // We need to toggle this window from another function
+    // We need to toggle this window from another function, so need a constant for it
     static constexpr u8 IMPORT_WINDOW_IDX = 2;
-    static_assert(windows[IMPORT_WINDOW_IDX].draw == &nativegui::window_draw_import_progress);
+    static_assert(windows[IMPORT_WINDOW_IDX].draw == &nativegui::window_draw_import_progress); // In case order changes
 
     // File import state
+    // TODO: Should this be on the core?
     import_stats_t import_stats;
     std::thread import_thread;
 
     // Temporary storage for import process
     std::vector<std::string> import_paths;
+    // TODO: This is stupid and janky and shouldn't need to exist
     std::vector<const char*> import_path_ptrs;
 
+    // Text input wrapper that automatically handles/renders tag autocompletion
     bool InputTagAutocompleted(const char* label, const char* hint, ImGuiInputTextFlags flags, tag_autocomplete& tac);
 
     /// @brief Load everything needed to start the GUI from the database
