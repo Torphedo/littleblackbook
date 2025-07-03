@@ -499,9 +499,12 @@ bool nativegui::gui_main(GLFWwindow *window) noexcept {
     if (core.need_reload) {
         core.load_from_db();
     }
+
+    // Load thumbnails only on first load. We can't do this in ctor since OpenGL
+    // may not be loaded yet
     if (need_thumbnail_reload) {
-        // Load thumbnails
-        const scope_timer thumbnail_reload(core.timer_map, "thumbnail_reload");
+        const scope_timer thumb_load(core.timer_map, "load_thumbnails");
+        need_thumbnail_reload = false;
         for (const auto& pair : core.song_map) {
             char pathbuf[512] = {0};
             snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s/%d.mp3", core.files_dir, pair.first);
