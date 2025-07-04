@@ -154,7 +154,7 @@ bool nativegui::window_song_editor(runtime_song& song) {
     return true;
 }
 
-bool nativegui::draw_song_row(song_hash_t hash, u32 thumb_size) const noexcept {
+bool nativegui::draw_song_row(song_hash_t hash, bool& need_add_to_playlist, u32 thumb_size) const noexcept {
     bool result = false;
     ImGui::TableNextRow(0, thumb_size);
     ImGui::TableSetColumnIndex(0);
@@ -165,6 +165,17 @@ bool nativegui::draw_song_row(song_hash_t hash, u32 thumb_size) const noexcept {
     // The 2nd arg is whether the row is selected (for highlighting)
     if (ImGui::Selectable(s.name.c_str(), false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(0, thumb_size))) {
         result = true;
+    }
+    s32 hovered_row = ImGui::TableGetHoveredRow();
+    s32 cur_row = ImGui::TableGetRowIndex();
+
+    char popup_name[128] = {0};
+    snprintf(popup_name, sizeof(popup_name), "song popup [%d] [%d]", hash, cur_row);
+    if (ImGui::BeginPopupContextItem(popup_name)) {
+        if (ImGui::MenuItem("Add to playlist")) {
+            need_add_to_playlist = true;
+        }
+        ImGui::EndPopup();
     }
 
     ImGui::TableSetColumnIndex(1);

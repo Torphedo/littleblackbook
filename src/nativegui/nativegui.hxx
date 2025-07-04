@@ -8,6 +8,7 @@
 #include <blackbook_core.hxx>
 #include <import.hxx>
 #include <schema.hxx>
+#include "imgui_internal.h"
 #include "thumbnails.hxx"
 
 // Struct for all GUI state
@@ -35,7 +36,7 @@ struct nativegui {
     // Draw read-only song metadata using ImGui::Text
     void draw_song_info(const runtime_song& song) const noexcept;
 
-    bool draw_song_row(song_hash_t hash, u32 thumb_size = 100) const noexcept;
+    bool draw_song_row(song_hash_t hash, bool& need_add_to_playlist, u32 thumb_size = 100) const noexcept;
 
     bool draw_search_menu(const char* win_title, tag_search& search) noexcept;
 
@@ -105,6 +106,8 @@ struct nativegui {
         return ((nativegui*)ctx)->gui_main(window);
     }
 
+    // Templated methods are kept at the bottom for readability
+
     // We need a template to handle STL collections generically (since we need to
     // use this on maps and vectors and sets).
     template<typename T>
@@ -120,10 +123,15 @@ struct nativegui {
 
             // Draw a row for each chunk
             for (song_hash_t hash : hashes) {
-                if (draw_song_row(hash)) {
+                bool add_to_playlist = false;
+                if (draw_song_row(hash, add_to_playlist)) {
                     song_editors.insert(hash);
                 }
+                if (add_to_playlist) {
+                    core.add_search_to_playlist(&hash, 1);
+                }
             }
+
             ImGui::EndTable();
         }
     }
