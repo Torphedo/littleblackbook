@@ -13,6 +13,7 @@
 #include <common/crc32.h>
 #include <common/int.h>
 
+#include <defaults.hxx>
 #include <blackbook_core.hxx>
 #include <schema.hxx>
 #include <tags.hxx>
@@ -174,6 +175,9 @@ bool nativegui::draw_song_row(song_hash_t hash, bool& need_add_to_playlist, u32 
     if (ImGui::BeginPopupContextItem(popup_name)) {
         if (ImGui::MenuItem("Add to playlist")) {
             need_add_to_playlist = true;
+        }
+        if (ImGui::MenuItem("Open editor")) {
+            result = true;
         }
         ImGui::EndPopup();
     }
@@ -364,6 +368,16 @@ bool nativegui::draw_toolbar() noexcept {
             if (ImGui::BeginMenu("File")) {
                 import_files |= ImGui::MenuItem("Import files", "Ctrl-I");
                 core.need_reload |= ImGui::MenuItem("Reload from database", "F5 / Ctrl-R");
+                if (ImGui::MenuItem("Apply default tag parents")) {
+                    std::string sql;
+                    for (default_tag_pair pair : default_tag_parents) {
+                        link_tags_sql(pair.parent, pair.child, sql);
+                    }
+                    char* errmsg = nullptr;
+                    if (sqlite3_exec(core.db, sql.c_str(), nullptr, nullptr, &errmsg) != SQLITE_OK) {
+                        LOG_MSG(error, "Failed to apply defaults because: %s\n", errmsg);
+                    }
+                }
                 ImGui::EndMenu();
             }
 
