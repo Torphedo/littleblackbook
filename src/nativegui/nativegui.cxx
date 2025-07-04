@@ -121,23 +121,16 @@ bool nativegui::window_song_editor(runtime_song& song) {
         ImGui::End();
         return false;
     }
-    if (ImGui::Button("Load thumbnail")) {
-        const scope_timer load_timer(core.timer_map, "load_thumbnail");
-        char pathbuf[512] = {0};
-        snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s/%d.mp3", core.files_dir, song.hash);
-        thumbnails.load_from_mp3(pathbuf, song.hash);
-    }
     draw_song_info(song);
 
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
     snprintf(win_title_buf, sizeof(win_title_buf), "##editor_input%d", song.hash);
     if (InputTagAutocompleted(win_title_buf, "Input a tag", flags, song.tac)) {
         const std::string& tag = song.tac.current();
-        const tag_hash_t tag_hash = crc32buf((const u8*)tag.c_str(), tag.size());
+        const tag_hash_t tag_hash = crc32buf((const u8*)tag.c_str() + (tag[0] == '-'), tag.size());
 
         bool found = false;
         for (auto iter = song.tags.begin(); iter != song.tags.end(); iter++) {
-            // Ignore leading minus signs if present
             found |= (*iter == tag_hash);
             if (found) {
                 song.tags.erase(iter);
@@ -158,6 +151,25 @@ bool nativegui::window_song_editor(runtime_song& song) {
 
     ImGui::End();
     return true;
+}
+
+bool nativegui::draw_song_row(song_hash_t hash, u32 thumb_size) const noexcept {
+    bool result = false;
+    ImGui::TableNextRow(0, thumb_size);
+    ImGui::TableSetColumnIndex(0);
+
+    const runtime_song& s = core.song_map.at(hash);
+    ImGui::Image(thumbnails[s.hash], ImVec2(thumb_size, thumb_size));
+    ImGui::SameLine();
+    // The 2nd arg is whether the row is selected (for highlighting)
+    if (ImGui::Selectable(s.name.c_str(), false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(0, thumb_size))) {
+        result = true;
+    }
+
+    ImGui::TableSetColumnIndex(1);
+    ImGui::Text("%d", s.release_year);
+
+    return result;
 }
 
 bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noexcept {
@@ -189,12 +201,24 @@ bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noex
     }
 
     // Display results
-    for (song_hash_t hash : search.result_hashes) {
-        const runtime_song& s = core.song_map[hash];
-        if (ImGui::Selectable(s.name.c_str())) {
-            song_editors.insert(s.hash);
+    if (ImGui::BeginTable("search results", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {
+        // Make header row that never scrolls away
+        ImGui::TableSetupScrollFreeze(0, 1);
+
+        // Setup table header
+        ImGui::TableSetupColumn("Title");
+        ImGui::TableSetupColumn("Year");
+        ImGui::TableHeadersRow();
+
+        // Draw a row for each chunk
+        for (song_hash_t hash : search.result_hashes) {
+            if (draw_song_row(hash)) {
+                song_editors.insert(hash);
+            }
         }
+        ImGui::EndTable();
     }
+
     ImGui::End();
     return true;
 }
@@ -210,7 +234,6 @@ bool nativegui::window_songs() noexcept {
         core.playlist_change_song(0);
     }
 
-    const u32 thumb_size = 100;
     if (ImGui::BeginTable("song table", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {
         // Make header row that never scrolls away
         ImGui::TableSetupScrollFreeze(0, 1);
@@ -222,19 +245,9 @@ bool nativegui::window_songs() noexcept {
 
         // Draw a row for each chunk
         for (const auto& pair : core.song_map) {
-            ImGui::TableNextRow(0, thumb_size);
-            ImGui::TableSetColumnIndex(0);
-
-            const runtime_song& s = pair.second;
-            ImGui::Image(thumbnails[s.hash], ImVec2(thumb_size, thumb_size));
-            ImGui::SameLine();
-            // The 2nd arg is whether the row is selected (for highlighting)
-            if (ImGui::Selectable(s.name.c_str(), false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(0, thumb_size))) {
-                song_editors.insert(s.hash);
+            if (draw_song_row(pair.first)) {
+                song_editors.insert(pair.first);
             }
-
-            ImGui::TableSetColumnIndex(1);
-            ImGui::Text("%d", s.release_year);
         }
         ImGui::EndTable();
     }
@@ -485,12 +498,24 @@ bool nativegui::window_lyric_search() noexcept {
     }
 
     // Draw results
-    for (song_hash_t hash : lyric_search_results) {
-        const runtime_song& s = core.song_map[hash];
-        if (ImGui::Selectable(s.name.c_str())) {
-            song_editors.insert(s.hash);
+    if (ImGui::BeginTable("search results", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {
+        // Make header row that never scrolls away
+        ImGui::TableSetupScrollFreeze(0, 1);
+
+        // Setup table header
+        ImGui::TableSetupColumn("Title");
+        ImGui::TableSetupColumn("Year");
+        ImGui::TableHeadersRow();
+
+        // Draw a row for each chunk
+        for (song_hash_t hash : lyric_search_results) {
+            if (draw_song_row(hash)) {
+                song_editors.insert(hash);
+            }
         }
+        ImGui::EndTable();
     }
+
     return true;
 }
 
