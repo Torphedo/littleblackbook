@@ -151,7 +151,7 @@ bool thumbnail_storage::load_from_mp3(const char* path, song_hash_t song_hash) n
     int x = 0;
     int y = 0;
     int channels = 0;
-    u8* data = stbi_load_from_memory(buf, image_size, &x, &y, &channels, 3);
+    u8* data = stbi_load_from_memory(buf, image_size, &x, &y, &channels, 0);
     free(buf);
 
     if (!data) {
