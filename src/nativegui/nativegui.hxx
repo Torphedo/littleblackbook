@@ -104,4 +104,27 @@ struct nativegui {
     static bool gui_main_static(void* ctx, GLFWwindow* window) noexcept {
         return ((nativegui*)ctx)->gui_main(window);
     }
+
+    // We need a template to handle STL collections generically (since we need to
+    // use this on maps and vectors and sets).
+    template<typename T>
+    void draw_songs(const T& hashes, u32 thumb_size = 100) noexcept {
+        if (ImGui::BeginTable("song table", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {
+            // Make header row that never scrolls away
+            ImGui::TableSetupScrollFreeze(0, 1);
+
+            // Setup table header
+            ImGui::TableSetupColumn("Title");
+            ImGui::TableSetupColumn("Year");
+            ImGui::TableHeadersRow();
+
+            // Draw a row for each chunk
+            for (song_hash_t hash : hashes) {
+                if (draw_song_row(hash)) {
+                    song_editors.insert(hash);
+                }
+            }
+            ImGui::EndTable();
+        }
+    }
 };

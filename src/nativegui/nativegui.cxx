@@ -1,6 +1,7 @@
 #include <glad/glad.h>
 #include "nativegui.hxx"
 #include <cstdio>
+#include <ranges>
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -201,24 +202,7 @@ bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noex
     }
 
     // Display results
-    if (ImGui::BeginTable("search results", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {
-        // Make header row that never scrolls away
-        ImGui::TableSetupScrollFreeze(0, 1);
-
-        // Setup table header
-        ImGui::TableSetupColumn("Title");
-        ImGui::TableSetupColumn("Year");
-        ImGui::TableHeadersRow();
-
-        // Draw a row for each chunk
-        for (song_hash_t hash : search.result_hashes) {
-            if (draw_song_row(hash)) {
-                song_editors.insert(hash);
-            }
-        }
-        ImGui::EndTable();
-    }
-
+    draw_songs(search.result_hashes);
     ImGui::End();
     return true;
 }
@@ -234,23 +218,7 @@ bool nativegui::window_songs() noexcept {
         core.playlist_change_song(0);
     }
 
-    if (ImGui::BeginTable("song table", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {
-        // Make header row that never scrolls away
-        ImGui::TableSetupScrollFreeze(0, 1);
-
-        // Setup table header
-        ImGui::TableSetupColumn("Title");
-        ImGui::TableSetupColumn("Year");
-        ImGui::TableHeadersRow();
-
-        // Draw a row for each chunk
-        for (const auto& pair : core.song_map) {
-            if (draw_song_row(pair.first)) {
-                song_editors.insert(pair.first);
-            }
-        }
-        ImGui::EndTable();
-    }
+    draw_songs(std::views::keys(core.song_map));
     return true;
 }
 
@@ -498,24 +466,7 @@ bool nativegui::window_lyric_search() noexcept {
     }
 
     // Draw results
-    if (ImGui::BeginTable("search results", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable)) {
-        // Make header row that never scrolls away
-        ImGui::TableSetupScrollFreeze(0, 1);
-
-        // Setup table header
-        ImGui::TableSetupColumn("Title");
-        ImGui::TableSetupColumn("Year");
-        ImGui::TableHeadersRow();
-
-        // Draw a row for each chunk
-        for (song_hash_t hash : lyric_search_results) {
-            if (draw_song_row(hash)) {
-                song_editors.insert(hash);
-            }
-        }
-        ImGui::EndTable();
-    }
-
+    draw_songs(lyric_search_results);
     return true;
 }
 
