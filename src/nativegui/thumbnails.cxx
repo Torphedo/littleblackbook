@@ -148,10 +148,14 @@ bool thumbnail_storage::load_from_mp3(const char* path, song_hash_t song_hash) n
         return true; // Already loaded
     }
 
+    // This forces stbi to convert to our preferred number of channels. That
+    // wastes some space on greyscale images, but stops them from being rendered
+    // as red-only images (without needing a custom shader).
+    const u8 desired_channels = 3;
     int x = 0;
     int y = 0;
     int channels = 0;
-    u8* data = stbi_load_from_memory(buf, image_size, &x, &y, &channels, 0);
+    u8* data = stbi_load_from_memory(buf, image_size, &x, &y, &channels, desired_channels);
     free(buf);
 
     if (!data) {
@@ -168,7 +172,7 @@ bool thumbnail_storage::load_from_mp3(const char* path, song_hash_t song_hash) n
         .data = data,
         .width = (u16)x,
         .height = (u16)y,
-        .channels = (u8)channels,
+        .channels = desired_channels,
     };
 
     this->thumbnails[ihash] = gl_tex;
