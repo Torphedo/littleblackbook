@@ -161,7 +161,7 @@ bool tag_autocomplete::update_results(sqlite3* db) noexcept {
         SELECT ns.namespace, t.tag FROM
         (SELECT * FROM tag_search('"%s" *') ORDER BY rank LIMIT %d) result
         JOIN tags t ON t.hash = result.hash
-        JOIN namespaces ns ON ns.hash = t.namespace_hash;
+        LEFT JOIN namespaces ns ON ns.hash = t.namespace_hash;
     )",
     user_str.c_str() + minus, AUTOCOMPLETE_SIZE);
 
@@ -176,7 +176,10 @@ bool tag_autocomplete::update_results(sqlite3* db) noexcept {
         const char* nspace = (const char*)sqlite3_column_text(stmt, 0);
         const char* tag = (const char*)sqlite3_column_text(stmt, 1);
 
-        result += std::string(nspace) + ":" + tag;
+        if (nspace) {
+            result += nspace + std::string(":");
+        }
+        result += tag;
         candidates.push_back(result);
     }
 
