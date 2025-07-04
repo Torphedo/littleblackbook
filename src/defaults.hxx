@@ -58,10 +58,6 @@ constexpr default_tag_pair default_tag_parents[] = {
     ARTIST_LINK("reflection eternal", "dj hi-tek"),
 
     // Wu Tang Clan aliases
-    ARTIST_LINK("rza", "prince rakeem"),
-    ARTIST_LINK("rza", "RZArecta"),
-    ARTIST_LINK("rza", "chief abbot"),
-    ARTIST_LINK("rza", "bobby steels"),
     ARTIST_LINK("raekwon the chef", "raekwon"),
     ARTIST_LINK("wu tang clan", "rza"),
     ARTIST_LINK("wu tang clan", "gza"),
