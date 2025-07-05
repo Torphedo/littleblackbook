@@ -55,7 +55,6 @@ song_record::song_record(u8* mp3, u32 size) {
             title = id3::text((u8*)vfile_cur(id3), frame.size);
             break;
         default:
-            LOG_MSG(warning, "Unknown ID3 frame ID 0x%x\n", frame.id);
             break;
         }
 
