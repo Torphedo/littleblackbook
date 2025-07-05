@@ -284,35 +284,37 @@ bool nativegui::toolbar_player() noexcept {
     const float height = ImGui::GetFrameHeight();
     const ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_MenuBar;
 
+    const bool ctrl = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl);
+    const bool shift = ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift);
+    bool toggle_play = ImGui::IsKeyPressed(ImGuiKey_Space, false);
+    s8 skip_song = (shift && ImGui::IsKeyPressed(ImGuiKey_N, false)) || ImGui::IsKeyPressed(ImGuiKey_J, false);
+    s8 prev_song = (shift && ImGui::IsKeyPressed(ImGuiKey_P, false)) || ImGui::IsKeyPressed(ImGuiKey_K, false);
+    s8 seek_ahead = (ImGui::IsKeyPressed(ImGuiKey_RightArrow, true)) || ImGui::IsKeyPressed(ImGuiKey_L, true);
+    s8 seek_back  = (ImGui::IsKeyPressed(ImGuiKey_LeftArrow, true))  || ImGui::IsKeyPressed(ImGuiKey_H, true);
+
+    float progress = GetMusicTimePlayed(core.audio_stream);
+    float total = 0;
+    if (IsMusicReady(core.audio_stream)) {
+        total = GetMusicTimeLength(core.audio_stream);
+    }
+
     ImGui::SetNextWindowSizeConstraints(ImVec2(0, 100), ImVec2(FLT_MAX, FLT_MAX));
     if (ImGui::BeginViewportSideBar("PlayerBar", viewport, ImGuiDir_Down, 100, flags)) {
         if (ImGui::BeginMenuBar()) {
-            float progress = GetMusicTimePlayed(core.audio_stream);
-            float total = 0;
-            if (IsMusicReady(core.audio_stream)) {
-                total = GetMusicTimeLength(core.audio_stream);
-            }
-
             if (core.song_map.count(cur_hash)) {
                 const runtime_song& song = core.song_map[cur_hash];
                 ImGui::Image(thumbnails[song.hash], ImVec2(100, 100));
-                ImGui::Text("%s", song.name.c_str());
             }
 
             ImGui::Text("[%d / %ld]", core.playlist_pos, core.playlist.size());
-            if (ImGui::Button("<")) {
-                core.playlist_change_song(-1);
-            }
+            prev_song |= ImGui::Button("<");
             const char* button_label = playing ? "Pause" : "Play";
-            if (ImGui::Button(button_label)) {
-                if (playing) {
-                    PauseMusicStream(core.audio_stream);
-                } else {
-                    ResumeMusicStream(core.audio_stream);
-                }
-            }
-            if (ImGui::Button(">")) {
-                core.playlist_change_song(1);
+            toggle_play |= ImGui::Button(button_label);
+            skip_song |= ImGui::Button(">");
+
+            if (core.song_map.count(cur_hash)) {
+                const runtime_song& song = core.song_map[cur_hash];
+                ImGui::Text("%s", song.name.c_str());
             }
 
             char tmpbuf[128] = {0};
@@ -330,6 +332,23 @@ bool nativegui::toolbar_player() noexcept {
         }
 
         ImGui::End();
+    }
+
+    if (toggle_play) {
+        if (playing) {
+            PauseMusicStream(core.audio_stream);
+        } else {
+            ResumeMusicStream(core.audio_stream);
+        }
+    }
+    if (prev_song || skip_song) {
+        core.playlist_change_song(skip_song - prev_song);
+    }
+
+    if (seek_ahead || seek_back) {
+        const float diff = 5.0f * (seek_ahead - seek_back);
+        const float new_pos = CLAMP(0.1f, progress + diff, total);
+        SeekMusicStream(core.audio_stream, new_pos);
     }
 
     UpdateMusicStream(core.audio_stream);
