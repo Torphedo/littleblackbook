@@ -36,6 +36,11 @@ void blackbook_core::add_search_to_playlist(const song_hash_t* songs, u32 num_so
 }
 
 void blackbook_core::playlist_change_song(s8 diff) {
+    if (playlist.size() <= 0) {
+        playlist_pos = 0;
+        return;
+    }
+
     if (diff == 0) {
         // This special value resets playlist position
         playlist_pos = 0;

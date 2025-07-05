@@ -158,7 +158,7 @@ bool nativegui::window_song_editor(runtime_song& song) {
 bool nativegui::draw_song_row(song_hash_t hash, bool& need_add_to_playlist, u32 thumb_size) const noexcept {
     bool result = false;
     if (!ImGui::IsItemVisible()) {
-        return result;
+        // return result;
     }
 
     ImGui::TableNextRow(0, thumb_size);
@@ -241,50 +241,98 @@ bool nativegui::window_songs() noexcept {
     return true;
 }
 
-bool nativegui::window_player() noexcept {
-    if (core.playlist.empty()) {
-        ImGui::Text("Playlist is empty.");
-        return true;
-    }
-    const u32 cur_hash = core.playlist.at(core.playlist_pos);
+bool nativegui::window_playlist() noexcept {
+    ImGui::Text("%ld songs", core.playlist.size());
 
+    // Outer border gives a tiny bit of padding to make the year column more readable
+    const int flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable | ImGuiTableFlags_BordersOuterV;
+    if (ImGui::BeginTable("song table", 2, flags)) {
+        // Make header row that never scrolls away
+        ImGui::TableSetupScrollFreeze(0, 1);
+
+        // Title column takes up as much space as possible, but won't truncate the year column
+        ImGui::TableSetupColumn("Title", ImGuiTableColumnFlags_WidthStretch);
+        // Fixed width makes sure the column never gets cut off
+        ImGui::TableSetupColumn("Year", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableHeadersRow(); // Show headers
+
+        for (song_hash_t hash : core.playlist) {
+            bool add_to_playlist = false;
+            if (draw_song_row(hash, add_to_playlist)) {
+                song_editors.insert(hash);
+            }
+            if (add_to_playlist) {
+                core.add_search_to_playlist(&hash, 1);
+            }
+        }
+        // TODO: We can add more columns here, so add some playlist management stuff.
+        // e.g. Drag handle to re-order rows (can ImGui do this for us?) or up/down buttons
+
+        ImGui::EndTable();
+    }
+    return true;
+}
+
+bool nativegui::toolbar_player() noexcept {
+    u32 cur_hash = 0;
+    if (!core.playlist.empty()) {
+        cur_hash = core.playlist.at(core.playlist_pos);
+    }
     const bool playing = IsMusicStreamPlaying(core.audio_stream);
-    if (ImGui::Button("<")) {
-        core.playlist_change_song(-1);
-    }
-    ImGui::SameLine();
-    if (playing) {
-        if (ImGui::Button("Pause")) {
-            PauseMusicStream(core.audio_stream);
-        }
-    } else {
-        if (ImGui::Button("Play")) {
-            ResumeMusicStream(core.audio_stream);
-        }
-    }
-    ImGui::SameLine();
-    if (ImGui::Button(">")) {
-        core.playlist_change_song(1);
-    }
-    ImGui::Text("Playlist pos %d, size %ld", core.playlist_pos, core.playlist.size());
 
-    float progress = GetMusicTimePlayed(core.audio_stream);
-    float total = GetMusicTimeLength(core.audio_stream);
-    if (ImGui::SliderFloat("Progress", &progress, 0.0f, total)) {
-        SeekMusicStream(core.audio_stream, progress);
-    }
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    const float height = ImGui::GetFrameHeight();
+    const ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_MenuBar;
 
-    if (total - progress < 0.1f) {
-        core.playlist_change_song(1);
+    ImGui::SetNextWindowSizeConstraints(ImVec2(0, 100), ImVec2(FLT_MAX, FLT_MAX));
+    if (ImGui::BeginViewportSideBar("PlayerBar", viewport, ImGuiDir_Down, 100, flags)) {
+        if (ImGui::BeginMenuBar()) {
+            float progress = GetMusicTimePlayed(core.audio_stream);
+            float total = 0;
+            if (IsMusicReady(core.audio_stream)) {
+                total = GetMusicTimeLength(core.audio_stream);
+            }
+
+            if (core.song_map.count(cur_hash)) {
+                const runtime_song& song = core.song_map[cur_hash];
+                ImGui::Image(thumbnails[song.hash], ImVec2(100, 100));
+                ImGui::Text("%s", song.name.c_str());
+            }
+
+            ImGui::Text("[%d / %ld]", core.playlist_pos, core.playlist.size());
+            if (ImGui::Button("<")) {
+                core.playlist_change_song(-1);
+            }
+            const char* button_label = playing ? "Pause" : "Play";
+            if (ImGui::Button(button_label)) {
+                if (playing) {
+                    PauseMusicStream(core.audio_stream);
+                } else {
+                    ResumeMusicStream(core.audio_stream);
+                }
+            }
+            if (ImGui::Button(">")) {
+                core.playlist_change_song(1);
+            }
+
+            char tmpbuf[128] = {0};
+            snprintf(tmpbuf, sizeof(tmpbuf), "%d:%02d / %d:%02d", u32(progress) / 60, u32(progress) % 60, u32(total) / 60, u32(total) % 60);
+
+            if (ImGui::SliderFloat("##progress", &progress, 0.0f, total, tmpbuf)) {
+                SeekMusicStream(core.audio_stream, progress);
+            }
+
+            // Automatically change songs
+            if (total - progress < 0.1f) {
+                core.playlist_change_song(1);
+            }
+            ImGui::EndMenuBar();
+        }
+
+        ImGui::End();
     }
 
     UpdateMusicStream(core.audio_stream);
-
-    ImGui::Separator();
-
-    const runtime_song& song = core.song_map[core.playlist.at(core.playlist_pos)];
-    draw_song_info(song);
-
     return true;
 }
 
@@ -356,7 +404,7 @@ bool nativegui::window_tag_parents() noexcept {
     return true;
 }
 
-bool nativegui::draw_toolbar() noexcept {
+bool nativegui::toolbar_main() noexcept {
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     const float height = ImGui::GetFrameHeight();
     const ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_MenuBar;
@@ -510,7 +558,8 @@ bool nativegui::gui_main(GLFWwindow *window) noexcept {
         }
     }
 
-    draw_toolbar();
+    toolbar_main();
+    toolbar_player();
 
     for (u32 i = 0; i < ARRAY_SIZE(windows); i++) {
         if (!windows_active[i]) {

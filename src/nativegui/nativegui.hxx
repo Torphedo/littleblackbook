@@ -49,8 +49,9 @@ struct nativegui {
     bool window_draw_import_progress() noexcept;
     bool window_timers() noexcept;
     bool window_lyric_search() noexcept;
-    bool window_player() noexcept;
-    bool draw_toolbar() noexcept;
+    bool window_playlist() noexcept;
+    bool toolbar_player() noexcept;
+    bool toolbar_main() noexcept;
 
     // Used to automatically draw windows, create window toggles in the toolbar, etc.
     static constexpr window_def windows[] = {
@@ -69,8 +70,8 @@ struct nativegui {
         {   .window_name = "Lyric Search",
             .draw = &nativegui::window_lyric_search,
         },
-        {   .window_name = "Music Player",
-            .draw = &nativegui::window_player,
+        {   .window_name = "Playlist",
+            .draw = &nativegui::window_playlist,
         },
     };
     bool windows_active[ARRAY_SIZE(windows)] = {};
