@@ -157,6 +157,10 @@ bool nativegui::window_song_editor(runtime_song& song) {
 
 bool nativegui::draw_song_row(song_hash_t hash, bool& need_add_to_playlist, u32 thumb_size) const noexcept {
     bool result = false;
+    if (!ImGui::IsItemVisible()) {
+        return result;
+    }
+
     ImGui::TableNextRow(0, thumb_size);
     ImGui::TableSetColumnIndex(0);
 
