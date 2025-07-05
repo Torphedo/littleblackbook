@@ -82,7 +82,6 @@ void link_tags_sql(const char* parent, const char* child, std::string& sql_out) 
 }
 
 void unlink_tags_sql(const char* parent, const char* child, std::string& sql_out) {
-    // We need to create the tags if they don't exist
     const tag_hash_t child_hash = crc32buf((const u8*)child, strlen(child));
     const tag_hash_t parent_hash = crc32buf((const u8*)parent, strlen(parent));
 

@@ -5,11 +5,12 @@
 #include <common/crc32.h>
 #include <common/logging.h>
 
-#include <sqlgen.hxx>
-#include <text_i8n.hxx>
-#include <tags.hxx>
-#include <schema.hxx>
-#include <scope_timer.hxx>
+#include "sqlgen.hxx"
+#include "text_i8n.hxx"
+#include "tags.hxx"
+#include "schema.hxx"
+#include "scope_timer.hxx"
+#include "defaults.hxx"
 
 void blackbook_core::add_search_to_playlist(const song_hash_t* songs, u32 num_songs, bool clear_first) {
     if (num_songs == 0) {
@@ -220,6 +221,25 @@ void tag_autocomplete::reset() noexcept {
     user_str = "";
     cur_idx = 0;
 }
+
+
+bool blackbook_core::apply_defaults() noexcept {
+    const scope_timer defaults_timer(timer_map, "apply_tag_defaults");
+    std::string sql = "BEGIN TRANSACTION;\n";
+    for (const default_tag_pair& pair : default_tag_parents) {
+        link_tags_sql(pair.parent, pair.child, sql);
+    }
+    sql.append("\nCOMMIT;");
+
+    char* errmsg = nullptr;
+    const int result = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
+    if (result != SQLITE_OK) {
+        LOG_MSG(error, "Failed to apply defaults because: %s\n", errmsg);
+    }
+
+    return (result == SQLITE_OK);
+}
+
 bool blackbook_core::load_from_db() {
     { // Scope for timer
     const scope_timer load_timer(timer_map, "db_load");

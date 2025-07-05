@@ -150,6 +150,8 @@ struct blackbook_core {
     // Apply the current tags in the parent/child inputs as a pair in the DB
     bool apply_tag_pair() noexcept;
 
+    bool apply_defaults() noexcept;
+
     /// @brief Load songs from database, optionally with a custom query
     bool load_songs_by_query(sqlite3* db, const char* query = nullptr);
 

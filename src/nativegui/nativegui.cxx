@@ -373,14 +373,7 @@ bool nativegui::draw_toolbar() noexcept {
                 import_files |= ImGui::MenuItem("Import files", "Ctrl-I");
                 core.need_reload |= ImGui::MenuItem("Reload from database", "F5 / Ctrl-R");
                 if (ImGui::MenuItem("Apply default tag parents")) {
-                    std::string sql;
-                    for (default_tag_pair pair : default_tag_parents) {
-                        link_tags_sql(pair.parent, pair.child, sql);
-                    }
-                    char* errmsg = nullptr;
-                    if (sqlite3_exec(core.db, sql.c_str(), nullptr, nullptr, &errmsg) != SQLITE_OK) {
-                        LOG_MSG(error, "Failed to apply defaults because: %s\n", errmsg);
-                    }
+                    core.apply_defaults();
                 }
                 ImGui::EndMenu();
             }
