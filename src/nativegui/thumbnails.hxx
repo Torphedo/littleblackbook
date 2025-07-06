@@ -41,14 +41,6 @@ public:
     // Wipe all state from the instance
     void clear() noexcept;
 
-    /// @brief Load a thumbnail from an MP3 and associate the song hash with it
-    ///
-    /// Thumbnail hashes are also tracked, so a single texture is re-used for
-    /// multiple songs with the same thumbnail data.
-    /// Since songs are always named by their hash, we assume you can provide
-    /// the song hash and avoid an expensive recalculation.
-    bool load_from_mp3(song_hash_t hash) noexcept;
-
     /// @brief Decode a thumbnail from an MP3 file
     ///
     /// This function is intended for internal use, but you can use it if you

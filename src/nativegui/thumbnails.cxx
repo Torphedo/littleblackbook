@@ -223,21 +223,3 @@ void thumbnail_storage::upload_deferred_textures() noexcept {
         this->thumbnails[entry.ihash] = gl_tex;
     }
 }
-
-bool thumbnail_storage::load_from_mp3(song_hash_t song_hash) noexcept {
-    texture_entry entry = {0};
-    bool result = image_from_mp3(song_hash, &entry);
-    gl_obj gl_tex = 0;
-    glGenTextures(1, &gl_tex);
-    if (gl_tex == 0) {
-        return false;
-    }
-
-    update_gl_tex(entry.tex, gl_tex);
-    free(entry.tex.data);
-
-    this->thumbnails[entry.ihash] = gl_tex;
-    this->song_map[song_hash] = entry.ihash;
-
-    return true;
-}
