@@ -564,6 +564,8 @@ bool nativegui::gui_main(GLFWwindow *window) noexcept {
     const scope_timer main_timer(core.timer_map, "main_draw");
     if (core.need_reload) {
         core.load_from_db();
+        thumbnails.clear();
+        need_thumbnail_reload = true;
     }
 
     // Load thumbnails only on first load. We can't do this in ctor since OpenGL

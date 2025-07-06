@@ -85,6 +85,17 @@ gl_obj thumbnail_storage::at(song_hash_t song_hash) const noexcept {
     return thumbnails.at(song_map.at(song_hash));
 }
 
+void thumbnail_storage::clear() noexcept {
+    thumbnails.clear();
+    song_map.clear();
+    std::lock_guard lock(texqueue_lock);
+    while (!texqueue.empty()) {
+        texture_entry entry = texqueue.front();
+        texqueue.pop();
+        free(entry.tex.data);
+    }
+}
+
 bool thumbnail_storage::image_from_mp3(song_hash_t song_hash, texture_entry* image_out) const noexcept {
     if (song_map.count(song_hash)) {
         // Somehow we got a song hash whose thumbnail is already loaded, skip it

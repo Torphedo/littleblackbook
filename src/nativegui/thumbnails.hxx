@@ -38,6 +38,9 @@ public:
     // Same as operator[], but will never do anything except a basic lookup.
     gl_obj at(song_hash_t song_hash) const noexcept;
 
+    // Wipe all state from the instance
+    void clear() noexcept;
+
     /// @brief Load a thumbnail from an MP3 and associate the song hash with it
     ///
     /// Thumbnail hashes are also tracked, so a single texture is re-used for
