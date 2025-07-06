@@ -19,6 +19,7 @@
 #include <tags.hxx>
 #include <sqlgen.hxx>
 #include <scope_timer.hxx>
+#include "thumbnails.hxx"
 #include "nfde_wrapper.hxx"
 
 // Autocomplete callback for ImGui::InputText() and related functions.
@@ -107,7 +108,7 @@ void nativegui::draw_song_info(const runtime_song& song) const noexcept {
     ImGui::Text("Hash: %d", song.hash);
     ImGui::Text("Imported @ %lu", song.import_timestamp);
 
-    gl_obj thumbnail = thumbnails[song.hash];
+    gl_obj thumbnail = thumbnails.at(song.hash);
     if (thumbnail != 0) {
         ImGui::Image(thumbnail, ImVec2(512, 512));
     }
@@ -165,7 +166,7 @@ bool nativegui::draw_song_row(song_hash_t hash, bool& need_add_to_playlist, u32 
     ImGui::TableSetColumnIndex(0);
 
     const runtime_song& s = core.song_map.at(hash);
-    ImGui::Image(thumbnails[s.hash], ImVec2(thumb_size, thumb_size));
+    ImGui::Image(thumbnails.at(s.hash), ImVec2(thumb_size, thumb_size));
     ImGui::SameLine();
     // The 2nd arg is whether the row is selected (for highlighting)
     if (ImGui::Selectable(s.name.c_str(), false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(0, thumb_size))) {
@@ -570,12 +571,10 @@ bool nativegui::gui_main(GLFWwindow *window) noexcept {
     if (need_thumbnail_reload) {
         const scope_timer thumb_load(core.timer_map, "load_thumbnails");
         need_thumbnail_reload = false;
-        for (const auto& pair : core.song_map) {
-            char pathbuf[512] = {0};
-            snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s/%d.mp3", core.files_dir, pair.first);
-            thumbnails.load_from_mp3(pathbuf, pair.first);
-        }
+        const auto& key_iter = std::views::keys(core.song_map);
+        thumbnails.load_many_mp3s_many_threads(key_iter, &thumbnails);
     }
+    thumbnails.upload_deferred_textures();
 
     toolbar_main();
     toolbar_player();
@@ -621,7 +620,7 @@ bool nativegui::gui_main(GLFWwindow *window) noexcept {
 }
 
 nativegui::nativegui(sqlite3* db, const char* files_dir) noexcept
-    : core(blackbook_core(db, files_dir))
+    : core(blackbook_core(db, files_dir)), thumbnails(thumbnail_storage(files_dir))
 {
     InitAudioDevice();
     initialized = core.initialized;

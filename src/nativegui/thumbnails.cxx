@@ -1,10 +1,12 @@
-#include "thumbnails.hxx"
-#include "common/int.h"
-#include <stdio.h>
-
 #include <glad/glad.h>
+#include "thumbnails.hxx"
+#include <cstdio>
+#include <cstdlib>
+
+#include <mutex>
 #include <stb_image.h>
 
+#include <common/int.h>
 #include <common/file.h>
 #include <common/image.h>
 #include <common/endian.h>
@@ -70,7 +72,11 @@ void update_gl_tex(texture img, gl_obj gl_tex) {
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-gl_obj thumbnail_storage::operator[](song_hash_t song_hash) const noexcept {
+gl_obj thumbnail_storage::operator[](song_hash_t song_hash) noexcept {
+    return at(song_hash);
+}
+
+gl_obj thumbnail_storage::at(song_hash_t song_hash) const noexcept {
     if (song_map.count(song_hash) == 0) {
         return 0;
     }
@@ -79,9 +85,17 @@ gl_obj thumbnail_storage::operator[](song_hash_t song_hash) const noexcept {
     return thumbnails.at(song_map.at(song_hash));
 }
 
-bool thumbnail_storage::load_from_mp3(const char* path, song_hash_t song_hash) noexcept {
-    u32 size = file_size(path);
-    FILE* f = fopen(path, "rb");
+bool thumbnail_storage::image_from_mp3(song_hash_t song_hash, texture_entry* image_out) const noexcept {
+    if (song_map.count(song_hash)) {
+        // Somehow we got a song hash whose thumbnail is already loaded, skip it
+        return true;
+    }
+
+    char pathbuf[512] = {0};
+    snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s/%d.mp3", files_dir, song_hash);
+
+    u32 size = file_size(pathbuf);
+    FILE* f = fopen(pathbuf, "rb");
     if (!f) {
         return false;
     }
@@ -110,7 +124,7 @@ bool thumbnail_storage::load_from_mp3(const char* path, song_hash_t song_hash) n
     if (frame_size == 0) {
         // Didn't find any image data.
         fclose(f);
-        return false;
+        return 0;
     }
     const long frame_start = ftell(f);
 
@@ -142,11 +156,6 @@ bool thumbnail_storage::load_from_mp3(const char* path, song_hash_t song_hash) n
     fclose(f);
 
     const image_hash_t ihash = crc32buf(buf, image_size);
-    if (thumbnails.count(ihash)) {
-        this->song_map[song_hash] = ihash;
-        free(buf);
-        return true; // Already loaded
-    }
 
     // This forces stbi to convert to our preferred number of channels. That
     // wastes some space on greyscale images, but stops them from being rendered
@@ -155,30 +164,69 @@ bool thumbnail_storage::load_from_mp3(const char* path, song_hash_t song_hash) n
     int x = 0;
     int y = 0;
     int channels = 0;
-    u8* data = stbi_load_from_memory(buf, image_size, &x, &y, &channels, desired_channels);
+    u8* decoded_data = stbi_load_from_memory(buf, image_size, &x, &y, &channels, desired_channels);
     free(buf);
 
-    if (!data) {
+    if (!decoded_data) {
         return false;
     }
 
+    *image_out = {
+        .tex = (texture){
+            .data = decoded_data,
+            .width = (u16)x,
+            .height = (u16)y,
+            .channels = desired_channels,
+        },
+        .ihash = ihash,
+        .song_hash = song_hash,
+    };
+
+    return true;
+}
+
+void thumbnail_storage::upload_deferred_textures() noexcept {
+    std::lock_guard lock(texqueue_lock);
+    while (!texqueue.empty()) {
+        texture_entry entry = texqueue.front();
+        texqueue.pop();
+
+        // TODO: It would be nice if we could handle this without having to do a
+        // full JPEG decode.
+        if (thumbnails.count(entry.ihash)) {
+            song_map[entry.song_hash] = entry.ihash;
+            free(entry.tex.data);
+            continue;
+        }
+
+        gl_obj gl_tex = 0;
+        glGenTextures(1, &gl_tex);
+        if (gl_tex == 0) {
+            continue;
+        }
+
+        update_gl_tex(entry.tex, gl_tex);
+        free(entry.tex.data);
+
+        this->song_map[entry.song_hash] = entry.ihash;
+        this->thumbnails[entry.ihash] = gl_tex;
+    }
+}
+
+bool thumbnail_storage::load_from_mp3(song_hash_t song_hash) noexcept {
+    texture_entry entry = {0};
+    bool result = image_from_mp3(song_hash, &entry);
     gl_obj gl_tex = 0;
     glGenTextures(1, &gl_tex);
     if (gl_tex == 0) {
         return false;
     }
 
-    texture tex = {
-        .data = data,
-        .width = (u16)x,
-        .height = (u16)y,
-        .channels = desired_channels,
-    };
+    update_gl_tex(entry.tex, gl_tex);
+    free(entry.tex.data);
 
-    this->thumbnails[ihash] = gl_tex;
-    this->song_map[song_hash] = ihash;
-    update_gl_tex(tex, gl_tex);
-    free(tex.data);
+    this->thumbnails[entry.ihash] = gl_tex;
+    this->song_map[song_hash] = entry.ihash;
 
     return true;
 }
