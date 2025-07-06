@@ -194,37 +194,38 @@ bool nativegui::draw_song_row(song_hash_t hash, bool& need_add_to_playlist, u32 
 }
 
 bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noexcept {
-    // TODO: Make this have a working X button
-    ImGui::Begin(win_title);
-    // Show current tags and input box
-    for (const std::string& tag : search.tags) {
-        ImGui::Text("%s", tag.c_str());
-    }
+    bool open = true;
+    if (ImGui::Begin(win_title, &open)) {
+        // Show current tags and input box
+        for (const std::string& tag : search.tags) {
+            ImGui::Text("%s", tag.c_str());
+        }
 
-    // Focus text input so user can keep typing
-    if (search.tac.need_refocus) {
-        search.tac.need_refocus = false; // Reset flag
-        ImGui::SetKeyboardFocusHere();
-    }
+        // Focus text input so user can keep typing
+        if (search.tac.need_refocus) {
+            search.tac.need_refocus = false; // Reset flag
+            ImGui::SetKeyboardFocusHere();
+        }
 
-    // Input for next tag
-    ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
-    if (InputTagAutocompleted("##tag", "Input a tag", flags, search.tac)) {
-        const scope_timer main_timer(core.timer_map, "last_search");
-        // This also executes the search and updates our state
-        search.finalize_current_tag(core.db);
-        search.tac.reset();
-    }
+        // Input for next tag
+        ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
+        if (InputTagAutocompleted("##tag", "Input a tag", flags, search.tac)) {
+            const scope_timer main_timer(core.timer_map, "last_search");
+            // This also executes the search and updates our state
+            search.finalize_current_tag(core.db);
+            search.tac.reset();
+        }
 
-    if (ImGui::Button("Add to playlist")) {
-        const auto& results = search.result_hashes;
-        core.add_search_to_playlist(results.data(), results.size());
-    }
+        if (ImGui::Button("Add to playlist")) {
+            const auto& results = search.result_hashes;
+            core.add_search_to_playlist(results.data(), results.size());
+        }
 
-    // Display results
-    draw_songs(search.result_hashes);
+        // Display results
+        draw_songs(search.result_hashes);
+    }
     ImGui::End();
-    return true;
+    return open;
 }
 
 bool nativegui::window_songs() noexcept {
@@ -598,10 +599,15 @@ bool nativegui::gui_main(GLFWwindow *window) noexcept {
     // Search windows each need a unique ID and special handling to access their
     // context, so we handle them differently than "one-off" windows.
     u32 idx = 0;
-    for (tag_search& entry : core.searches) {
+    std::vector<tag_search> searches_to_close(0); // Reserve 0 since this is rare
+    for (u32 i = 0; i < core.searches.size(); i++) {
+        tag_search& entry = core.searches[i];
         char win_title_buf[64] = {0};
         snprintf(win_title_buf, sizeof(win_title_buf), "Search ##%d", idx++);
-        draw_search_menu(win_title_buf, entry);
+        if (!draw_search_menu(win_title_buf, entry)) {
+            core.searches.erase(core.searches.begin() + i);
+            break;
+        }
     }
 
     // Same as above is true for song editor windows
