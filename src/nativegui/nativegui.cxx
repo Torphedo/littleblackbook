@@ -440,6 +440,7 @@ bool nativegui::toolbar_main() noexcept {
             if (ImGui::BeginMenu("File")) {
                 import_files |= ImGui::MenuItem("Import files", "Ctrl-I");
                 core.need_reload |= ImGui::MenuItem("Reload from database", "F5 / Ctrl-R");
+                need_thumbnail_reload |= ImGui::MenuItem("Reload thumbnails");
                 if (ImGui::MenuItem("Apply default tag parents")) {
                     core.apply_defaults();
                 }
@@ -564,7 +565,6 @@ bool nativegui::gui_main(GLFWwindow *window) noexcept {
     const scope_timer main_timer(core.timer_map, "main_draw");
     if (core.need_reload) {
         core.load_from_db();
-        thumbnails.clear();
         need_thumbnail_reload = true;
     }
 
@@ -572,6 +572,7 @@ bool nativegui::gui_main(GLFWwindow *window) noexcept {
     // may not be loaded yet
     if (need_thumbnail_reload) {
         const scope_timer thumb_load(core.timer_map, "load_thumbnails");
+        thumbnails.clear();
         need_thumbnail_reload = false;
         const auto& key_iter = std::views::keys(core.song_map);
         thumbnails.load_many_mp3s_many_threads(key_iter, &thumbnails);
