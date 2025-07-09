@@ -169,10 +169,9 @@ bool nativegui::draw_song_row(song_hash_t hash, u32 thumb_size) noexcept {
     ImGui::Image(thumbnails.at(s.hash), ImVec2(thumb_size, thumb_size));
     ImGui::SameLine();
     // The 2nd arg is whether the row is selected (for highlighting)
-    if (ImGui::Selectable(s.name.c_str(), false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(0, thumb_size))) {
+    if (ImGui::Selectable(s.name.c_str(), false, 0, ImVec2(0, thumb_size))) {
         result = true;
     }
-    s32 hovered_row = ImGui::TableGetHoveredRow();
     s32 cur_row = ImGui::TableGetRowIndex();
 
     enum class playlist_add_type {
@@ -277,13 +276,30 @@ bool nativegui::window_playlist() noexcept {
         ImGui::TableSetupColumn("Year", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableHeadersRow(); // Show headers
 
-        for (song_hash_t hash : core.playlist) {
+        for (u32 i = 0; i < core.playlist.size(); i++) {
+            const song_hash_t hash = core.playlist[i];
             if (draw_song_row(hash)) {
                 song_editors.insert(hash);
             }
+
+            // TODO: We can add more columns here, so add some playlist management stuff.
+            // TODO: This UX sucks. Find a way to put it these left of the image
+            // (Maybe a child window? Might be overkill though, ImGui dev is
+            // always telling people not to use child windows if avoidable)
+            // Ideally we want a drag handle to re-order rows
+            char labelbuf[32] = {0};
+            snprintf(labelbuf, sizeof(labelbuf), "^##%d", hash);
+            if (ImGui::SmallButton(labelbuf) && i > 0) {
+                // "Up" to the user is backwards in the array
+                std::swap(core.playlist[i], core.playlist[i - 1]);
+            }
+
+            labelbuf[0] = 'v';
+            if (ImGui::SmallButton(labelbuf) && i + 1 < core.playlist.size()) {
+                // "Down" to the user is forwards in the array
+                std::swap(core.playlist[i], core.playlist[i + 1]);
+            }
         }
-        // TODO: We can add more columns here, so add some playlist management stuff.
-        // e.g. Drag handle to re-order rows (can ImGui do this for us?) or up/down buttons
 
         ImGui::EndTable();
     }
