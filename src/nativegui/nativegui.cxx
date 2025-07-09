@@ -92,7 +92,7 @@ bool nativegui::InputTagAutocompleted(const char* label, const char* hint, ImGui
     return result;
 }
 
-void nativegui::draw_song_info(const runtime_song& song) const noexcept {
+void nativegui::draw_song_info(const runtime_song& song) noexcept {
     ImGui::Text("Title: %s", song.name.c_str());
     ImGui::Text("Released: %u", song.release_year);
 
@@ -156,7 +156,7 @@ bool nativegui::window_song_editor(runtime_song& song) {
     return true;
 }
 
-bool nativegui::draw_song_row(song_hash_t hash, bool& need_add_to_playlist, u32 thumb_size) const noexcept {
+bool nativegui::draw_song_row(song_hash_t hash, u32 thumb_size) noexcept {
     bool result = false;
     if (!ImGui::IsItemVisible()) {
         // return result;
@@ -175,11 +175,26 @@ bool nativegui::draw_song_row(song_hash_t hash, bool& need_add_to_playlist, u32 
     s32 hovered_row = ImGui::TableGetHoveredRow();
     s32 cur_row = ImGui::TableGetRowIndex();
 
+    enum class playlist_add_type {
+        APPEND,
+        NEXT,
+        PREPEND,
+    };
+    blackbook_core::playlist_add_type type = blackbook_core::PLAYLIST_APPEND;
+    bool playlist_add = false;
     char popup_name[128] = {0};
     snprintf(popup_name, sizeof(popup_name), "song popup [%d] [%d]", hash, cur_row);
     if (ImGui::BeginPopupContextItem(popup_name)) {
-        if (ImGui::MenuItem("Add to playlist")) {
-            need_add_to_playlist = true;
+        if (ImGui::MenuItem("Append to playlist")) {
+            playlist_add = true;
+        }
+        if (ImGui::MenuItem("Prepend to playlist")) {
+            playlist_add = true;
+            type = blackbook_core::PLAYLIST_PREPEND;
+        }
+        if (ImGui::MenuItem("Play next")) {
+            playlist_add = true;
+            type = blackbook_core::PLAYLIST_NEXT;
         }
         if (ImGui::MenuItem("Open editor")) {
             result = true;
@@ -189,6 +204,10 @@ bool nativegui::draw_song_row(song_hash_t hash, bool& need_add_to_playlist, u32 
 
     ImGui::TableSetColumnIndex(1);
     ImGui::Text("%d", s.release_year);
+
+    if (playlist_add) {
+        core.add_to_playlist(&s.hash, 1, type);
+    }
 
     return result;
 }
@@ -218,7 +237,7 @@ bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noex
 
         if (ImGui::Button("Add to playlist")) {
             const auto& results = search.result_hashes;
-            core.add_search_to_playlist(results.data(), results.size());
+            core.add_to_playlist(results.data(), results.size());
         }
 
         // Display results
@@ -259,12 +278,8 @@ bool nativegui::window_playlist() noexcept {
         ImGui::TableHeadersRow(); // Show headers
 
         for (song_hash_t hash : core.playlist) {
-            bool add_to_playlist = false;
-            if (draw_song_row(hash, add_to_playlist)) {
+            if (draw_song_row(hash)) {
                 song_editors.insert(hash);
-            }
-            if (add_to_playlist) {
-                core.add_search_to_playlist(&hash, 1);
             }
         }
         // TODO: We can add more columns here, so add some playlist management stuff.

@@ -34,9 +34,9 @@ struct nativegui {
     };
 
     // Draw read-only song metadata using ImGui::Text
-    void draw_song_info(const runtime_song& song) const noexcept;
+    void draw_song_info(const runtime_song& song) noexcept;
 
-    bool draw_song_row(song_hash_t hash, bool& need_add_to_playlist, u32 thumb_size = 100) const noexcept;
+    bool draw_song_row(song_hash_t hash, u32 thumb_size = 100) noexcept;
 
     bool draw_search_menu(const char* win_title, tag_search& search) noexcept;
 
@@ -124,12 +124,8 @@ struct nativegui {
 
             // Draw a row for each chunk
             for (song_hash_t hash : hashes) {
-                bool add_to_playlist = false;
-                if (draw_song_row(hash, add_to_playlist)) {
+                if (draw_song_row(hash)) {
                     song_editors.insert(hash);
-                }
-                if (add_to_playlist) {
-                    core.add_search_to_playlist(&hash, 1);
                 }
             }
 

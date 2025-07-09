@@ -4,6 +4,7 @@
 
 #include <common/crc32.h>
 #include <common/logging.h>
+#include <common/int.h>
 
 #include "sqlgen.hxx"
 #include "text_i8n.hxx"
@@ -12,21 +13,35 @@
 #include "scope_timer.hxx"
 #include "defaults.hxx"
 
-void blackbook_core::add_search_to_playlist(const song_hash_t* songs, u32 num_songs, bool clear_first) {
+void blackbook_core::add_to_playlist(const song_hash_t* songs, u32 num_songs, playlist_add_type type) {
     if (num_songs == 0) {
         return;
     }
 
-    if (clear_first) {
-        playlist.clear();
+    u32 pos = 0;
+    switch (type) {
+    case PLAYLIST_APPEND:
+        pos = playlist.size();
+        break;
+    case PLAYLIST_PREPEND:
+        pos = 0;
+        break;
+    case PLAYLIST_NEXT:
+        pos = playlist_pos + 1;
+        break;
     }
+    // Keep in range
+    pos = CLAMP(0, pos, playlist.size());
 
     const bool need_init = playlist.empty();
 
     // Append results to playlist
     playlist.reserve(playlist.size() + num_songs);
     for (u32 i = 0; i < num_songs; i++) {
-        playlist.push_back(songs[i]);
+        playlist.insert(playlist.begin() + pos + i, songs[i]);
+        if (pos + i <= playlist_pos) {
+            playlist_pos++;
+        }
     }
 
     // Load a stream for the first song if needed

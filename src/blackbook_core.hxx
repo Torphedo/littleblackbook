@@ -142,8 +142,14 @@ struct blackbook_core {
     // Set this flag to trigger a reload at the start of the next frame
     bool need_reload = false;
 
+    enum playlist_add_type {
+        PLAYLIST_APPEND,
+        PLAYLIST_NEXT,
+        PLAYLIST_PREPEND,
+    };
+
     // Add the results of a search to the current playlist
-    void add_search_to_playlist(const song_hash_t* songs, u32 num_songs, bool clear_first = false);
+    void add_to_playlist(const song_hash_t* songs, u32 num_songs, playlist_add_type type = PLAYLIST_APPEND);
 
     void playlist_change_song(s8 diff);
 
