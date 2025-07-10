@@ -19,6 +19,7 @@
 #include "scope_timer.hxx"
 #include "sqlgen.hxx"
 #include "tags.hxx"
+#include "text_i8n.hxx"
 
 song_record::song_record(u8* mp3, u32 size) {
     assert(size >= sizeof(id3::header) && "MP3 file is impossibly small!");
@@ -65,9 +66,12 @@ song_record::song_record(u8* mp3, u32 size) {
 
 void song_record::insert_sql(std::string& out) const noexcept {
     // SQLite only wants UTF8 strings
-    const std::string title_str = title.to_utf8();
-    const std::string artist_str = artist.to_utf8();
-    const std::string album_str = album.to_utf8();
+    std::string title_str = title.to_utf8();
+    std::string artist_str = artist.to_utf8();
+    std::string album_str = album.to_utf8();
+
+    run_transliterator(artist_str, RULES_AMERICANIZE);
+    run_transliterator(album_str,  RULES_AMERICANIZE);
 
     sqlgen(out,
         "INSERT INTO songs (title, artist, album, year, hash) VALUES ('%s', '%s', '%s', %u, %d);\n",

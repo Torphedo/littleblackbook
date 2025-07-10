@@ -11,6 +11,12 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 
+find_package(ICU COMPONENTS i18n io uc)
+
+message("Was ICU found? ${ICU_FOUND} (v${ICU_VERSION})")
+message("ICU libraries: ${ICU_LIBRARIES}")
+message("ICU include dir is: ${ICU_INCLUDE_DIRS}")
+
 include_directories(
     src
     lib
@@ -24,6 +30,8 @@ include_directories(
     lib/glfw/include
     lib/raudio/src
     lib/nfde/src/include
+
+    ${ICU_INCLUDE_DIRS}
 )
 
 # Add ImGui as a library
@@ -97,4 +105,5 @@ target_link_libraries(blackbook PUBLIC
     sqlite3-static glfw imgui nfd raudio stb_image
 # For some reason linking on Clang requires explicitly adding "stdc++"...
     stdc++
+    ${ICU_LIBRARIES}
 )
