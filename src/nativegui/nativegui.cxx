@@ -282,22 +282,27 @@ bool nativegui::window_playlist() noexcept {
                 song_editors.insert(hash);
             }
 
-            // TODO: We can add more columns here, so add some playlist management stuff.
-            // TODO: This UX sucks. Find a way to put it these left of the image
-            // (Maybe a child window? Might be overkill though, ImGui dev is
-            // always telling people not to use child windows if avoidable)
-            // Ideally we want a drag handle to re-order rows
-            char labelbuf[32] = {0};
-            snprintf(labelbuf, sizeof(labelbuf), "^##%d", hash);
-            if (ImGui::SmallButton(labelbuf) && i > 0) {
-                // "Up" to the user is backwards in the array
-                std::swap(core.playlist[i], core.playlist[i - 1]);
+            const s32 hovered = ImGui::TableGetHoveredRow() - 1;
+            ImGui::TableSetColumnIndex(0);
+            if (i == hovered) {
+                // This shows where the song will end up during drag & drop
+                ImGui::Separator();
             }
 
-            labelbuf[0] = 'v';
-            if (ImGui::SmallButton(labelbuf) && i + 1 < core.playlist.size()) {
-                // "Down" to the user is forwards in the array
-                std::swap(core.playlist[i], core.playlist[i + 1]);
+            const bool m2 = ImGui::IsMouseClicked(ImGuiMouseButton_Right, true);
+            const bool esc = ImGui::IsKeyPressed(ImGuiKey_Escape, true);
+            if (m2 || esc) {
+                playlist_drag_start = -1; // User wants to cancel
+            }
+
+            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+                if (playlist_drag_start < 0) {
+                    playlist_drag_start = hovered;
+                }
+            } else if (playlist_drag_start >= 0 && hovered >= 0) {
+                // User had been dragging, and just released.
+                core.playlist_move_song(playlist_drag_start, hovered);
+                playlist_drag_start = -1;
             }
         }
 

@@ -151,7 +151,11 @@ struct blackbook_core {
     // Add the results of a search to the current playlist
     void add_to_playlist(const song_hash_t* songs, u32 num_songs, playlist_add_type type = PLAYLIST_APPEND);
 
-    void playlist_change_song(s8 diff);
+    // Skip forward or back in the playlist, (wraps in both directions)
+    void playlist_change_song(s8 diff) noexcept;
+
+    // Move a song from one location to another in the playlist
+    void playlist_move_song(u32 source, u32 target) noexcept;
 
     // Apply the current tags in the parent/child inputs as a pair in the DB
     bool apply_tag_pair() noexcept;

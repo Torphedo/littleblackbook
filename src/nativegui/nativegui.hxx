@@ -26,6 +26,8 @@ struct nativegui {
     std::string lyric_search_input;
     std::set<song_hash_t> lyric_search_results;
 
+    s32 playlist_drag_start = -1;
+
     // This struct lets us loop over known windows, which makes it easy to add
     // new ones without any other boilerplate.
     struct window_def {

@@ -50,7 +50,7 @@ void blackbook_core::add_to_playlist(const song_hash_t* songs, u32 num_songs, pl
     }
 }
 
-void blackbook_core::playlist_change_song(s8 diff) {
+void blackbook_core::playlist_change_song(s8 diff) noexcept {
     if (playlist.size() <= 0) {
         playlist_pos = 0;
         return;
@@ -78,6 +78,24 @@ void blackbook_core::playlist_change_song(s8 diff) {
     }
     audio_stream = LoadMusicStream(pathbuf);
     PlayMusicStream(audio_stream);
+}
+
+void blackbook_core::playlist_move_song(u32 source, u32 target) noexcept {
+    const song_hash_t source_hash = playlist[source];
+    // Delete the song we're moving, and insert its hash at the target location
+    playlist.erase(playlist.begin() + source);
+
+    if (target > source) {
+        // Erasing an element changed the target position
+        target--;
+    }
+
+    playlist.insert(playlist.begin() + target, source_hash);
+
+    // We moved the current song, and need to keep the state consistent
+    if (playlist_pos == source) {
+        playlist_pos = (s32)target;
+    }
 }
 
 bool blackbook_core::apply_tag_pair() noexcept {
