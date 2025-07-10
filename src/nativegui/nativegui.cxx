@@ -320,10 +320,10 @@ bool nativegui::toolbar_player() noexcept {
     const bool ctrl = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl);
     const bool shift = ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift);
     bool toggle_play = ImGui::IsKeyPressed(ImGuiKey_Space, false);
-    s8 skip_song = (shift && ImGui::IsKeyPressed(ImGuiKey_N, false)) || ImGui::IsKeyPressed(ImGuiKey_J, false);
-    s8 prev_song = (shift && ImGui::IsKeyPressed(ImGuiKey_P, false)) || ImGui::IsKeyPressed(ImGuiKey_K, false);
-    s8 seek_ahead = (ImGui::IsKeyPressed(ImGuiKey_RightArrow, true)) || ImGui::IsKeyPressed(ImGuiKey_L, true);
-    s8 seek_back  = (ImGui::IsKeyPressed(ImGuiKey_LeftArrow, true))  || ImGui::IsKeyPressed(ImGuiKey_H, true);
+    s8 skip_song = (shift && ImGui::IsKeyPressed(ImGuiKey_N, false)) || (ctrl && ImGui::IsKeyPressed(ImGuiKey_J, false));
+    s8 prev_song = (shift && ImGui::IsKeyPressed(ImGuiKey_P, false)) || (ctrl && ImGui::IsKeyPressed(ImGuiKey_K, false));
+    s8 seek_ahead = (ImGui::IsKeyPressed(ImGuiKey_RightArrow, true)) || (ctrl && ImGui::IsKeyPressed(ImGuiKey_L, true));
+    s8 seek_back  = (ImGui::IsKeyPressed(ImGuiKey_LeftArrow, true))  || (ctrl && ImGui::IsKeyPressed(ImGuiKey_H, true));
 
     float progress = GetMusicTimePlayed(core.audio_stream);
     float total = 0;
