@@ -18,6 +18,7 @@ struct nativegui {
 
     blackbook_core core;
     thumbnail_storage thumbnails;
+    // This default is what makes us load thumbnails on start
     bool need_thumbnail_reload = true;
 
     // All song hashes that need their editing window drawn
@@ -26,6 +27,8 @@ struct nativegui {
     std::string lyric_search_input;
     std::set<song_hash_t> lyric_search_results;
 
+    // When the user drags a song around in the playlist, this is the index of
+    // the song they're dragging.
     s32 playlist_drag_start = -1;
 
     // This struct lets us loop over known windows, which makes it easy to add
@@ -35,7 +38,7 @@ struct nativegui {
         bool (nativegui::*draw)(); // Pointer to member function
     };
 
-    // Draw read-only song metadata using ImGui::Text
+    // Draw read-only song metadata using ImGui::Text()
     void draw_song_info(const runtime_song& song) noexcept;
 
     bool draw_song_row(song_hash_t hash, u32 thumb_size = 100) noexcept;
@@ -57,14 +60,14 @@ struct nativegui {
 
     // Used to automatically draw windows, create window toggles in the toolbar, etc.
     static constexpr window_def windows[] = {
+        {   .window_name = "Import Progress",
+            .draw = &nativegui::window_draw_import_progress,
+        },
         {   .window_name = "Song List",
             .draw = &nativegui::window_songs,
         },
         {   .window_name = "Tag Parents",
             .draw = &nativegui::window_tag_parents,
-        },
-        {   .window_name = "Import Progress",
-            .draw = &nativegui::window_draw_import_progress,
         },
         {   .window_name = "Performance Timers",
             .draw = &nativegui::window_timers,
@@ -79,8 +82,7 @@ struct nativegui {
     bool windows_active[ARRAY_SIZE(windows)] = {};
 
     // We need to toggle this window from another function, so need a constant for it
-    static constexpr u8 IMPORT_WINDOW_IDX = 2;
-    static_assert(windows[IMPORT_WINDOW_IDX].draw == &nativegui::window_draw_import_progress); // In case order changes
+    static constexpr u8 IMPORT_WINDOW_IDX = 0;
 
     // File import state
     // TODO: Should this be on the core?

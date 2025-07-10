@@ -60,14 +60,13 @@ void blackbook_core::playlist_change_song(s8 diff) noexcept {
         // This special value resets playlist position
         playlist_pos = 0;
     } else {
-        diff /= abs(diff); // Force to 1 or -1
-
         playlist_pos += diff;
-        if (playlist_pos < 0) {
-            playlist_pos = playlist.size() - 1;
-        } else {
-            playlist_pos %= playlist.size();
+        // Get back in range
+        while (playlist_pos < 0) {
+            playlist_pos += playlist.size() - 1;
         }
+
+        playlist_pos %= playlist.size();
     }
 
     const song_hash_t cur_hash = playlist.at(playlist_pos);
