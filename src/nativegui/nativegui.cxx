@@ -316,20 +316,29 @@ bool nativegui::toolbar_player() noexcept {
     if (!core.playlist.empty()) {
         cur_hash = core.playlist.at(core.playlist_pos);
     }
+
+    const bool ctrl = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl);
+    const bool shift = ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift);
+    bool toggle_play = ImGui::IsKeyPressed(ImGuiKey_Space, false);
+    s8 skip_song = (shift && ImGui::IsKeyPressed(ImGuiKey_N, false)) || ImGui::IsKeyPressed(ImGuiKey_J, false);
+    s8 prev_song = (shift && ImGui::IsKeyPressed(ImGuiKey_P, false)) || ImGui::IsKeyPressed(ImGuiKey_K, false);
+    s8 seek_ahead = ImGui::IsKeyPressed(ImGuiKey_RightArrow, true)   || ImGui::IsKeyPressed(ImGuiKey_L, true);
+    s8 seek_back  = ImGui::IsKeyPressed(ImGuiKey_LeftArrow, true)    || ImGui::IsKeyPressed(ImGuiKey_H, true);
+
+    // Disable everything when ImGui is using the keyboard
+    const bool disable_shortcuts = ImGui::GetIO().WantTextInput;
+    toggle_play *= !disable_shortcuts;
+    prev_song *= !disable_shortcuts;
+    skip_song *= !disable_shortcuts;
+    seek_ahead *= !disable_shortcuts;
+    seek_back *= !disable_shortcuts;
+
+
     const bool playing = IsMusicStreamPlaying(core.audio_stream);
 
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     const float height = ImGui::GetFrameHeight();
     const ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_MenuBar;
-
-    const bool ctrl = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl);
-    const bool shift = ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift);
-    bool toggle_play = ImGui::IsKeyPressed(ImGuiKey_Space, false);
-    s8 skip_song = (shift && ImGui::IsKeyPressed(ImGuiKey_N, false)) || (ctrl && ImGui::IsKeyPressed(ImGuiKey_J, false));
-    s8 prev_song = (shift && ImGui::IsKeyPressed(ImGuiKey_P, false)) || (ctrl && ImGui::IsKeyPressed(ImGuiKey_K, false));
-    s8 seek_ahead = (ImGui::IsKeyPressed(ImGuiKey_RightArrow, true)) || (ctrl && ImGui::IsKeyPressed(ImGuiKey_L, true));
-    s8 seek_back  = (ImGui::IsKeyPressed(ImGuiKey_LeftArrow, true))  || (ctrl && ImGui::IsKeyPressed(ImGuiKey_H, true));
-
     float progress = GetMusicTimePlayed(core.audio_stream);
     float total = 0;
     if (IsMusicReady(core.audio_stream)) {
@@ -468,7 +477,7 @@ bool nativegui::toolbar_main() noexcept {
 
     const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl);
     bool import_files = ctrl_pressed && ImGui::IsKeyPressed(ImGuiKey_I, false);
-    bool new_search = ctrl_pressed && ImGui::IsKeyPressed(ImGuiKey_T, false);
+    bool new_search = ImGui::IsKeyChordPressed(ImGuiKey_T | ImGuiMod_Ctrl);
     core.need_reload |= ImGui::IsKeyPressed(ImGuiKey_F5, false);
     core.need_reload |= ctrl_pressed && ImGui::IsKeyPressed(ImGuiKey_R, false);
 
