@@ -295,11 +295,13 @@ bool nativegui::window_playlist() noexcept {
                 playlist_drag_start = -1; // User wants to cancel
             }
 
-            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+            const bool m1_click = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+            const bool m1_down = ImGui::IsMouseDown(ImGuiMouseButton_Left);
+            if (m1_click) {
                 if (playlist_drag_start < 0) {
                     playlist_drag_start = hovered;
                 }
-            } else if (playlist_drag_start >= 0 && hovered >= 0) {
+            } else if (!m1_down && playlist_drag_start >= 0 && hovered >= 0) {
                 // User had been dragging, and just released.
                 core.playlist_move_song(playlist_drag_start, hovered);
                 playlist_drag_start = -1;
