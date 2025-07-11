@@ -49,6 +49,10 @@ constexpr default_tag_pair default_tag_parents[] = {
     HIPHOP_ARTIST("u-god"),
     HIPHOP_ARTIST("inspectah deck"),
     HIPHOP_ARTIST("masta killa"),
+    HIPHOP_ARTIST("kendrick lamar"),
+    HIPHOP_ARTIST("mf doom"), // Sorry to butcher the MF DOOM name like this. System works with lowercase - torph
+    HIPHOP_ARTIST("macklemore"),
+    HIPHOP_ARTIST("e-dubble"),
 
 // Artist aliases/groups
     ARTIST_LINK("yasiin bey", "mos def"),
