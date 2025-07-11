@@ -397,7 +397,9 @@ bool nativegui::toolbar_player() noexcept {
     if (seek_ahead || seek_back) {
         const float diff = 5.0f * (seek_ahead - seek_back);
         const float new_pos = CLAMP(0.1f, progress + diff, total);
-        SeekMusicStream(core.audio_stream, new_pos);
+        if (IsMusicReady(core.audio_stream)) {
+            SeekMusicStream(core.audio_stream, new_pos);
+        }
     }
 
     UpdateMusicStream(core.audio_stream);
