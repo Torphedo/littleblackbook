@@ -180,9 +180,10 @@ void tag_search::update_results(sqlite3* db) noexcept {
 
     int result = SQLITE_OK;
     while ((result = sqlite3_step(query)) == SQLITE_ROW) {
-        const tag_hash_t hash = sqlite3_column_int(query, 6);
+        const tag_hash_t hash = sqlite3_column_int(query, 0);
         result_hashes.push_back(hash);
     }
+    sql_handle_error("Search error: ", db, result);
 
     sqlite3_finalize(query);
 }

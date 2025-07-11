@@ -138,10 +138,10 @@ void search_many_tags_and(const char* const* tags, u32 num_tags, std::string& sq
     // parent/child table tells us that all results for "mos def" will be
     // included in "rap".
 
-    // Tag search gives us hashes, so we use a compound SELECT to pull out full rows.
-    // SELECT-all at the end lets us put a compound keyword in front of all future SELECTs.
-    // This is both simpler and makes single negated tags work correctly.
-    sql_out.append("SELECT * FROM songs s WHERE s.hash IN (SELECT hash FROM songs\n");
+    // SELECTing all hashes lets us put a compound keyword in front of all
+    // future SELECTs. The code is simpler, and it makes single negated tags
+    // work correctly.
+    sql_out.append("SELECT hash FROM songs\n");
 
     for (u32 i = 0; i < num_tags; i++) {
         // If the tag starts with "-", we interpret that as "AND NOT [tag]".
@@ -157,5 +157,5 @@ void search_many_tags_and(const char* const* tags, u32 num_tags, std::string& sq
     }
 
     // Terminate statement
-    sql_out.append(");\n");
+    sql_out.append(";\n");
 }
