@@ -130,7 +130,7 @@ bool nativegui::window_song_editor(runtime_song& song) {
     snprintf(win_title_buf, sizeof(win_title_buf), "##editor_input%d", song.hash);
     if (InputTagAutocompleted(win_title_buf, "Input a tag", flags, song.tac)) {
         const std::string& tag = song.tac.current();
-        const tag_hash_t tag_hash = crc32buf((const u8*)tag.c_str() + (tag[0] == '-'), tag.size());
+        const tag_hash_t tag_hash = crc32fast((const u8*)tag.c_str() + (tag[0] == '-'), tag.size());
 
         bool found = false;
         for (auto iter = song.tags.begin(); iter != song.tags.end(); iter++) {

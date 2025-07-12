@@ -166,7 +166,7 @@ bool thumbnail_storage::image_from_mp3(song_hash_t song_hash, texture_entry* ima
     fread(buf, image_size, 1, f);
     fclose(f);
 
-    const image_hash_t ihash = crc32buf(buf, image_size);
+    const image_hash_t ihash = crc32fast(buf, image_size);
 
     // This forces stbi to convert to our preferred number of channels. That
     // wastes some space on greyscale images, but stops them from being rendered

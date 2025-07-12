@@ -36,7 +36,7 @@ std::vector<std::string> parse_artists(const char* str) {
 tag_hash_t create_tag_sql(sqlite3* db, const char* tag, tag_hash_t hash, unsigned char encoding) {
     if (hash == 0) {
         // No hash provided, calculate it
-        hash = crc32buf((const u8*)tag, strlen(tag));
+        hash = crc32fast((const u8*)tag, strlen(tag));
     }
     const char tag_insert[] = "INSERT INTO tags (tag, hash, namespace_hash) VALUES (?, ?, ?);";
     sqlite3_stmt* tag_stmt = compile_sql(tag_insert, sizeof(tag_insert), db);
@@ -48,7 +48,7 @@ tag_hash_t create_tag_sql(sqlite3* db, const char* tag, tag_hash_t hash, unsigne
     const ptrdiff_t namespace_len = ptrdiff_t(colon) - ptrdiff_t(tag);
     if (colon != nullptr && namespace_len > 0) {
         // This tag has a namespace, split it up.
-        const tag_hash_t namespace_hash = crc32buf((const u8*)tag, namespace_len);
+        const tag_hash_t namespace_hash = crc32fast((const u8*)tag, namespace_len);
         // We don't rehash because the tag hash includes namespace
         sql_bind(tag_stmt, 3, namespace_hash);
 
@@ -85,7 +85,7 @@ void add_tag_to_song_sql(sqlite3* db, const char* tag, song_hash_t song_hash, st
 }
 
 void del_tag_from_song_sql(const char* tag, song_hash_t song_hash, std::string& sql_out) {
-    const tag_hash_t tag_hash = crc32buf((const u8*)tag, strlen(tag));
+    const tag_hash_t tag_hash = crc32fast((const u8*)tag, strlen(tag));
     sqlgen(sql_out,
            "DELETE FROM " TAG_SONG_TABLE " WHERE " TAG_SONG_TABLE ".song_hash = %d AND " TAG_SONG_TABLE ".tag_hash = %d;\n",
            song_hash, tag_hash);
@@ -101,8 +101,8 @@ void link_tags_sql(sqlite3* db, const char* parent, const char* child, std::stri
 }
 
 void unlink_tags_sql(const char* parent, const char* child, std::string& sql_out) {
-    const tag_hash_t child_hash = crc32buf((const u8*)child, strlen(child));
-    const tag_hash_t parent_hash = crc32buf((const u8*)parent, strlen(parent));
+    const tag_hash_t child_hash = crc32fast((const u8*)child, strlen(child));
+    const tag_hash_t parent_hash = crc32fast((const u8*)parent, strlen(parent));
 
     // Delete the tag association
     sqlgen(sql_out, "DELETE FROM " TAG_PARENT_TABLE " WHERE child_hash = %d AND parent_hash = %d\n", child_hash, parent_hash);
@@ -122,7 +122,7 @@ void search_tag(const char* tag, std::string& sql_out, bool standalone_query) {
 
     if (!is_year) {
         // Generate the normal SQL
-        const tag_hash_t tag_hash = crc32buf((u8*)tag, strlen(tag));
+        const tag_hash_t tag_hash = crc32fast((u8*)tag, strlen(tag));
         sqlgen(sql_out, "SELECT song_hash FROM " RESOLVED_TAG_SONG_TABLE " WHERE tag_hash = %d", tag_hash);
 
         if (standalone_query) {
