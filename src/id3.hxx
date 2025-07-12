@@ -38,24 +38,16 @@ enum text_encoding : u8 {
 
 // A wrapper for text frames, which can be either ASCII or UCS2.
 struct text {
+    u16 length: 16 = 0;
     // Spec says ASCII is default: https://id3.org/id3v2.3.0#ID3v2_frame_overview
-    text_encoding encoding = TEXT_ASCII;
-    u16 length = 0;
-    // This causes a ridiculous amount of padding, but it's not a big deal since
-    // this structure is short-lived and in-memory only.
-    union {
-        char* ascii;
-        c16* ucs2;
-    };
+    text_encoding encoding: 1 = TEXT_ASCII;
+    uintptr_t ascii: 47;
 
     text() = default;
     text(u8* frame_data, u32 frame_size);
 
-    // Print the contained text to stdout (no newline)
-    void print() const noexcept;
-
     /// @brief Convert UCS-2 text to UTF-8 if needed
-    std::string to_utf8() const noexcept;
+    std::string to_utf8(u8* frame_data) const noexcept;
 };
 
 // All relevant metadata frame types

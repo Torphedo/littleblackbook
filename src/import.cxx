@@ -20,7 +20,7 @@
 #include "tags.hxx"
 #include "text_i8n.hxx"
 
-song_record::song_record(u8* mp3, u32 size) {
+song_record::song_record(u8* mp3, u32 size) : mp3(mp3) {
     assert(size >= sizeof(id3::header) && "MP3 file is impossibly small!");
 
     vfile id3 = vfile_open(mp3, size);
@@ -64,9 +64,9 @@ song_record::song_record(u8* mp3, u32 size) {
 }
 
 void song_record::insert_sql(sqlite3* db, sqlite3_stmt* stmt) const noexcept {
-    sql_bind(stmt, 1, title);
-    sql_bind(stmt, 2, artist);
-    sql_bind(stmt, 3, album);
+    sql_bind(stmt, 1, mp3, title);
+    sql_bind(stmt, 2, mp3, artist);
+    sql_bind(stmt, 3, mp3, album);
     sql_bind(stmt, 4, int(release_year));
     sql_bind(stmt, 5, crc32);
     sqlite3_step(stmt);
@@ -76,9 +76,9 @@ void song_record::insert_sql(sqlite3* db, sqlite3_stmt* stmt) const noexcept {
     {
         std::string artist_copy;
         // Try to avoid copying if possible
-        const char* artist_str = artist.ascii;
+        const char* artist_str = (char*)(mp3 + artist.ascii);
         if (artist.encoding == id3::TEXT_UCS2) {
-            artist_copy = artist.to_utf8();
+            artist_copy = artist.to_utf8(mp3);
             artist_str = artist_copy.c_str();
         }
         artist_tags = parse_artists(artist_str);

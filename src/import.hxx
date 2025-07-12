@@ -12,6 +12,7 @@
 
 // Representation of a row in the song table used during metadata parsing
 struct song_record {
+    u8* mp3 = nullptr;
     id3::text title; // Song title
     id3::text album;
     id3::text artist;

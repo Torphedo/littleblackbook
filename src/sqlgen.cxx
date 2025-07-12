@@ -108,12 +108,13 @@ bool sql_handle_error(const char* msg_prefix, sqlite3* db, int errcode) {
     return false;
 }
 
-int sql_bind(sqlite3_stmt* stmt, int pos, const id3::text& str) noexcept {
+int sql_bind(sqlite3_stmt* stmt, int pos, u8* frame_data, const id3::text& str) noexcept {
     void (*const callback)(void*) = SQLITE_STATIC;
+    const void* text = (frame_data + str.ascii);
     if (str.encoding == id3::TEXT_UCS2) {
         // Length multiplied by 2 since our length is in characters, not bytes
-        return sqlite3_bind_text16(stmt, pos, str.ucs2, str.length * 2, callback);
+        return sqlite3_bind_text16(stmt, pos, text, str.length * 2, callback);
     } else {
-        return sqlite3_bind_text(stmt, pos, str.ascii, str.length, callback);
+        return sqlite3_bind_text(stmt, pos, (char*)text, str.length, callback);
     }
 }

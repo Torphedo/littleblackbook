@@ -16,25 +16,17 @@ text::text(u8* frame_data, u32 frame_size) {
 
     encoding = VFILE_READ(id3::text_encoding, &vf);
     vfile_seek(&vf, sizeof(u16)); // Skip byte order marker
-    ascii = (char*)vfile_cur(vf);
+    ascii = vf.pos;
     const u32 remaining_size = vf.size - vf.pos;
     const u8 char_size = (encoding == TEXT_ASCII) ? 1 : 2;
     length = remaining_size / char_size;
 }
 
-void text::print() const noexcept {
-    if (encoding == TEXT_ASCII) {
-        printf("%s", ascii);
-    } else {
-        print_c16s(ucs2);
-    }
-}
-
-std::string text::to_utf8() const noexcept {
+std::string text::to_utf8(u8* frame_data) const noexcept {
     std::string output;
     output.reserve(length);
     for (u16 i = 0; i < length; i++) {
-        const char16_t c = ucs2[i];
+        const c16 c = *(c16*)(frame_data + ascii);
         // Sorry for 1-letter variable, I couldn't think of a name.
         const utf8 u = codepoint_to_utf8(c);
         output.append(u.data);

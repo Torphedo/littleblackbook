@@ -25,7 +25,7 @@ sqlite3_stmt* compile_sql(const char* sql, s32 sql_len, sqlite3* db);
 ///        colon will be added to separate it from the message.
 /// @param db Database context to retrieve the message from
 /// @param errcode The result code from an sqlite3 function
-/// @return Whether the given result code was an error
+/// @return Whether the operation succeeded
 bool sql_handle_error(const char* msg_prefix, sqlite3* db, int errcode);
 
 // Function overloads for most SQLite statement binding functions
@@ -61,7 +61,7 @@ DEF_SQL_BIND(const char* buf, sqlite_uint64 size, unsigned char encoding) {
 }
 
 // ID3 overload is too different to make a macro for
-int sql_bind(sqlite3_stmt* stmt, int pos, const id3::text& str) noexcept;
+int sql_bind(sqlite3_stmt* stmt, int pos, u8* frame_data, const id3::text& str) noexcept;
 
 #undef VALUE_BIND_TYPE
 #undef VALUE_BIND
