@@ -74,8 +74,14 @@ void song_record::insert_sql(sqlite3* db, sqlite3_stmt* stmt) const noexcept {
 
     std::vector<std::string> artist_tags;
     {
-        std::string artist_str = artist.to_utf8();
-        artist_tags = parse_artists(artist_str.c_str());
+        std::string artist_copy;
+        // Try to avoid copying if possible
+        const char* artist_str = artist.ascii;
+        if (artist.encoding == id3::TEXT_UCS2) {
+            artist_copy = artist.to_utf8();
+            artist_str = artist_copy.c_str();
+        }
+        artist_tags = parse_artists(artist_str);
     }
     std::string sqlbuf;
     for (const std::string& tag : artist_tags) {
@@ -90,11 +96,8 @@ void song_record::insert_sql(sqlite3* db, sqlite3_stmt* stmt) const noexcept {
 }
 
 sqlite3_stmt* song_record::prepare_sql(sqlite3* db) noexcept {
-    const char* sql = "INSERT INTO songs (title, artist, album, year, hash) VALUES (?, ?, ?, ?, ?);";
-    sqlite3_stmt* stmt = nullptr;
-    int res = sqlite3_prepare_v2(db, sql,  -1, &stmt, nullptr);
-    sql_handle_error("Failed to compile song insert", db, res);
-    return stmt;
+    const char sql[] = "INSERT INTO songs (title, artist, album, year, hash) VALUES (?, ?, ?, ?, ?);";
+    return compile_sql(sql, sizeof(sql), db);
 }
 
 // Generate SQL and gather some basic stats about the import process
