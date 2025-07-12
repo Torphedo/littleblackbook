@@ -3,7 +3,6 @@
 
 #include <common/int.h>
 #include <common/crc32.h>
-#include <common/path.h>
 
 #include "sqlgen.hxx"
 #include "schema.hxx"
@@ -40,9 +39,8 @@ tag_hash_t create_tag_sql(sqlite3* db, const char* tag, tag_hash_t hash, unsigne
         hash = crc32buf((const u8*)tag, strlen(tag));
     }
     const char tag_insert[] = "INSERT INTO tags (tag, hash, namespace_hash) VALUES (?, ?, ?);";
-    sqlite3_stmt* tag_stmt = nullptr;
-    int res = sqlite3_prepare_v2(db, tag_insert, sizeof(tag_insert), &tag_stmt, nullptr);
-    if (!sql_handle_error("Failed to compile tag INSERT", db, res)) {
+    sqlite3_stmt* tag_stmt = compile_sql(tag_insert, sizeof(tag_insert), db);
+    if (tag_stmt == nullptr) {
         return 0;
     }
 
@@ -55,10 +53,9 @@ tag_hash_t create_tag_sql(sqlite3* db, const char* tag, tag_hash_t hash, unsigne
         sql_bind(tag_stmt, 3, namespace_hash);
 
         // Compile & execute INSERT
-        const char namespace_insert[] = "INSERT OR IGNORE INTO namespaces (namespace, hash) VALUES (?, ?);";
-        sqlite3_stmt* ns_stmt = nullptr;
-        res = sqlite3_prepare_v2(db, namespace_insert, sizeof(namespace_insert), &ns_stmt, nullptr);
-        if (sql_handle_error("Failed to compile namespace INSERT", db, res)) {
+        const char ns_insert[] = "INSERT OR IGNORE INTO namespaces (namespace, hash) VALUES (?, ?);";
+        sqlite3_stmt* ns_stmt = compile_sql(ns_insert, sizeof(ns_insert), db);
+        if (ns_stmt != nullptr) {
             sql_bind(ns_stmt, 1, tag, namespace_len, encoding);
             sql_bind(ns_stmt, 2, namespace_hash);
             sqlite3_step(ns_stmt);

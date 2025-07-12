@@ -30,17 +30,13 @@ void text::print() const noexcept {
     }
 }
 
-std::string text::to_utf8(bool sql_sanitize) const noexcept {
+std::string text::to_utf8() const noexcept {
     std::string output;
+    output.reserve(length);
     for (u16 i = 0; i < length; i++) {
         const char16_t c = ucs2[i];
         // Sorry for 1-letter variable, I couldn't think of a name.
         const utf8 u = codepoint_to_utf8(c);
-
-        if (sql_sanitize && strcmp(u.data, "'") == 0) {
-            // Escape the quote with another quote
-            output.append("'");
-        }
         output.append(u.data);
     }
 

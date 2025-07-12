@@ -1,11 +1,9 @@
+#include "sqlgen.hxx"
 #include <cstdarg>
 #include <cstdio>
 
-#include <sqlite3.h>
-
 #include <common/int.h>
 #include <common/logging.h>
-#include <string>
 
 #include "scope_timer.hxx"
 
@@ -84,9 +82,9 @@ bool sqlgen(std::string& sql_out, const char* fmt, ...) {
 
 sqlite3_stmt* compile_sql(const char* sql, s32 sql_len, sqlite3* db) {
     sqlite3_stmt* stmt = nullptr;
-    int songres = sqlite3_prepare_v2(db, sql, sql_len, &stmt, nullptr);
+    int res = sqlite3_prepare_v2(db, sql, sql_len, &stmt, nullptr);
 
-    if (songres != SQLITE_OK) {
+    if (res != SQLITE_OK) {
         const char* msg = sqlite3_errmsg(db);
         if (msg) {
             LOG_MSG(error, "Couldn't compile SQL statement because: \"%s\"\n", msg);
@@ -108,4 +106,14 @@ bool sql_handle_error(const char* msg_prefix, sqlite3* db, int errcode) {
     const char* msg = sqlite3_errmsg(db);
     LOG_MSG(error, "%s: %s\n", msg_prefix, msg);
     return false;
+}
+
+int sql_bind(sqlite3_stmt* stmt, int pos, const id3::text& str) noexcept {
+    void (*const callback)(void*) = SQLITE_STATIC;
+    if (str.encoding == id3::TEXT_UCS2) {
+        // Length multiplied by 2 since our length is in characters, not bytes
+        return sqlite3_bind_text16(stmt, pos, str.ucs2, str.length * 2, callback);
+    } else {
+        return sqlite3_bind_text(stmt, pos, str.ascii, str.length, callback);
+    }
 }

@@ -162,8 +162,8 @@ struct blackbook_core {
 
     bool apply_defaults() noexcept;
 
-    /// @brief Load songs from database, optionally with a custom query
-    bool load_songs_by_query(sqlite3* db, const char* query = nullptr);
+    /// @brief Load songs from database
+    bool load_songs_by_query(sqlite3* db);
 
     /// @brief Load songs and tags from the database
     ///
@@ -171,8 +171,6 @@ struct blackbook_core {
     /// parent-child tag mappings. Automatically reloads all open searches using
     /// the new data
     bool load_from_db();
-    // Maybe also add a "lazy" version that only loads new songs whose hash we
-    // don't recognize
 
     /// @brief Load everything from the database
     blackbook_core(sqlite3* db, const char* files_dir);

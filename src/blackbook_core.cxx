@@ -311,8 +311,6 @@ bool blackbook_core::load_from_db() {
         return false; // Error already printed for us
     }
 
-    // TODO: Check for errors after each sqlite3_step() loop so we can get detailed error messages
-
     // Load tag namespaces
     int exec_result = SQLITE_OK;
     while ((exec_result = sqlite3_step(fetchnamespaces)) == SQLITE_ROW) {
@@ -368,20 +366,16 @@ bool blackbook_core::load_from_db() {
     sqlite3_finalize(fetchtagmap);
     sqlite3_finalize(fetchtagparents);
 
-    need_reload = false; // Reset reload flag
+    this->need_reload = false;
 
     } // Scope for timer
     LOG_MSG(info, "Finished loading from database in %.3fms\n", timer_map["db_load"]);
     return true;
 }
 
-bool blackbook_core::load_songs_by_query(sqlite3* db, const char* query) {
+bool blackbook_core::load_songs_by_query(sqlite3* db) {
     // We don't bother getting album/artist, since those are stored as tags.
     static const char fetchsongs_sql[] = "SELECT title, year, lyrics, hash, import_timestamp, duration_secs FROM songs";
-    if (!query) {
-        query = fetchsongs_sql;
-    }
-
     sqlite3_stmt* fetchsongs = compile_sql(fetchsongs_sql, ARRAY_SIZE(fetchsongs_sql) + 1, db);
     if (!fetchsongs) {
         sqlite3_finalize(fetchsongs);
@@ -404,6 +398,7 @@ bool blackbook_core::load_songs_by_query(sqlite3* db, const char* query) {
             .release_year = year,
         };
     }
+    sql_handle_error("Error while loading songs", db, exec_result);
 
     sqlite3_finalize(fetchsongs);
     return true;

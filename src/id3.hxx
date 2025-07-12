@@ -55,9 +55,7 @@ struct text {
     void print() const noexcept;
 
     /// @brief Convert UCS-2 text to UTF-8 if needed
-    /// @param sql_sanitize Whether to escape quote characters for SQL, since
-    ///        we're already processing the entire string
-    std::string to_utf8(bool sql_sanitize = true) const noexcept;
+    std::string to_utf8() const noexcept;
 };
 
 // All relevant metadata frame types

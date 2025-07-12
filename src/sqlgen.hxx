@@ -31,12 +31,16 @@ bool sql_handle_error(const char* msg_prefix, sqlite3* db, int errcode);
 // Function overloads for most SQLite statement binding functions
 #define DEF_SQL_BIND(args...) static int sql_bind(sqlite3_stmt* stmt, int pos, args) noexcept
 #define CALL_SQL_BIND(funcT, args...) sqlite3_bind_##funcT(stmt, pos, args)
+
+// SQL bind wrappers for primitive values (int/float)
 #define VALUE_BIND_TYPE(funcT, inT)   \
 DEF_SQL_BIND(inT val) {               \
     return CALL_SQL_BIND(funcT, val); \
 }
 #define VALUE_BIND(T) VALUE_BIND_TYPE(T, T)
-#define BUF_BIND_TYPE(bufT, sizeT, funcT)            \
+
+// SQL bind wrappers for buffers (text / blobs)
+#define BUF_BIND_TYPE(funcT, bufT, sizeT)            \
 DEF_SQL_BIND(bufT buf, sizeT size) {                 \
     return CALL_SQL_BIND(funcT, buf, size, nullptr); \
 }
@@ -46,10 +50,10 @@ VALUE_BIND(int)
 VALUE_BIND(double)
 VALUE_BIND_TYPE(value, const sqlite3_value*)
 VALUE_BIND_TYPE(int64, sqlite3_int64)
-BUF_BIND_TYPE(const char*, int, text)
-BUF_BIND_TYPE(const c16*, int, text16)
-BUF_BIND_TYPE(const void*, int, blob)
-BUF_BIND_TYPE(const void*, sqlite_uint64, blob64)
+BUF_BIND_TYPE(text, const char*, int)
+BUF_BIND_TYPE(text16, const c16*, int)
+BUF_BIND_TYPE(blob, const void*, int)
+BUF_BIND_TYPE(blob64, const void*, sqlite_uint64)
 
 // Overload for sqlite3_bind_text64 which takes encoding as a param
 DEF_SQL_BIND(const char* buf, sqlite_uint64 size, unsigned char encoding) {
@@ -57,15 +61,7 @@ DEF_SQL_BIND(const char* buf, sqlite_uint64 size, unsigned char encoding) {
 }
 
 // ID3 overload is too different to make a macro for
-static int sql_bind(sqlite3_stmt* stmt, int pos, const id3::text& str) noexcept {
-    void (*const callback)(void*) = SQLITE_STATIC;
-    if (str.encoding == id3::TEXT_UCS2) {
-        // Length multiplied by 2 since our length is in characters, not bytes
-        return sqlite3_bind_text16(stmt, pos, str.ucs2, str.length * 2, callback);
-    } else {
-        return sqlite3_bind_text(stmt, pos, str.ascii, str.length, callback);
-    }
-}
+int sql_bind(sqlite3_stmt* stmt, int pos, const id3::text& str) noexcept;
 
 #undef VALUE_BIND_TYPE
 #undef VALUE_BIND
