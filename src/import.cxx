@@ -64,29 +64,51 @@ song_record::song_record(u8* mp3, u32 size) {
     }
 }
 
-void song_record::insert_sql(std::string& out) const noexcept {
-    // SQLite only wants UTF8 strings
-    std::string title_str = title.to_utf8();
-    std::string artist_str = artist.to_utf8();
-    std::string album_str = album.to_utf8();
 
-    run_transliterator(artist_str, RULES_AMERICANIZE);
-    run_transliterator(album_str,  RULES_AMERICANIZE);
-
-    sqlgen(out,
-        "INSERT INTO songs (title, artist, album, year, hash) VALUES ('%s', '%s', '%s', %u, %d);\n",
-        title_str.c_str(), artist_str.c_str(), album_str.c_str(), release_year, crc32
-    );
-
-    std::vector<std::string> artist_tags = parse_artists(artist_str.c_str());
-    for (const std::string& tag : artist_tags) {
-        create_tag_sql(tag.c_str(), out);
-        add_tag_to_song_sql(tag.c_str(), this->crc32, out);
+int bind_id3_to_statement(sqlite3_stmt* stmt, int pos, id3::text str, void (*callback)(void*) = SQLITE_STATIC) {
+    if (str.encoding == id3::TEXT_UCS2) {
+        return sqlite3_bind_text16(stmt, pos, str.ucs2, str.length, callback);
+    } else {
+        return sqlite3_bind_text(stmt, pos, str.ascii, str.length, callback);
     }
 }
 
+void song_record::insert_sql(sqlite3* db, sqlite3_stmt* stmt) const noexcept {
+    bind_id3_to_statement(stmt, 1, title);
+    bind_id3_to_statement(stmt, 2, artist);
+    bind_id3_to_statement(stmt, 3, album);
+    sqlite3_bind_int(stmt, 4, (s32)release_year);
+    sqlite3_bind_int(stmt, 5, crc32);
+    sqlite3_step(stmt);
+    sqlite3_reset(stmt);
+
+    std::vector<std::string> artist_tags;
+    {
+        std::string artist_str = artist.to_utf8();
+        artist_tags = parse_artists(artist_str.c_str());
+    }
+    std::string sqlbuf;
+    for (const std::string& tag : artist_tags) {
+        create_tag_sql(tag.c_str(), sqlbuf);
+        add_tag_to_song_sql(tag.c_str(), this->crc32, sqlbuf);
+    }
+    char* errmsg = nullptr;
+    if (sqlite3_exec(db, sqlbuf.c_str(), nullptr, nullptr, &errmsg) != SQLITE_OK) {
+        LOG_MSG(error, "SQLite error: %s\n", errmsg);
+        LOG_MSG(debug, "Offending statement: \"%s\"\n", sqlbuf.c_str());
+    }
+}
+
+sqlite3_stmt* song_record::prepare_sql(sqlite3* db) noexcept {
+    const char* sql = "INSERT INTO songs (title, artist, album, year, hash) VALUES (?, ?, ?, ?, ?);";
+    sqlite3_stmt* stmt = nullptr;
+    int res = sqlite3_prepare_v2(db, sql,  -1, &stmt, nullptr);
+    sql_handle_error("Failed to compile song insert", db, res);
+    return stmt;
+}
+
 // Generate SQL and gather some basic stats about the import process
-void import_many_files(const char* const* paths, u32 num_paths, const char* files_dir, std::string* sql, import_stats_t* stats) {
+void import_many_files(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db, import_stats_t* stats) {
     if (!file_exists(files_dir)) {
         std::filesystem::create_directory(files_dir);
     }
@@ -96,6 +118,7 @@ void import_many_files(const char* const* paths, u32 num_paths, const char* file
     const scope_timer generator_timer(sqlgen_time);
 
     std::vector<u8> file_buf(5 * 1024 * 1024); // Buffer is reused for many files
+    sqlite3_stmt* song_stmt = song_record::prepare_sql(db);
 
     // Indices of all paths that were found to already be in the database
     std::vector<song_hash_t> import_conflicts;
@@ -151,10 +174,11 @@ void import_many_files(const char* const* paths, u32 num_paths, const char* file
             stats->num_copied++;
 
             // Generate INSERT statement
-            song.insert_sql(*sql);
+            song.insert_sql(db, song_stmt);
             stats->num_generated_sql++;
         }
     }
+    sqlite3_finalize(song_stmt);
 
     } // Timer scope
     stats->sqlgen_time_us += sqlgen_time * 1000.0f; // Convert to microseconds
@@ -180,12 +204,13 @@ bool import_many_files_many_threads(const char* const* paths, u32 num_paths, con
     const u32 paths_per_thread = num_paths / num_threads;
     stats->total_songs = num_paths;
 
+    sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
+
     // Dispatch a bunch of threads, assigning an even amount to each one
     u32 pos = 0;
-    std::string thread_results[max_threads] = {};
     for (u32 i = 0; i < num_threads; i++) {
         const char* const* thread_paths = &paths[pos];
-        threads[i] = std::thread(import_many_files, thread_paths, paths_per_thread, files_dir, &thread_results[i], stats);
+        threads[i] = std::thread(import_many_files, thread_paths, paths_per_thread, files_dir, db, stats);
         pos += paths_per_thread;
     }
 
@@ -195,21 +220,12 @@ bool import_many_files_many_threads(const char* const* paths, u32 num_paths, con
         }
     }
 
-    std::string total = "BEGIN TRANSACTION;\n";
-
-    // Accumulate results
-    for (u32 i = 0; i < num_threads; i++) {
-        total += thread_results[i];
-    }
-
     // Do the remainder sequentially
     const u32 remainder = num_paths % num_threads;
     if (remainder > 0) {
-        std::string temp;
-        import_many_files(&paths[num_threads * paths_per_thread], remainder, files_dir, &temp, stats);
-        total += temp;
+        import_many_files(&paths[num_threads * paths_per_thread], remainder, files_dir, db, stats);
     }
-    total.append("\nCOMMIT;\n");
+    sqlite3_exec(db, "COMMIT;", nullptr, nullptr, nullptr);
 
     LOG_MSG(info, "Finished Phase 1 in %.3fms\n", stats->sqlgen_time_us / 1000.0f);
 
@@ -220,23 +236,5 @@ bool import_many_files_many_threads(const char* const* paths, u32 num_paths, con
         LOG_MSG(info, "Importing %u new songs.\n", stats->num_generated_sql.load());
     }
 
-    printf("Phase 2: Importing data to SQLite\n");
-
-    bool result = true;
-    char* errmsg = nullptr;
-    float sqlexec_time = 0.0f;
-    int sql_result = SQLITE_OK;
-    {
-        scope_timer exectimer(sqlexec_time);
-        sql_result = sqlite3_exec(db, total.c_str(), nullptr, nullptr, &errmsg);
-    }
-    if (sql_result != SQLITE_OK) {
-        result = false;
-        if (errmsg) {
-            LOG_MSG(error, "SQLite error: %s\n", errmsg);
-        }
-    }
-    LOG_MSG(info, "Finished Phase 2 in %.3fms\n", sqlexec_time);
-
-    return result;
+    return true;
 }

@@ -30,7 +30,6 @@ void text::print() const noexcept {
     }
 }
 
-// TODO: Maybe have this take an output buffer? Could we reasonably make this re-use buffers?
 std::string text::to_utf8(bool sql_sanitize) const noexcept {
     std::string output;
     for (u16 i = 0; i < length; i++) {

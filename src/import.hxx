@@ -26,9 +26,9 @@ struct song_record {
     song_record(u8* mp3, u32 size);
 
     /// @brief Generate an INSERT statement that will add the song to the database
-    ///
-    /// @param out A text buffer where the generated SQL should be stored
-    void insert_sql(std::string& out) const noexcept;
+    void insert_sql(sqlite3* db, sqlite3_stmt* stmt) const noexcept;
+
+    static sqlite3_stmt* prepare_sql(sqlite3* db) noexcept;
 };
 
 // Statistics about an in-progress import operation
