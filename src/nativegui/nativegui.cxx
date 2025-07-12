@@ -145,7 +145,7 @@ bool nativegui::window_song_editor(runtime_song& song) {
         if (found) {
             del_tag_from_song_sql(tag.c_str(), song.hash, sql);
         } else {
-            add_tag_to_song_sql(tag.c_str(), song.hash, sql);
+            add_tag_to_song_sql(core.db, tag.c_str(), song.hash, sql);
         }
         int result = sqlite3_exec(core.db, sql.c_str(), nullptr, nullptr, nullptr);
         sql_handle_error("Failed to add/remove tag", core.db, result);

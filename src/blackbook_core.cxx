@@ -105,7 +105,7 @@ bool blackbook_core::apply_tag_pair() noexcept {
     }
 
     std::string sql;
-    link_tags_sql(parent.c_str(), child.c_str(), sql);
+    link_tags_sql(db, parent.c_str(), child.c_str(), sql);
 
     char* errmsg = nullptr;
     int sql_res = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
@@ -265,7 +265,7 @@ bool blackbook_core::apply_defaults() noexcept {
     const scope_timer defaults_timer(timer_map, "apply_tag_defaults");
     std::string sql = "BEGIN TRANSACTION;\n";
     for (const default_tag_pair& pair : default_tag_parents) {
-        link_tags_sql(pair.parent, pair.child, sql);
+        link_tags_sql(db, pair.parent, pair.child, sql);
     }
     sql.append("\nCOMMIT;");
 

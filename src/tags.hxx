@@ -11,14 +11,15 @@ std::vector<std::string> parse_artists(const char* str);
 
 /// Create a tag, but don't add it to any songs
 ///
+/// @param db A database connection to use for the operation
 /// @param tag The name of the tag to add
-/// @param sql_out The buffer to store the generated SQL code
 /// @param hash If you already know the tag's hash, you can provide it to prevent a redundant calculation
+/// @param encoding UTF8 or UTF16 encoding
 /// @return The newly calculated hash, or the hash you provided
-tag_hash_t create_tag_sql(const char* tag, std::string& sql_out, tag_hash_t hash = 0);
+tag_hash_t create_tag_sql(sqlite3* db, const char* tag, tag_hash_t hash = 0, unsigned char encoding = SQLITE_UTF8);
 
 // Add a tag to a song, adding it to the tag table if needed
-void add_tag_to_song_sql(const char* tag, song_hash_t song_hash, std::string& sql_out);
+void add_tag_to_song_sql(sqlite3* db, const char* tag, song_hash_t song_hash, std::string& sql_out);
 
 void del_tag_from_song_sql(const char* tag, song_hash_t song_hash, std::string& sql_out);
 
@@ -27,10 +28,7 @@ void del_tag_from_song_sql(const char* tag, song_hash_t song_hash, std::string& 
 /// If the child tag is added to a song, the parent will appear to be
 /// automatically added too. It'll also appear to be automatically removed if the
 /// relationship is deleted.
-///
-/// Internally this behaviour is implemented with table joins, so adding/removing
-// a pair in the parent table will instantly apply the change to the next search.
-void link_tags_sql(const char* parent, const char* child, std::string& sql_out);
+void link_tags_sql(sqlite3* db, const char* parent, const char* child, std::string& sql_out);
 
 /// @brief Delete a parent-child relationship between 2 tags
 void unlink_tags_sql(const char* parent, const char* child, std::string& sql_out);

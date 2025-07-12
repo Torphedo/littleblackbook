@@ -4,7 +4,6 @@
 #include <filesystem>
 #include <thread>
 #include <vector>
-#include <threads.h>
 
 #include <common/file.h>
 #include <common/endian.h>
@@ -64,21 +63,12 @@ song_record::song_record(u8* mp3, u32 size) {
     }
 }
 
-
-int bind_id3_to_statement(sqlite3_stmt* stmt, int pos, id3::text str, void (*callback)(void*) = SQLITE_STATIC) {
-    if (str.encoding == id3::TEXT_UCS2) {
-        return sqlite3_bind_text16(stmt, pos, str.ucs2, str.length, callback);
-    } else {
-        return sqlite3_bind_text(stmt, pos, str.ascii, str.length, callback);
-    }
-}
-
 void song_record::insert_sql(sqlite3* db, sqlite3_stmt* stmt) const noexcept {
-    bind_id3_to_statement(stmt, 1, title);
-    bind_id3_to_statement(stmt, 2, artist);
-    bind_id3_to_statement(stmt, 3, album);
-    sqlite3_bind_int(stmt, 4, (s32)release_year);
-    sqlite3_bind_int(stmt, 5, crc32);
+    sql_bind(stmt, 1, title);
+    sql_bind(stmt, 2, artist);
+    sql_bind(stmt, 3, album);
+    sql_bind(stmt, 4, int(release_year));
+    sql_bind(stmt, 5, crc32);
     sqlite3_step(stmt);
     sqlite3_reset(stmt);
 
@@ -89,8 +79,8 @@ void song_record::insert_sql(sqlite3* db, sqlite3_stmt* stmt) const noexcept {
     }
     std::string sqlbuf;
     for (const std::string& tag : artist_tags) {
-        create_tag_sql(tag.c_str(), sqlbuf);
-        add_tag_to_song_sql(tag.c_str(), this->crc32, sqlbuf);
+        create_tag_sql(db, tag.c_str());
+        add_tag_to_song_sql(db, tag.c_str(), this->crc32, sqlbuf);
     }
     char* errmsg = nullptr;
     if (sqlite3_exec(db, sqlbuf.c_str(), nullptr, nullptr, &errmsg) != SQLITE_OK) {
@@ -204,6 +194,9 @@ bool import_many_files_many_threads(const char* const* paths, u32 num_paths, con
     const u32 paths_per_thread = num_paths / num_threads;
     stats->total_songs = num_paths;
 
+    float phase1_elapsed = 0.0f;
+    {
+    const scope_timer phase1_timer(phase1_elapsed);
     sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
 
     // Dispatch a bunch of threads, assigning an even amount to each one
@@ -226,8 +219,10 @@ bool import_many_files_many_threads(const char* const* paths, u32 num_paths, con
         import_many_files(&paths[num_threads * paths_per_thread], remainder, files_dir, db, stats);
     }
     sqlite3_exec(db, "COMMIT;", nullptr, nullptr, nullptr);
+    } // Timer scope
 
-    LOG_MSG(info, "Finished Phase 1 in %.3fms\n", stats->sqlgen_time_us / 1000.0f);
+
+    LOG_MSG(info, "Finished Phase 1 in %.3fms\n", phase1_elapsed);
 
     if (stats->num_skipped > 0) {
         LOG_MSG(info, "I found %u new songs to import, but skipped %u that were already in the database.\n",

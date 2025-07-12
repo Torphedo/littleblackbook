@@ -34,32 +34,54 @@ std::vector<std::string> parse_artists(const char* str) {
     return results;
 }
 
-tag_hash_t create_tag_sql(const char* tag, std::string& sql_out, tag_hash_t hash) {
+tag_hash_t create_tag_sql(sqlite3* db, const char* tag, tag_hash_t hash, unsigned char encoding) {
     if (hash == 0) {
         // No hash provided, calculate it
         hash = crc32buf((const u8*)tag, strlen(tag));
     }
-    const char* colon = strchr(tag, ':');
-
-    if (colon == nullptr) {
-        // No namespace found, proceed as normal
-        sqlgen(sql_out, "INSERT INTO tags (tag, hash) VALUES ('%s', %d);\n", tag, hash);
-        return hash;
+    const char tag_insert[] = "INSERT INTO tags (tag, hash, namespace_hash) VALUES (?, ?, ?);";
+    sqlite3_stmt* tag_stmt = nullptr;
+    int res = sqlite3_prepare_v2(db, tag_insert, sizeof(tag_insert), &tag_stmt, nullptr);
+    if (!sql_handle_error("Failed to compile tag INSERT", db, res)) {
+        return 0;
     }
 
-    // This tag has a namespace, split it up.
-    const u32 namespace_len = colon - tag;
-    const char* tag_isolated = colon + 1;
-    const tag_hash_t namespace_hash = crc32buf((const u8*)tag, namespace_len);
-    sqlgen(sql_out, "INSERT OR IGNORE INTO namespaces (namespace, hash) VALUES ('%.*s', %d);\n", namespace_len, tag, namespace_hash);
-    sqlgen(sql_out, "INSERT INTO tags (tag, namespace_hash, hash) VALUES ('%s', %d, %d);\n", tag_isolated, namespace_hash, hash);
+    const char* colon = strchr(tag, ':');
+    const ptrdiff_t namespace_len = ptrdiff_t(colon) - ptrdiff_t(tag);
+    if (colon != nullptr && namespace_len > 0) {
+        // This tag has a namespace, split it up.
+        const tag_hash_t namespace_hash = crc32buf((const u8*)tag, namespace_len);
+        // We don't rehash because the tag hash includes namespace
+        sql_bind(tag_stmt, 3, namespace_hash);
 
+        // Compile & execute INSERT
+        const char namespace_insert[] = "INSERT OR IGNORE INTO namespaces (namespace, hash) VALUES (?, ?);";
+        sqlite3_stmt* ns_stmt = nullptr;
+        res = sqlite3_prepare_v2(db, namespace_insert, sizeof(namespace_insert), &ns_stmt, nullptr);
+        if (sql_handle_error("Failed to compile namespace INSERT", db, res)) {
+            sql_bind(ns_stmt, 1, tag, namespace_len, encoding);
+            sql_bind(ns_stmt, 2, namespace_hash);
+            sqlite3_step(ns_stmt);
+            sqlite3_finalize(ns_stmt);
+        }
+
+        // Make sure tag string doesn't include the namespace
+        const u32 char_size = (encoding == SQLITE_UTF8) ? 1 : 2;
+        tag = colon + char_size;
+    } else {
+        sqlite3_bind_null(tag_stmt, 3);
+    }
+    sql_bind(tag_stmt, 1, tag, strlen(tag), encoding);
+    sql_bind(tag_stmt, 2, hash);
+
+    sqlite3_step(tag_stmt);
+    sqlite3_finalize(tag_stmt);
     return hash;
 }
 
-void add_tag_to_song_sql(const char* tag, song_hash_t song_hash, std::string& sql_out) {
+void add_tag_to_song_sql(sqlite3* db, const char* tag, song_hash_t song_hash, std::string& sql_out) {
     // We need to create the tag if it doesn't exist
-    const tag_hash_t tag_hash = create_tag_sql(tag, sql_out);
+    const tag_hash_t tag_hash = create_tag_sql(db, tag);
 
     // Actually add the tag association
     sqlgen(sql_out, "INSERT INTO " TAG_SONG_TABLE " (song_hash, tag_hash) VALUES (%d, %d);\n", song_hash, tag_hash);
@@ -72,10 +94,10 @@ void del_tag_from_song_sql(const char* tag, song_hash_t song_hash, std::string& 
            song_hash, tag_hash);
 }
 
-void link_tags_sql(const char* parent, const char* child, std::string& sql_out) {
+void link_tags_sql(sqlite3* db, const char* parent, const char* child, std::string& sql_out) {
     // We need to create the tags if they don't exist
-    const tag_hash_t child_hash = create_tag_sql(child, sql_out);
-    const tag_hash_t parent_hash = create_tag_sql(parent, sql_out);
+    const tag_hash_t child_hash = create_tag_sql(db, child);
+    const tag_hash_t parent_hash = create_tag_sql(db, parent);
 
     // Add the tag association
     sqlgen(sql_out, "INSERT INTO " TAG_PARENT_TABLE " (child_hash, parent_hash) VALUES (%d, %d);\n", child_hash, parent_hash);
