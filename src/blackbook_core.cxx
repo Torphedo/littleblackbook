@@ -194,20 +194,24 @@ bool tag_autocomplete::update_results(sqlite3* db) noexcept {
 
     // We use this to skip the minus sign in the generated SQL
     const bool minus = user_str.c_str()[0] == '-';
-    std::string sql;
-    // This searches the tag table, then uses the result to find the namespace string
-    sqlgen(sql, R"(
+    // '"[user_str] *"'. Quotes and '*' are required by FTS5 table.
+    const std::string search_val = "\"" + std::string(user_str.c_str() + minus) + "\" *";
+
+    // This searches the tag table, then uses the result to find the namespace.
+    // Both of the results are strings.
+    const char sql[] = R"(
         SELECT ns.namespace, t.tag FROM
-        (SELECT * FROM tag_search('"%s" *') ORDER BY rank LIMIT %d) result
+        (SELECT * FROM tag_search(?) ORDER BY rank LIMIT ?) result
         JOIN tags t ON t.hash = result.hash
         LEFT JOIN namespaces ns ON ns.hash = t.namespace_hash;
-    )",
-    user_str.c_str() + minus, AUTOCOMPLETE_SIZE);
+    )";
 
-    sqlite3_stmt* stmt = compile_sql(sql.c_str(), -1, db);
+    sqlite3_stmt* stmt = compile_sql(sql, sizeof(sql), db);
     if (stmt == nullptr) {
         return false; // Error printed for us
     }
+    sql_bind(stmt, 1, search_val.c_str(), search_val.size());
+    sql_bind(stmt, 2, AUTOCOMPLETE_SIZE);
 
     int res = SQLITE_OK;
     while ((res = sqlite3_step(stmt)) == SQLITE_ROW) {
@@ -221,7 +225,9 @@ bool tag_autocomplete::update_results(sqlite3* db) noexcept {
         result += tag;
         candidates.push_back(result);
     }
+    sql_handle_error("Error running tag autocomplete", db, res);
 
+    sqlite3_finalize(stmt);
     return true;
 }
 
