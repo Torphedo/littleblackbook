@@ -158,8 +158,9 @@ void import_many_files(const char* const* paths, u32 num_paths, const char* file
     std::vector<song_record> songs;
     songs.reserve(num_paths);
 
-    std::vector<u8> file_buf(5 * 1024 * 1024); // Buffer is reused for many files
+    std::vector<u8> file_buf(32 * 1024 * 1024); // Buffer is reused for many files
     std::vector<u8> id3_buf;
+    id3_buf.reserve(1 * 1024 * 1024);
 
     for (u32 i = 0; i < num_paths; i++) {
         // Early exit for simple errors
@@ -202,6 +203,11 @@ void import_many_files(const char* const* paths, u32 num_paths, const char* file
     for (song_record& song : songs) {
         song.mp3 = id3_buf.data(); // All offsets are relative to this buffer
 
+        song.insert_sql(db, song_stmt);
+        stats->num_generated_sql++;
+    }
+
+    for (song_record& song : songs) {
         // Make sure the path will fit in our static sized buffer.
         // hash -> [up to] 10 chars, extension -> 4 chars, dirsep -> 1 char
         char destpath[512] = {0};
@@ -220,18 +226,16 @@ void import_many_files(const char* const* paths, u32 num_paths, const char* file
             std::filesystem::copy_file(paths[song.path_idx], destpath);
             stats->num_copied++;
         }
-
-        song.insert_sql(db, song_stmt);
-        stats->num_generated_sql++;
     }
     sqlite3_finalize(song_stmt);
 }
 
 bool import_many_files_many_threads(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db, import_stats_t* stats) {
     if (num_paths == 0) {
-        LOG_MSG(info, "You didn't give any paths. Not much of an import, is it?\n");
+        LOG_MSG(info, "You didn't give me any files. Not much of an import, is it?\n");
         return true;
     }
+
     LOG_MSG(info, "Starting importer for %d files\n", num_paths);
     if (num_paths > 100) {
         LOG_MSG(info, "You're importing a lot of files, this might take a while.\n");
@@ -245,9 +249,9 @@ bool import_many_files_many_threads(const char* const* paths, u32 num_paths, con
     const u32 paths_per_thread = num_paths / num_threads;
     stats->total_songs = num_paths;
 
-    float phase1_elapsed = 0.0f;
+    float import_elapsed = 0.0f;
     {
-    const scope_timer phase1_timer(phase1_elapsed);
+    const scope_timer import_timer(import_elapsed);
     sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
 
     // Dispatch a bunch of threads, assigning an even amount to each one
@@ -277,15 +281,18 @@ bool import_many_files_many_threads(const char* const* paths, u32 num_paths, con
     } // Timer scope
 
 
-    LOG_MSG(info, "Finished importing in %.3fms\n", phase1_elapsed);
+    LOG_MSG(info, "Finished importing in %.3fms\n", import_elapsed);
 
-    if (stats->num_skipped > 0) {
-        u32 num_skipped = stats->num_skipped.load();
+    const u32 num_skipped = stats->num_skipped.load();
+    if (num_skipped == stats->total_songs.load()) {
+        LOG_MSG(error, "All %u songs you gave me were already in the database, or couldn't be imported for some reason.\n",
+                num_skipped);
+    } else if (num_skipped > 0) {
         const char* past_tense_word = (num_skipped == 1) ? "was" : "were";
         LOG_MSG(info, "I found %u new songs to import, but skipped %u that %s already in the database.\n",
-                stats->num_generated_sql.load(), stats->num_skipped.load(), past_tense_word);
+                stats->num_generated_sql.load(), num_skipped, past_tense_word);
     } else {
-        LOG_MSG(info, "Importing %u new songs.\n", stats->num_generated_sql.load());
+        LOG_MSG(info, "Imported %u new songs.\n", stats->num_generated_sql.load());
     }
 
     return true;
