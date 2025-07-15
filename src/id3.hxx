@@ -44,7 +44,7 @@ struct text {
     uintptr_t ascii: 47;
 
     text() = default;
-    text(u8* frame_data, u32 frame_size);
+    text(u8* frame_data, u32 frame_size, u32 frame_offset);
 
     /// @brief Convert UCS-2 text to UTF-8 if needed
     std::string to_utf8(u8* frame_data) const noexcept;

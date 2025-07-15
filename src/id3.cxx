@@ -11,12 +11,12 @@
 
 namespace id3 {
 
-text::text(u8* frame_data, u32 frame_size) {
+text::text(u8* frame_data, u32 frame_size, u32 frame_offset) {
     vfile vf = vfile_open(frame_data, frame_size);
 
     encoding = VFILE_READ(id3::text_encoding, &vf);
     vfile_seek(&vf, sizeof(u16)); // Skip byte order marker
-    ascii = vf.pos;
+    ascii = vf.pos + frame_offset;
     const u32 remaining_size = vf.size - vf.pos;
     const u8 char_size = (encoding == TEXT_ASCII) ? 1 : 2;
     length = remaining_size / char_size;
@@ -25,10 +25,10 @@ text::text(u8* frame_data, u32 frame_size) {
 std::string text::to_utf8(u8* frame_data) const noexcept {
     std::string output;
     output.reserve(length);
+    const c16* str = (c16*)(frame_data + ascii);
     for (u16 i = 0; i < length; i++) {
-        const c16 c = *(c16*)(frame_data + ascii);
         // Sorry for 1-letter variable, I couldn't think of a name.
-        const utf8 u = codepoint_to_utf8(c);
+        const utf8 u = codepoint_to_utf8(str[i]);
         output.append(u.data);
     }
 

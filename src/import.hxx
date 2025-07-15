@@ -17,17 +17,20 @@ struct song_record {
     id3::text album;
     id3::text artist;
 
-    u32 release_year = 0;
+    u16 path_idx = 0;
+    u16 release_year = 0;
     song_hash_t crc32 = 0;
 
     /// @brief Collect MP3 metadata into song info.
     ///
     /// This structure stores pointers into the MP3 buffer, so make sure it's
     /// freed only once this structure is destroyed/unused.
-    song_record(u8* mp3, u32 size);
+    song_record(u8* mp3, u32 size, u16 path_idx);
 
     /// @brief Generate an INSERT statement that will add the song to the database
     void insert_sql(sqlite3* db, sqlite3_stmt* stmt) const noexcept;
+
+    void adjust_offsets(u32 offset) noexcept;
 
     static sqlite3_stmt* prepare_sql(sqlite3* db) noexcept;
 };
