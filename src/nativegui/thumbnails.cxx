@@ -14,6 +14,7 @@
 
 #include <id3.hxx>
 
+bool thumbnail_storage::thread_stop_flag = false;
 
 void update_gl_tex(texture img, gl_obj gl_tex) {
     glActiveTexture(GL_TEXTURE0);

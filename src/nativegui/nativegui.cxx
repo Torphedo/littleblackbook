@@ -685,6 +685,7 @@ nativegui::nativegui(sqlite3* db, const char* files_dir) noexcept
 }
 
 nativegui::~nativegui() noexcept {
+    thumbnails.thread_stop_flag = true;
     // Gather up texture IDs to be deleted in 1 call
     // TODO: Should this be done in a thumbnail object dtor?
     std::vector<gl_obj> textures(thumbnails.thumbnails.size());

@@ -24,6 +24,7 @@ public:
     std::map<image_hash_t, gl_obj> thumbnails;
     std::map<song_hash_t, image_hash_t> song_map;
     const char* files_dir;
+    static bool thread_stop_flag;
 
     thumbnail_storage(const char* files_dir) noexcept : files_dir(files_dir) {
         return;
@@ -80,6 +81,9 @@ private:
     template<typename T>
     void load_many_mp3s(const T& hashes) noexcept {
         for (song_hash_t hash : hashes) {
+            if (thread_stop_flag) {
+                break;
+            }
             texture_entry entry = {0};
             if (image_from_mp3(hash, &entry) && entry.tex.data) {
                 std::lock_guard lock(texqueue_lock);
