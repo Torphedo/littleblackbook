@@ -126,13 +126,32 @@ struct nativegui {
             ImGui::TableSetupColumn("Year");
             ImGui::TableHeadersRow();
 
-            // Draw a row for each chunk
-            for (song_hash_t hash : hashes) {
-                if (draw_song_row(hash)) {
-                    song_editors.insert(hash);
+            // Clipper allows us to only draw rows that are visible.
+            // On my system w/ 1381 song entries, this reduced draw time from
+            // ~1-1.2ms to ~0.1-0.2ms, and reduced CPU usage a lot.
+            ImGuiListClipper clipper;
+            clipper.Begin(hashes.size());
+            while (clipper.Step()) {
+                // I'd love to use operator[] here and not have to iterate over
+                // things that are skipped, but some (like map key iterators)
+                // don't implement operator[].
+                u32 i = 0;
+                for (song_hash_t hash : hashes) {
+                    if (i < clipper.DisplayStart) {
+                        i++;
+                        continue;
+                    }
+                    if (i >= clipper.DisplayEnd) {
+                        i++;
+                        continue;
+                    }
+                    if (draw_song_row(hash)) {
+                        song_editors.insert(hash);
+                    }
+                    i++;
                 }
             }
-
+            clipper.End();
             ImGui::EndTable();
         }
     }
