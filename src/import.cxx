@@ -28,7 +28,7 @@ song_record::song_record(u8* mp3, u32 size, u16 path_idx) : mp3(mp3), path_idx(p
     assert(header.correct_magic() && "File is not an MP3!");
     assert(header.size() <= size && "Metadata claims to be larger than the MP3!");
 
-    crc32 = crc32buf(mp3, size);
+    crc32 = crc32fast(mp3, size);
 
     // This makes our loop simpler and avoids reading into the audio data
     id3.size = header.size();
@@ -206,6 +206,7 @@ void import_many_files(const char* const* paths, u32 num_paths, const char* file
         song.insert_sql(db, song_stmt);
         stats->num_generated_sql++;
     }
+    sqlite3_finalize(song_stmt);
 
     for (song_record& song : songs) {
         // Make sure the path will fit in our static sized buffer.
@@ -227,7 +228,6 @@ void import_many_files(const char* const* paths, u32 num_paths, const char* file
             stats->num_copied++;
         }
     }
-    sqlite3_finalize(song_stmt);
 }
 
 bool import_many_files_many_threads(const char* const* paths, u32 num_paths, const char* files_dir, sqlite3* db, import_stats_t* stats) {
