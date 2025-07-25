@@ -111,7 +111,7 @@ bool sql_handle_error(const char* msg_prefix, sqlite3* db, int errcode) {
 int sql_bind(sqlite3_stmt* stmt, int pos, u8* frame_data, const id3::text& str) noexcept {
     void (*const callback)(void*) = SQLITE_STATIC;
     const void* text = (frame_data + str.ascii);
-    if (str.encoding == id3::TEXT_UCS2) {
+    if (id3::char_size_for_encoding(str.encoding) == 2) {
         // Length multiplied by 2 since our length is in characters, not bytes
         return sqlite3_bind_text16(stmt, pos, text, str.length * 2, callback);
     } else {
