@@ -36,7 +36,15 @@ enum text_encoding : u8 {
     TEXT_UCS2 = 1, // 2-byte Unicode format which is *not* UTF-16
     TEXT_UTF16BE = 2, // 2-byte Unicode format which is *not* UTF-16
     TEXT_UTF8 = 3, // 2-byte Unicode format which is *not* UTF-16
+
 };
+
+static u8 char_size_for_encoding(text_encoding e) {
+    if (e == TEXT_UCS2 || e == TEXT_UTF16BE) {
+        return 2;
+    }
+    return 1;
+}
 
 // A wrapper for text frames, which can be either ASCII or UCS2.
 struct text {
