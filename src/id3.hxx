@@ -34,6 +34,8 @@ static_assert(sizeof(header) == 10);
 enum text_encoding : u8 {
     TEXT_ASCII = 0,
     TEXT_UCS2 = 1, // 2-byte Unicode format which is *not* UTF-16
+    TEXT_UTF16BE = 2, // 2-byte Unicode format which is *not* UTF-16
+    TEXT_UTF8 = 3, // 2-byte Unicode format which is *not* UTF-16
 };
 
 // A wrapper for text frames, which can be either ASCII or UCS2.
