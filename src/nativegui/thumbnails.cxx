@@ -142,7 +142,11 @@ bool thumbnail_storage::image_from_mp3(song_hash_t song_hash, texture_entry* ima
     // Skip 2 strings
     id3::text_encoding encoding;
     fread(&encoding, sizeof(encoding), 1, f);
-    const u8 char_size = encoding == id3::TEXT_ASCII ? sizeof(u8) : sizeof(u16);
+
+    u8 char_size = sizeof(u8);
+    if (encoding == id3::TEXT_UCS2 || char_size == id3::TEXT_UTF16BE) {
+        char_size = sizeof(u16);
+    }
 
     u16 c = ' ';
     while (c != 0) {
