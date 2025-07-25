@@ -3,6 +3,18 @@ This is a music player for PC based on SQLite, designed for easy and powerful se
 
 <img width="2559" height="1365" alt="2025-07-24_21-45" src="https://github.com/user-attachments/assets/3dbe9335-986c-4be4-9d86-904d812a12a2" />
 
+## Keybinds
+| Key               | Effect                            |
+| ----------------- | --------------------------------- |
+| K OR Shift+P      | Previous song                     |
+| J OR Shift+N      | Next song                         |
+| H OR Left Arrow   | Back 5 seconds                    |
+| L OR Right Arrow  | Forward 5 seconds                 |
+| Space             | Pause/play                        |
+| Ctrl+T            | Open new search menu              |
+| F5 OR Crl+R       | Reload from database              |
+| Ctrl+I            | Import files menu                 |
+
 ## Tags & Inheritance
 Tags are the main way to filter songs. Usually these are simple things like the artist or album name, but can also be genres or any arbitrary text.
 Tags can *inherit* from each other, so that one tag automatically adds another. For example `artist:frequency` may be a child of `drum and bass`,
