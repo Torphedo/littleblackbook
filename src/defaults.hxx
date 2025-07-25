@@ -7,8 +7,9 @@ typedef struct {
 
 #define ARTIST_LINK(child, parent) { "artist:" child, "artist:" parent }
 #define HIPHOP_ARTIST(str) { "artist:" str, "hip hop" }
+#define IRISH_ARTIST(str) { "artist:" str, "irish" }
 
-constexpr default_tag_pair default_tag_parents[] = {
+static constexpr default_tag_pair default_tag_parents[] = {
 // Genres
     HIPHOP_ARTIST("mos def"),
     HIPHOP_ARTIST("talib kweli"),
@@ -39,8 +40,8 @@ constexpr default_tag_pair default_tag_parents[] = {
     HIPHOP_ARTIST("young mc"),
     HIPHOP_ARTIST("nas"),
     // TODO: Once we do proper escaping or parameterized queries, unncomment this.
-    // HIPHOP_ARTIST("royce da 5'9\""),
-    // HIPHOP_ARTIST("ol' dirty bastard"),
+    HIPHOP_ARTIST("royce da 5'9\""),
+    HIPHOP_ARTIST("ol' dirty bastard"),
     HIPHOP_ARTIST("rza"),
     HIPHOP_ARTIST("gza"),
     HIPHOP_ARTIST("method man"),
@@ -53,6 +54,10 @@ constexpr default_tag_pair default_tag_parents[] = {
     HIPHOP_ARTIST("mf doom"), // Sorry to butcher the MF DOOM name like this. System works with lowercase - torph
     HIPHOP_ARTIST("macklemore"),
     HIPHOP_ARTIST("e-dubble"),
+
+    IRISH_ARTIST("flogging molly"),
+    IRISH_ARTIST("1916"),
+    IRISH_ARTIST("dropkick murphys"),
 
 // Artist aliases/groups
     ARTIST_LINK("yasiin bey", "mos def"),
