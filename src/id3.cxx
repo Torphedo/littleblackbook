@@ -15,14 +15,23 @@ text::text(u8* frame_data, u32 frame_size, u32 frame_offset) {
     vfile vf = vfile_open(frame_data, frame_size);
 
     encoding = VFILE_READ(id3::text_encoding, &vf);
-    vfile_seek(&vf, sizeof(u16)); // Skip byte order marker
+    if (encoding == TEXT_UCS2) {
+        vfile_seek(&vf, sizeof(u16)); // Skip byte order marker
+    }
     ascii = vf.pos + frame_offset;
     const u32 remaining_size = vf.size - vf.pos;
-    const u8 char_size = (encoding == TEXT_ASCII) ? 1 : 2;
+    const u8 char_size = char_size_for_encoding(encoding);
     length = remaining_size / char_size;
+    if (encoding == TEXT_UTF8) {
+        length -= 1; // Don't count null terminator, DB viewer will display it as a BLOB
+    }
 }
 
 std::string text::to_utf8(u8* frame_data) const noexcept {
+    if (char_size_for_encoding(encoding) == 1) {
+        return (char*)(frame_data + ascii);
+    }
+
     std::string output;
     output.reserve(length);
     const c16* str = (c16*)(frame_data + ascii);
