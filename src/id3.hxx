@@ -42,8 +42,8 @@ enum text_encoding : u8 {
 struct text {
     u16 length: 16 = 0;
     // Spec says ASCII is default: https://id3.org/id3v2.3.0#ID3v2_frame_overview
-    text_encoding encoding: 1 = TEXT_ASCII;
-    uintptr_t ascii: 47;
+    text_encoding encoding: 2 = TEXT_ASCII;
+    uintptr_t ascii: 46;
 
     text() = default;
     text(u8* frame_data, u32 frame_size, u32 frame_offset);
