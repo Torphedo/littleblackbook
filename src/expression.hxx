@@ -13,6 +13,11 @@ enum class tag_op : u8 {
     PAREN, // Internal to the parser, will never show up in a tree
 };
 
+typedef struct {
+    const char* data;
+    u32 length;
+}substr_t;
+
 // Recursive expression structure used for complex queries like:
 // (artist:beastie boys OR artist:a tribe called quest) AND (year:1990s OR year:1980s) AND -year:1992
 //
@@ -21,7 +26,7 @@ struct tag_expression {
     struct value {
         union {
             tag_expression* expr;
-            std::string_view tag;
+            substr_t tag;
         };
         bool recursive = false;
         value(const char* text, u32 len) : tag(text, len) {}
@@ -39,8 +44,8 @@ struct tag_expression {
     tag_expression(const char* text) : tag_expression(text, strlen(text)) {}
     tag_expression() = default;
 private:
-    tag_expression(std::queue<std::string_view> tokens);
+    tag_expression(std::queue<substr_t> tokens);
 };
 
-tag_expression recurse_parse(std::queue<std::string_view>& lex, u8 subexpr_precedence);
-void parse_tail_tokens(const std::string_view& cur_tok, std::queue<std::string_view>& lex, tag_expression& partial_expr);
+tag_expression recurse_parse(std::queue<substr_t>& lex, u8 subexpr_precedence);
+void parse_tail_tokens(const substr_t& cur_tok, std::queue<substr_t>& lex, tag_expression& partial_expr);

@@ -78,13 +78,13 @@ operator_t op_from_token(const char* text, u32 len) {
     return result;
 }
 
-operator_t op_from_token(const std::string_view& str) {
-    return op_from_token(str.data(), str.length());
+operator_t op_from_token(const substr_t& str) {
+    return op_from_token(str.data, str.length);
 }
 
 static const char reserved_chars[] = "()-";
 
-std::queue<std::string_view> shatter_str(const char* text, s32 len) {
+std::queue<substr_t> shatter_str(const char* text, s32 len) {
     // Remove trailing whitespace
     while (isspace(text[MAX(0, len - 1)]) && len > 0) {
         len--;
@@ -96,7 +96,7 @@ std::queue<std::string_view> shatter_str(const char* text, s32 len) {
         len--;
     }
 
-    std::queue<std::string_view> out;
+    std::queue<substr_t> out;
     s32 last_token_end = 0;
     for (s32 i = 0; i < len; i++) {
         const u32 prev_pos = MAX(0, i - 1);
@@ -109,14 +109,14 @@ std::queue<std::string_view> shatter_str(const char* text, s32 len) {
         }
         else if (isspace(cur_ch)) {
             is_token_end = true; // End token when we hit whitespace
-        }
-
-        // Reserved characters always end the last token, and form their own
-        // 1-character tokens
-        // TODO: '-' might get used in normal text, and probably shouldn't be handled like this
-        for (char c : reserved_chars) {
-            if (cur_ch == c || prev_ch == c) {
-                is_token_end = true;
+        } else {
+            // Reserved characters always end the previous token, and form their
+            // own 1-character tokens
+            // TODO: '-' might get used in normal text, should probably be handled another way
+            for (char c : reserved_chars) {
+                if (cur_ch == c || prev_ch == c) {
+                    is_token_end = true;
+                }
             }
         }
 
@@ -128,13 +128,11 @@ std::queue<std::string_view> shatter_str(const char* text, s32 len) {
             if (out.size() > 0) {
                 prev_op = op_from_token(out.back()).op_enum;
             }
+            // Merge non-operator tokens (allows tokens to have whitespace)
             if (cur_op == tag_op::NONE && prev_op == tag_op::NONE) {
-                // Neither of the last 2 tokens are operators, merge them
                 const char* cur_token_end = token_begin + MAX(0, token_len);
-                const s32 combined_len = MAX(0, cur_token_end - out.back().data());
-                // We have to completely replace the old token data because it
-                // offers no way to edit the size or pointer directly.
-                std::construct_at(&out.back(), out.back().data(), combined_len);
+                const s32 combined_len = MAX(0, cur_token_end - out.back().data);
+                out.back().length = combined_len;
             } else {
                 // Proceed as normal
                 out.emplace(token_begin, token_len);
@@ -143,6 +141,7 @@ std::queue<std::string_view> shatter_str(const char* text, s32 len) {
         }
     }
 
+    // Make the rest of the string a token
     const u32 token_len = MAX(0, len - last_token_end);
     if (token_len > 0) {
         out.emplace(&text[last_token_end], token_len);
@@ -151,7 +150,7 @@ std::queue<std::string_view> shatter_str(const char* text, s32 len) {
     return out;
 }
 
-tag_expression parse_head_tokens(std::string_view cur_tok, std::queue<std::string_view>& lex) {
+tag_expression parse_head_tokens(substr_t cur_tok, std::queue<substr_t>& lex) {
     tag_expression result = {};
     const operator_t cur_op = op_from_token(cur_tok);
     switch (cur_op.op_enum) {
@@ -169,7 +168,7 @@ tag_expression parse_head_tokens(std::string_view cur_tok, std::queue<std::strin
     return result;
 }
 
-void parse_tail_tokens(const std::string_view& cur_tok, std::queue<std::string_view>& lex, tag_expression& partial_expr) {
+void parse_tail_tokens(const substr_t& cur_tok, std::queue<substr_t>& lex, tag_expression& partial_expr) {
 
     const operator_t cur_op = op_from_token(cur_tok);
     tag_expression next_expr = recurse_parse(lex, cur_op.left_binding);
@@ -185,24 +184,24 @@ void parse_tail_tokens(const std::string_view& cur_tok, std::queue<std::string_v
     partial_expr.op = cur_op.op_enum;
 }
 
-tag_expression recurse_parse(std::queue<std::string_view>& lex, u8 subexpr_precedence) {
-    std::string_view& cur_tok = lex.front();
+tag_expression recurse_parse(std::queue<substr_t>& lex, u8 subexpr_precedence) {
+    substr_t& cur_tok = lex.front();
     lex.pop();
     tag_expression processed_left;
-    if (cur_tok[0] == '(') {
+    if (cur_tok.data[0] == '(') {
         // Treat everything inside parens as a totally independent expression
         processed_left = recurse_parse(lex, 0);
 
-        std::string_view& closing_tok = lex.front();
+        substr_t& closing_tok = lex.front();
         lex.pop();
         // TODO: Do safe error handling (here and throughout parsing)
-        assert(closing_tok[0] == ')');
+        assert(closing_tok.data[0] == ')');
     } else {
         processed_left = parse_head_tokens(cur_tok, lex);
     }
 
     while (!lex.empty() && op_from_token(lex.front()).left_binding > subexpr_precedence) {
-        std::string_view& tok = lex.front();
+        substr_t& tok = lex.front();
         lex.pop();
         parse_tail_tokens(tok, lex, processed_left);
     }
