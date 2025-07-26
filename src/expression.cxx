@@ -8,6 +8,8 @@
 #include <common/int.h>
 #include <common/logging.h>
 
+static const char reserved_chars[] = "()-";
+
 std::queue<std::string_view> shatter_str(const char* text, s32 len) {
     // Remove trailing whitespace
     while (isspace(text[MAX(0, len - 1)]) && len > 0) {
@@ -21,7 +23,7 @@ std::queue<std::string_view> shatter_str(const char* text, s32 len) {
     }
 
     std::queue<std::string_view> out;
-    u32 last_token_end = 0;
+    s32 last_token_end = 0;
     for (s32 i = 0; i < len; i++) {
         const u32 prev_pos = MAX(0, i - 1);
         const char cur_ch = text[i];
@@ -35,14 +37,12 @@ std::queue<std::string_view> shatter_str(const char* text, s32 len) {
             is_token_end = true; // End token when we hit whitespace
         }
 
-        // Parens always end the last token
-        if (cur_ch == '(' || cur_ch == ')') {
-            is_token_end = true;
-        }
-
-        // And form their own 1-character tokens
-        if (prev_ch == '(' || prev_ch == ')') {
-            is_token_end = true;
+        // Reserved characters always end the last token, and form their own
+        // 1-character tokens
+        for (char c : reserved_chars) {
+            if (cur_ch == c || prev_ch == c) {
+                is_token_end = true;
+            }
         }
 
         const char* token_begin = &text[last_token_end];
@@ -61,6 +61,10 @@ std::queue<std::string_view> shatter_str(const char* text, s32 len) {
     return out;
 }
 
+// Operators for use in Pratt parsing.
+// See the following articles for details:
+// https://abarker.github.io/typped/pratt_parsing_intro.html
+// https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html
 typedef struct {
     const char* token;
     tag_op op_enum;
@@ -90,16 +94,16 @@ const operator_t pratt_ops[] = {
     {
         .token = "-",
         .op_enum = tag_op::NOT,
-        .left_binding = 2,
-        .right_binding = 3,
+        .left_binding = 0,
+        .right_binding = 5,
     },
 };
 
 operator_t op_from_token(const std::string_view& str) {
     operator_t result = {};
-    for (u32 i = 0; i < ARRAY_SIZE(pratt_ops); i++) {
-        if (strncmp(str.data(), pratt_ops[i].token, str.length()) == 0) {
-            result = pratt_ops[i];
+    for (operator_t op : pratt_ops) {
+        if (strncmp(str.data(), op.token, str.length()) == 0) {
+            result = op;
             break;
         }
     }

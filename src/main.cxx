@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
     }
     LOG_MSG(debug, "DB files folder: %s\n", db_files_folder.c_str());
 
-    const tag_expression expr("foo  AND NOT bar OR NOT baz");
+    const tag_expression expr("  NOT foo  AND -bar OR -baz");
 
     sqlite3_initialize();
     sqlite3* db = nullptr;
