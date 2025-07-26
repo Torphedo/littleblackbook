@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
 
     sqlite3_initialize();
     sqlite3* db = nullptr;
-    const int res = sqlite3_open(db_path, &db);
+    int res = sqlite3_open(db_path, &db);
     char* errmsg = nullptr;
     if (res != SQLITE_OK) {
         const char* msg = sqlite3_errmsg(db);
@@ -50,6 +50,15 @@ int main(int argc, char** argv) {
 
     // Always enable extended result codes for more detailed errors
     sqlite3_extended_result_codes(db, true);
+
+    res = sqlite3_exec(db, "PRAGMA foreign_keys = ON", nullptr, nullptr, &errmsg);
+    if (res != SQLITE_OK) {
+        LOG_MSG(error, "Failed to enable foreign key constraints because: %s\n", errmsg);
+        result = EXIT_FAILURE;
+        goto exit;
+    } else {
+        LOG_MSG(info, "Enabled foreign keys\n");
+    }
 
     // Enable extension loading (from C only, not SQL) and try to load CRC32 module
     sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, nullptr);

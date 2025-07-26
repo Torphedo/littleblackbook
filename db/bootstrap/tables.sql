@@ -10,8 +10,8 @@ CREATE TABLE IF NOT EXISTS songs (
     year   INTEGER NOT NULL,
     lyrics TEXT,
     -- TODO: Make NOT NULL once we can get this data from the MP3
-    duration_secs INTEGER,
-    hash             INTEGER NOT NULL UNIQUE, -- CRC32 hash
+    duration_secs    INTEGER,
+    hash             INTEGER PRIMARY KEY NOT NULL UNIQUE, -- CRC32-C hash
     import_timestamp INTEGER NOT NULL DEFAULT 0 -- Unix timestamp, set by a trigger
 )STRICT;
 
@@ -22,27 +22,29 @@ CREATE TABLE IF NOT EXISTS songs (
 -- doesn't support full substring searches, only token prefixes (e.g. 'w'
 -- matches 'where', but 'ere' doesn't). When searching, we want to type 'sub'
 -- and see suggestions for 'artist:sublime' and 'album:sublime'. Keeping the
--- namespace separate from the tag makes this easier.
+-- namespace separate from the tag makes this work.
 CREATE TABLE IF NOT EXISTS tags (
     -- The tag without the namespace (e.g. just 'elton john').
-    -- This isn't unique since namespace may vary ('artist:sublime' and
-    -- 'album:sublime' are both 'sublime')
+    -- This isn't unique since namespace may vary
+    -- ('artist:sublime' and 'album:sublime' are both 'sublime')
     tag TEXT NOT NULL,
 
     -- CRC32 hash of the whole tag name, (e.g. crc32('artist:elton john')).
     -- This lets us have a single unique tag column, and makes it easy for the
     -- GUI code to look up tags from user input.
-    hash INTEGER NOT NULL UNIQUE ON CONFLICT IGNORE,
+    hash INTEGER PRIMARY KEY NOT NULL UNIQUE ON CONFLICT IGNORE,
 
     -- Many tags will be in the same namespace (or no namespace), so this is
     -- nullable and non-unique. e.g. crc32('artist') (no colon!)
-    namespace_hash INTEGER
+    namespace_hash INTEGER DEFAULT 0,
+    FOREIGN KEY(namespace_hash) REFERENCES namespaces(hash)
 )STRICT;
 
 -- The set of tag namespaces
 CREATE TABLE IF NOT EXISTS namespaces (
     namespace TEXT NOT NULL UNIQUE ON CONFLICT IGNORE,
-    hash INTEGER NOT NULL UNIQUE ON CONFLICT IGNORE -- crc32 of other column
+    -- CRC32-C hash of other column
+    hash INTEGER PRIMARY KEY NOT NULL UNIQUE ON CONFLICT IGNORE
 )STRICT;
 
 -- Many-to-many table for parent-child tag relationship.
@@ -55,11 +57,15 @@ CREATE TABLE IF NOT EXISTS namespaces (
 -- child: crc32('madvillian'), parent: crc32('madlib')
 CREATE TABLE IF NOT EXISTS tag_parents (
     child_hash INTEGER NOT NULL,
-    parent_hash INTEGER NOT NULL
+    parent_hash INTEGER NOT NULL,
+    FOREIGN KEY(child_hash) REFERENCES tags(hash),
+    FOREIGN KEY(parent_hash) REFERENCES tags(hash)
 )STRICT;
 
 -- Many-to-many table attaching tags to songs
 CREATE TABLE IF NOT EXISTS tagmap (
     song_hash INTEGER NOT NULL,
-    tag_hash INTEGER NOT NULL
+    tag_hash INTEGER NOT NULL,
+    FOREIGN KEY(song_hash) REFERENCES songs(hash)
+    FOREIGN KEY(tag_hash) REFERENCES tags(hash)
 )STRICT;
