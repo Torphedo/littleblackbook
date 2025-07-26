@@ -76,6 +76,7 @@ add_executable(blackbook
     src/import.cxx
     src/tags.cxx
     src/sqlgen.cxx
+    src/expression.cxx
     src/blackbook_core.cxx
 
     src/nativegui/gui_bootstrap.cxx

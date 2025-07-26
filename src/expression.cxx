@@ -1,14 +1,13 @@
 #include "expression.hxx"
 #include <cctype>
-#include <iostream>
-#include <cstdio>
 #include <cstring>
-#include <vector>
+
+#include <queue>
 
 #include <common/int.h>
 #include <common/logging.h>
 
-std::vector<std::string_view> shatter_str(const char* text, s32 len) {
+std::queue<std::string_view> shatter_str(const char* text, s32 len) {
     // Remove trailing whitespace
     while (isspace(text[MAX(0, len - 1)]) && len > 0) {
         len--;
@@ -20,7 +19,7 @@ std::vector<std::string_view> shatter_str(const char* text, s32 len) {
         len--;
     }
 
-    std::vector<std::string_view> out;
+    std::queue<std::string_view> out;
     u32 last_token_end = 0;
     for (s32 i = 0; i < len; i++) {
         const u32 prev_pos = MAX(0, i - 1);
@@ -48,31 +47,108 @@ std::vector<std::string_view> shatter_str(const char* text, s32 len) {
         const char* token_begin = &text[last_token_end];
         const s32 token_len = i - last_token_end;
         if (is_token_end && token_len > 0) {
-            out.emplace_back(token_begin, token_len);
+            out.emplace(token_begin, token_len);
             last_token_end = i;
         }
     }
 
     const u32 token_len = MAX(0, len - last_token_end);
     if (token_len > 0) {
-        out.emplace_back(&text[last_token_end], token_len);
+        out.emplace(&text[last_token_end], token_len);
     }
 
     return out;
 }
 
-tag_expression::tag_expression(const char* text) : tag_expression(text, strlen(text)) {}
+typedef struct {
+    const char* token;
+    tag_op op_enum;
+    u8 left_binding;
+    u8 right_binding;
+}operator_t;
 
-tag_expression::tag_expression(const char* text, u32 len) {
-    // Shatter input into tokens
-    const std::vector<std::string_view> tokens = shatter_str(text, len);
+const operator_t pratt_ops[] = {
+    {
+        .token = "AND",
+        .op_enum = tag_op::AND,
+        .left_binding = 1,
+        .right_binding = 2,
+    },
+    {
+        .token = "OR",
+        .op_enum = tag_op::OR,
+        .left_binding = 1,
+        .right_binding = 2,
+    },
+    {
+        .token = "NOT",
+        .op_enum = tag_op::NOT,
+        .left_binding = 2,
+        .right_binding = 3,
+    },
+    {
+        .token = "-",
+        .op_enum = tag_op::NOT,
+        .left_binding = 2,
+        .right_binding = 3,
+    },
+};
 
-    LOG_MSG(info, "Split \"%s\" into:\n", text);
-    for (const std::string_view& str : tokens) {
-        LOG_MSG(info, "");
-        std::cout << "\t \"" << str << "\"\n";
+operator_t op_from_token(const std::string_view& str) {
+    operator_t result = {};
+    for (u32 i = 0; i < ARRAY_SIZE(pratt_ops); i++) {
+        if (strncmp(str.data(), pratt_ops[i].token, str.length()) == 0) {
+            result = pratt_ops[i];
+            break;
+        }
     }
 
+    return result;
+}
+
+tag_expression parse_head_tokens(std::string_view& cur_tok, std::queue<std::string_view> lex) {
+    tag_expression result = {};
+    const operator_t cur_op = op_from_token(cur_tok);
+    switch (cur_op.op_enum) {
+    default:
+        result.lhs.tag = cur_tok;
+        break;
+    }
+
+    return result;
+}
+
+void parse_tail_tokens(const std::string_view& cur_tok, std::queue<std::string_view> lex, tag_expression& partial_expr) {
+    const operator_t cur_op = op_from_token(cur_tok);
+    // partial_expr.rhs_recursive = true;
+    partial_expr.op = cur_op.op_enum;
+    tag_expression next_expr = recurse_parse(lex, cur_op.left_binding);
+    if (next_expr.op != tag_op::NONE) {
+        partial_expr.rhs.expr = (tag_expression*)calloc(1, sizeof(tag_expression));
+        *partial_expr.rhs.expr = next_expr;
+        partial_expr.rhs_recursive = true;
+    } else {
+        partial_expr.rhs.tag = next_expr.lhs.tag;
+    }
+}
+
+tag_expression recurse_parse(std::queue<std::string_view> lex, u8 subexpr_precedence) {
+    auto& cur_tok = lex.front();
+    lex.pop();
+    tag_expression processed_left = parse_head_tokens(cur_tok, lex);
+
+    while (!lex.empty() && op_from_token(lex.front()).left_binding > subexpr_precedence) {
+        std::string_view& tok = lex.front();
+        lex.pop();
+        parse_tail_tokens(tok, lex, processed_left);
+    }
+
+    return processed_left;
+}
+
+tag_expression::tag_expression(const char* text, u32 len) {
+    auto tokens = shatter_str(text, len);
+    *this = recurse_parse(tokens, 0);
     // TODO:
     // - Split by "AND" / "OR" / "NOT" / "-"
 
