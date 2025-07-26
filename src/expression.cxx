@@ -8,6 +8,60 @@
 #include <common/int.h>
 #include <common/logging.h>
 
+// Operators for use in Pratt parsing.
+// See the following articles for details:
+// https://abarker.github.io/typped/pratt_parsing_intro.html
+// https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html
+typedef struct {
+    const char* token;
+    tag_op op_enum;
+    u8 left_binding;
+    u8 right_binding;
+}operator_t;
+
+const operator_t pratt_ops[] = {
+    {
+        .token = "AND",
+        .op_enum = tag_op::AND,
+        .left_binding = 3,
+        .right_binding = 2,
+    },
+    {
+        .token = "OR",
+        .op_enum = tag_op::OR,
+        .left_binding = 2,
+        .right_binding = 1,
+    },
+    {
+        .token = "NOT",
+        .op_enum = tag_op::NOT,
+        .left_binding = 0,
+        .right_binding = 5,
+    },
+    {
+        .token = "-",
+        .op_enum = tag_op::NOT,
+        .left_binding = 0,
+        .right_binding = 5,
+    },
+};
+
+operator_t op_from_token(const char* text, u32 len) {
+    operator_t result = {};
+    for (operator_t op : pratt_ops) {
+        if (strncmp(text, op.token, len) == 0) {
+            result = op;
+            break;
+        }
+    }
+
+    return result;
+}
+
+operator_t op_from_token(const std::string_view& str) {
+    return op_from_token(str.data(), str.length());
+}
+
 static const char reserved_chars[] = "()-";
 
 std::queue<std::string_view> shatter_str(const char* text, s32 len) {
@@ -48,7 +102,17 @@ std::queue<std::string_view> shatter_str(const char* text, s32 len) {
         const char* token_begin = &text[last_token_end];
         const s32 token_len = i - last_token_end;
         if (is_token_end && token_len > 0) {
-            out.emplace(token_begin, token_len);
+            const tag_op cur_op = op_from_token(token_begin, token_len).op_enum;
+            const tag_op prev_op = out.size() == 0 ? tag_op::NONE : op_from_token(out.back()).op_enum;
+            if (cur_op == tag_op::NONE && prev_op == tag_op::NONE) {
+                // Neither of the last 2 tokens are operators, merge them
+                const char* cur_token_end = token_begin + MAX(0, token_len);
+                const s32 combined_len = MAX(0, cur_token_end - out.back().data());
+                std::construct_at(&out.back(), out.back().data(), combined_len);
+            } else {
+                // Proceed as normal
+                out.emplace(token_begin, token_len);
+            }
             last_token_end = i;
         }
     }
@@ -59,56 +123,6 @@ std::queue<std::string_view> shatter_str(const char* text, s32 len) {
     }
 
     return out;
-}
-
-// Operators for use in Pratt parsing.
-// See the following articles for details:
-// https://abarker.github.io/typped/pratt_parsing_intro.html
-// https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html
-typedef struct {
-    const char* token;
-    tag_op op_enum;
-    u8 left_binding;
-    u8 right_binding;
-}operator_t;
-
-const operator_t pratt_ops[] = {
-    {
-        .token = "AND",
-        .op_enum = tag_op::AND,
-        .left_binding = 3,
-        .right_binding = 2,
-    },
-    {
-        .token = "OR",
-        .op_enum = tag_op::OR,
-        .left_binding = 2,
-        .right_binding = 1,
-    },
-    {
-        .token = "NOT",
-        .op_enum = tag_op::NOT,
-        .left_binding = 0,
-        .right_binding = 5,
-    },
-    {
-        .token = "-",
-        .op_enum = tag_op::NOT,
-        .left_binding = 0,
-        .right_binding = 5,
-    },
-};
-
-operator_t op_from_token(const std::string_view& str) {
-    operator_t result = {};
-    for (operator_t op : pratt_ops) {
-        if (strncmp(str.data(), op.token, str.length()) == 0) {
-            result = op;
-            break;
-        }
-    }
-
-    return result;
 }
 
 tag_expression parse_head_tokens(std::string_view cur_tok, std::queue<std::string_view>& lex) {
