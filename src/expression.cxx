@@ -9,6 +9,20 @@
 #include <common/int.h>
 #include <common/logging.h>
 
+tag_expression::value::value(const tag_expression& other_ex) {
+    if (other_ex.op == tag_op::NONE) {
+        // Trivial expression, we can "inline" it as an immediate value
+        tag = other_ex.lhs.tag;
+    } else {
+        // This requires its own expression
+        recursive = true;
+        expr = (tag_expression*)calloc(1, sizeof(*expr));
+        if (expr) {
+            *expr = other_ex;
+        }
+    }
+}
+
 // Operators for use in Pratt parsing.
 // See the following articles for details:
 // https://abarker.github.io/typped/pratt_parsing_intro.html
@@ -21,29 +35,34 @@ typedef struct {
 }operator_t;
 
 const operator_t pratt_ops[] = {
-    {
-        .token = "AND",
+    {   .token = "AND",
         .op_enum = tag_op::AND,
         .left_binding = 3,
         .right_binding = 2,
     },
-    {
-        .token = "OR",
+    {   .token = "OR",
         .op_enum = tag_op::OR,
         .left_binding = 2,
         .right_binding = 1,
     },
-    {
-        .token = "NOT",
+    {   .token = "NOT",
         .op_enum = tag_op::NOT,
         .left_binding = 0,
         .right_binding = 5,
     },
-    {
-        .token = "-",
+    {   .token = "-",
         .op_enum = tag_op::NOT,
         .left_binding = 0,
         .right_binding = 5,
+    },
+
+    // Making parens an operator stops the tokenizer from trying to merge it with
+    // nearby tokens.
+    {   .token = "(",
+        .op_enum = tag_op::PAREN,
+    },
+    {   .token = ")",
+        .op_enum = tag_op::PAREN,
     },
 };
 
@@ -157,12 +176,8 @@ void parse_tail_tokens(const std::string_view& cur_tok, std::queue<std::string_v
     if (cur_op.op_enum != tag_op::NONE) {
         // Build a new expression with the previous and next expression as children
         tag_expression temp = {};
-        temp.lhs.expr = (tag_expression*)calloc(1, sizeof(tag_expression));
-        temp.rhs.expr = (tag_expression*)calloc(1, sizeof(tag_expression));
-        *temp.lhs.expr = partial_expr;
-        *temp.rhs.expr = next_expr;
-        temp.rhs_recursive = true;
-
+        temp.lhs = tag_expression::value(partial_expr);
+        temp.rhs = tag_expression::value(next_expr);
         partial_expr = temp;
     } else {
         partial_expr.rhs.tag = next_expr.lhs.tag;
@@ -199,10 +214,5 @@ tag_expression::tag_expression(const char* text, u32 len) {
     auto tokens = shatter_str(text, len);
     *this = recurse_parse(tokens, 0);
     // TODO:
-    // - Split by "AND" / "OR" / "NOT" / "-"
-
-    // - Do very basic parsing not accounting for parens
     // - Add SQL generator method, use in the search bar for testing
-    // - Add support for non-nested parens like (A AND B) OR (C AND D)
-    // - Call ctor recursively to handle nested parens
 }

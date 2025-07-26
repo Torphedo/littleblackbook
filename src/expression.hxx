@@ -10,6 +10,7 @@ enum class tag_op : u8 {
     AND, // SQL INTERSECT
     OR,  // SQL UNION
     NOT, // SQL EXCEPT
+    PAREN, // Internal to the parser, will never show up in a tree
 };
 
 // Recursive expression structure used for complex queries like:
@@ -20,21 +21,19 @@ struct tag_expression {
     struct value {
         union {
             tag_expression* expr;
-            std::basic_string_view<char> tag;
+            std::string_view tag;
         };
+        bool recursive = false;
+        value(const char* text, u32 len) : tag(text, len) {}
+        value(const tag_expression& other_ex);
         value() : expr(nullptr) {}
     };
-
-    // These aren't part of the value struct because they would add padding,
-    // growing each value by 8 bytes. If recursive, the value is the expression
-    // pointer instead of the tag.
-    bool lhs_recursive = false;
-    bool rhs_recursive = false;
-    tag_op op;
 
     // Left/right hand side
     value lhs;
     value rhs;
+
+    tag_op op;
 
     tag_expression(const char* text, u32 len);
     tag_expression(const char* text) : tag_expression(text, strlen(text)) {}
