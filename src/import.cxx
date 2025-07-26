@@ -14,11 +14,9 @@
 #include <common/path.h>
 
 #include "id3.hxx"
-#include "schema.hxx"
 #include "scope_timer.hxx"
 #include "sqlgen.hxx"
 #include "tags.hxx"
-#include "text_i8n.hxx"
 
 song_record::song_record(u8* mp3, u32 size, u16 path_idx) : mp3(mp3), path_idx(path_idx) {
     assert(size >= sizeof(id3::header) && "MP3 file is impossibly small!");
@@ -243,7 +241,7 @@ bool import_many_files_many_threads(const char* const* paths, u32 num_paths, con
     printf("\n");
 
     static const u32 max_threads = 64;
-    const u32 num_threads = 16;
+    const u32 num_threads = 28;
 
     std::thread threads[max_threads];
     const u32 paths_per_thread = num_paths / num_threads;

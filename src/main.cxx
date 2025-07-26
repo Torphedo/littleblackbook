@@ -4,6 +4,7 @@
 #include <common/logging.h>
 #include <common/path.h>
 
+#include "expression.hxx"
 #include "nativegui/nativegui.hxx"
 #include "nativegui/gui_bootstrap.hxx"
 #include "cli/cli_main.hxx"
@@ -35,6 +36,7 @@ int main(int argc, char** argv) {
     }
     LOG_MSG(debug, "DB files folder: %s\n", db_files_folder.c_str());
 
+    const tag_expression expr("  text (   parsing )blah()temp   test   ");
 
     sqlite3_initialize();
     sqlite3* db = nullptr;
