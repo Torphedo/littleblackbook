@@ -1,6 +1,7 @@
 #include "expression.hxx"
 #include <cctype>
 #include <cstring>
+#include <cstdlib>
 
 #include <queue>
 
@@ -71,14 +72,14 @@ const operator_t pratt_ops[] = {
     {
         .token = "AND",
         .op_enum = tag_op::AND,
-        .left_binding = 1,
+        .left_binding = 3,
         .right_binding = 2,
     },
     {
         .token = "OR",
         .op_enum = tag_op::OR,
-        .left_binding = 1,
-        .right_binding = 2,
+        .left_binding = 2,
+        .right_binding = 1,
     },
     {
         .token = "NOT",
@@ -118,21 +119,28 @@ tag_expression parse_head_tokens(std::string_view& cur_tok, std::queue<std::stri
     return result;
 }
 
-void parse_tail_tokens(const std::string_view& cur_tok, std::queue<std::string_view> lex, tag_expression& partial_expr) {
+void parse_tail_tokens(const std::string_view& cur_tok, std::queue<std::string_view>& lex, tag_expression& partial_expr) {
+
     const operator_t cur_op = op_from_token(cur_tok);
+    // partial_expr.op = cur_op.op_enum;
     // partial_expr.rhs_recursive = true;
-    partial_expr.op = cur_op.op_enum;
     tag_expression next_expr = recurse_parse(lex, cur_op.left_binding);
-    if (next_expr.op != tag_op::NONE) {
-        partial_expr.rhs.expr = (tag_expression*)calloc(1, sizeof(tag_expression));
-        *partial_expr.rhs.expr = next_expr;
-        partial_expr.rhs_recursive = true;
+    if (cur_op.op_enum != tag_op::NONE) {
+        // Build a new expression with the previous and next expression as children
+        tag_expression temp = {};
+        temp.lhs.expr = (tag_expression*)calloc(1, sizeof(tag_expression));
+        temp.rhs.expr = (tag_expression*)calloc(1, sizeof(tag_expression));
+        *temp.lhs.expr = partial_expr;
+        *temp.rhs.expr = next_expr;
+        temp.rhs_recursive = true;
+
+        partial_expr = temp;
     } else {
         partial_expr.rhs.tag = next_expr.lhs.tag;
     }
 }
 
-tag_expression recurse_parse(std::queue<std::string_view> lex, u8 subexpr_precedence) {
+tag_expression recurse_parse(std::queue<std::string_view>& lex, u8 subexpr_precedence) {
     auto& cur_tok = lex.front();
     lex.pop();
     tag_expression processed_left = parse_head_tokens(cur_tok, lex);
@@ -141,6 +149,7 @@ tag_expression recurse_parse(std::queue<std::string_view> lex, u8 subexpr_preced
         std::string_view& tok = lex.front();
         lex.pop();
         parse_tail_tokens(tok, lex, processed_left);
+        processed_left.op = op_from_token(tok).op_enum;
     }
 
     return processed_left;

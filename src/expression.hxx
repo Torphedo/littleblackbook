@@ -45,5 +45,5 @@ private:
     tag_expression(std::queue<std::string_view> tokens);
 };
 
-tag_expression recurse_parse(std::queue<std::string_view> lex, u8 subexpr_precedence);
-void parse_tail_tokens(const std::string_view& cur_tok, std::queue<std::string_view> lex, tag_expression& partial_expr);
+tag_expression recurse_parse(std::queue<std::string_view>& lex, u8 subexpr_precedence);
+void parse_tail_tokens(const std::string_view& cur_tok, std::queue<std::string_view>& lex, tag_expression& partial_expr);
