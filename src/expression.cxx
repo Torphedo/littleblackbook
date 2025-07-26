@@ -84,8 +84,8 @@ const operator_t pratt_ops[] = {
     {
         .token = "NOT",
         .op_enum = tag_op::NOT,
-        .left_binding = 2,
-        .right_binding = 3,
+        .left_binding = 0,
+        .right_binding = 5,
     },
     {
         .token = "-",
@@ -107,10 +107,16 @@ operator_t op_from_token(const std::string_view& str) {
     return result;
 }
 
-tag_expression parse_head_tokens(std::string_view& cur_tok, std::queue<std::string_view> lex) {
+tag_expression parse_head_tokens(std::string_view cur_tok, std::queue<std::string_view>& lex) {
     tag_expression result = {};
     const operator_t cur_op = op_from_token(cur_tok);
     switch (cur_op.op_enum) {
+    case tag_op::NOT:
+        // NOT operator is unary and uses an extra token
+        result.op = cur_op.op_enum;
+        cur_tok = lex.front();
+        lex.pop();
+        // fallthrough
     default:
         result.lhs.tag = cur_tok;
         break;
@@ -122,8 +128,6 @@ tag_expression parse_head_tokens(std::string_view& cur_tok, std::queue<std::stri
 void parse_tail_tokens(const std::string_view& cur_tok, std::queue<std::string_view>& lex, tag_expression& partial_expr) {
 
     const operator_t cur_op = op_from_token(cur_tok);
-    // partial_expr.op = cur_op.op_enum;
-    // partial_expr.rhs_recursive = true;
     tag_expression next_expr = recurse_parse(lex, cur_op.left_binding);
     if (cur_op.op_enum != tag_op::NONE) {
         // Build a new expression with the previous and next expression as children
@@ -138,6 +142,7 @@ void parse_tail_tokens(const std::string_view& cur_tok, std::queue<std::string_v
     } else {
         partial_expr.rhs.tag = next_expr.lhs.tag;
     }
+    partial_expr.op = cur_op.op_enum;
 }
 
 tag_expression recurse_parse(std::queue<std::string_view>& lex, u8 subexpr_precedence) {
@@ -149,7 +154,6 @@ tag_expression recurse_parse(std::queue<std::string_view>& lex, u8 subexpr_prece
         std::string_view& tok = lex.front();
         lex.pop();
         parse_tail_tokens(tok, lex, processed_left);
-        processed_left.op = op_from_token(tok).op_enum;
     }
 
     return processed_left;
