@@ -22,8 +22,6 @@ struct tag_expression {
             tag_expression* expr;
             std::basic_string_view<char> tag;
         };
-        value(const tag_expression* expr);
-        value(const std::string_view& tag);
         value() : expr(nullptr) {}
     };
 

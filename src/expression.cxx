@@ -1,6 +1,7 @@
 #include "expression.hxx"
 #include <cctype>
 #include <cstring>
+#include <cassert>
 #include <cstdlib>
 
 #include <queue>
@@ -93,6 +94,7 @@ std::queue<std::string_view> shatter_str(const char* text, s32 len) {
 
         // Reserved characters always end the last token, and form their own
         // 1-character tokens
+        // TODO: '-' might get used in normal text, and probably shouldn't be handled like this
         for (char c : reserved_chars) {
             if (cur_ch == c || prev_ch == c) {
                 is_token_end = true;
@@ -103,11 +105,16 @@ std::queue<std::string_view> shatter_str(const char* text, s32 len) {
         const s32 token_len = i - last_token_end;
         if (is_token_end && token_len > 0) {
             const tag_op cur_op = op_from_token(token_begin, token_len).op_enum;
-            const tag_op prev_op = out.size() == 0 ? tag_op::NONE : op_from_token(out.back()).op_enum;
+            tag_op prev_op = tag_op::NONE;
+            if (out.size() > 0) {
+                prev_op = op_from_token(out.back()).op_enum;
+            }
             if (cur_op == tag_op::NONE && prev_op == tag_op::NONE) {
                 // Neither of the last 2 tokens are operators, merge them
                 const char* cur_token_end = token_begin + MAX(0, token_len);
                 const s32 combined_len = MAX(0, cur_token_end - out.back().data());
+                // We have to completely replace the old token data because it
+                // offers no way to edit the size or pointer directly.
                 std::construct_at(&out.back(), out.back().data(), combined_len);
             } else {
                 // Proceed as normal
@@ -164,9 +171,20 @@ void parse_tail_tokens(const std::string_view& cur_tok, std::queue<std::string_v
 }
 
 tag_expression recurse_parse(std::queue<std::string_view>& lex, u8 subexpr_precedence) {
-    auto& cur_tok = lex.front();
+    std::string_view& cur_tok = lex.front();
     lex.pop();
-    tag_expression processed_left = parse_head_tokens(cur_tok, lex);
+    tag_expression processed_left;
+    if (cur_tok[0] == '(') {
+        // Treat everything inside parens as a totally independent expression
+        processed_left = recurse_parse(lex, 0);
+
+        std::string_view& closing_tok = lex.front();
+        lex.pop();
+        // TODO: Do safe error handling (here and throughout parsing)
+        assert(closing_tok[0] == ')');
+    } else {
+        processed_left = parse_head_tokens(cur_tok, lex);
+    }
 
     while (!lex.empty() && op_from_token(lex.front()).left_binding > subexpr_precedence) {
         std::string_view& tok = lex.front();
