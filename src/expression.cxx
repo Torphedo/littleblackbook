@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstdlib>
 
+#include <exception>
 #include <queue>
 #include <string>
 
@@ -132,7 +133,7 @@ std::queue<substr_t> shatter_str(const char* text, s32 len) {
                 prev_op = op_from_token(out.back()).op_enum;
             }
             // Merge non-operator tokens (allows tokens to have whitespace)
-            if (cur_op == tag_op::NONE && prev_op == tag_op::NONE) {
+            if (cur_op == tag_op::NONE && prev_op == tag_op::NONE && out.size()) {
                 const char* cur_token_end = token_begin + MAX(0, token_len);
                 const s32 combined_len = MAX(0, cur_token_end - out.back().data);
                 out.back().length = combined_len;
@@ -144,10 +145,26 @@ std::queue<substr_t> shatter_str(const char* text, s32 len) {
         }
     }
 
+    // TODO: Can this be factored out to a function easily?
     // Make the rest of the string a token
     const u32 token_len = MAX(0, len - last_token_end);
+    const char* token_begin = &text[last_token_end];
+    const tag_op cur_op = op_from_token(token_begin, token_len).op_enum;
+    tag_op prev_op = tag_op::NONE;
+    if (out.size() > 0) {
+        prev_op = op_from_token(out.back()).op_enum;
+    }
+
     if (token_len > 0) {
-        out.emplace(&text[last_token_end], token_len);
+        // Merge final 2 tokens to allow whitespace if needed
+        if (cur_op == tag_op::NONE && prev_op == tag_op::NONE && out.size()) {
+            const char* cur_token_end = token_begin + MAX(0, token_len);
+            const s32 combined_len = MAX(0, cur_token_end - out.back().data);
+            out.back().length = combined_len;
+        } else {
+            // Proceed as normal
+            out.emplace(token_begin, token_len);
+        }
     }
 
     return out;
@@ -213,9 +230,12 @@ tag_expression recurse_parse(std::queue<substr_t>& lex, u8 subexpr_precedence) {
 
 tag_expression::tag_expression(const char* text, u32 len) {
     auto tokens = shatter_str(text, len);
-    *this = recurse_parse(tokens, 0);
-    // TODO:
-    // - Add SQL generator method, use in the search bar for testing
+    try {
+        *this = recurse_parse(tokens, 0);
+    } catch (std::exception& e) {
+        return;
+    }
+}
 
 void sqlgen_value(const tag_expression::value& val, bool is_negated, std::string& sql_out) {
     if (val.tag.data == nullptr) {
