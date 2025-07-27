@@ -108,8 +108,20 @@ void unlink_tags_sql(const char* parent, const char* child, std::string& sql_out
     sqlgen(sql_out, "DELETE FROM " TAG_PARENT_TABLE " WHERE child_hash = %d AND parent_hash = %d\n", child_hash, parent_hash);
 }
 
-void search_tag(const char* tag, std::string& sql_out, bool standalone_query) {
-    const char* colon = strchr(tag, ':');
+const char* strnchr(const char* text, char c, u32 len) {
+    const char* result = strchr(text, c);
+    if (result > &text[len]) {
+        result = nullptr;
+    }
+
+    return result;
+}
+
+void search_tag(const char* tag, std::string& sql_out, bool standalone_query, s32 tag_len) {
+    if (tag_len < 0) {
+        tag_len = strlen(tag);
+    }
+    const char* colon = strnchr(tag, ':', tag_len);
     const ptrdiff_t namespace_len = ptrdiff_t(colon) - ptrdiff_t(tag);
 
     bool is_year = false;
@@ -122,7 +134,7 @@ void search_tag(const char* tag, std::string& sql_out, bool standalone_query) {
 
     if (!is_year) {
         // Generate the normal SQL
-        const tag_hash_t tag_hash = crc32fast((u8*)tag, strlen(tag));
+        const tag_hash_t tag_hash = crc32fast((u8*)tag, tag_len);
         sqlgen(sql_out, "SELECT song_hash FROM " RESOLVED_TAG_SONG_TABLE " WHERE tag_hash = %d", tag_hash);
 
         if (standalone_query) {
@@ -135,7 +147,7 @@ void search_tag(const char* tag, std::string& sql_out, bool standalone_query) {
     const char* tag_isolated = colon + 1;
     char* endptr = nullptr;
     const long year = strtol(tag_isolated, &endptr, 10);
-    if (endptr != nullptr && strcmp(endptr, "s") == 0) {
+    if (endptr != nullptr && *endptr == 's') {
         // This is a decade, do a range check
         const long decade = year - (year % 10);
         sqlgen(sql_out, "SELECT hash FROM songs WHERE year >= %ld AND year <= %ld", decade, decade + 9);

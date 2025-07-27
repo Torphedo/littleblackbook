@@ -40,7 +40,7 @@ void unlink_tags_sql(const char* parent, const char* child, std::string& sql_out
 /// @param sql_out The buffer to store the generated SQL in
 /// @param standalone_query Whether the generated SQL will be executed as its own
 ///        query (rather than being used to build a larger complex query).
-void search_tag(const char* tag, std::string& sql_out, bool standalone_query = true);
+void search_tag(const char* tag, std::string& sql_out, bool standalone_query = true, s32 tag_len = -1);
 
 /// @brief Generate SQL to search for songs that have all the specified tags
 ///
