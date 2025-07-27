@@ -6,6 +6,7 @@
 #include <common/logging.h>
 #include <common/int.h>
 
+#include "expression.hxx"
 #include "sqlgen.hxx"
 #include "text_i8n.hxx"
 #include "tags.hxx"
@@ -130,9 +131,6 @@ void tag_search::finalize_current_tag(sqlite3* db) noexcept {
         return;
     }
 
-    // Go to lowercase to make it case-insensitive
-    str_tolower(tag);
-
     bool is_negated = tag.c_str()[0] == '-';
 
     bool found = false;
@@ -162,16 +160,12 @@ void tag_search::update_results(sqlite3* db) noexcept {
     // Clear existing results
     result_hashes.clear();
 
-    // Get a pointer array for underlying function to use
-    std::vector<const char*> tags_temp;
-    tags_temp.reserve(tags.size());
-
-    for (const std::string& tag : tags) {
-        tags_temp.push_back(tag.c_str());
-    }
+    // We only use the top tag for now
+    tag_expression expr(tags[0].c_str());
 
     // Generate SQL query
-    search_many_tags_and(tags_temp.data(), tags.size(), sql);
+    sqlgen_expression(expr, sql);
+    LOG_MSG(debug, "Generated SQL query: \n%s\n", sql.c_str());
 
     sqlite3_stmt* query = compile_sql(sql.c_str(), sql.size(), db);
     if (!query) {
