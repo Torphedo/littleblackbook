@@ -5,9 +5,12 @@
 #include <cstdlib>
 
 #include <queue>
+#include <string>
 
 #include <common/int.h>
 #include <common/logging.h>
+#include "blackbook_core.hxx"
+#include "tags.hxx"
 
 tag_expression::value::value(const tag_expression& other_ex) {
     if (other_ex.op == tag_op::NONE) {
@@ -169,7 +172,6 @@ tag_expression parse_head_tokens(substr_t cur_tok, std::queue<substr_t>& lex) {
 }
 
 void parse_tail_tokens(const substr_t& cur_tok, std::queue<substr_t>& lex, tag_expression& partial_expr) {
-
     const operator_t cur_op = op_from_token(cur_tok);
     tag_expression next_expr = recurse_parse(lex, cur_op.left_binding);
     if (cur_op.op_enum != tag_op::NONE) {
@@ -214,4 +216,46 @@ tag_expression::tag_expression(const char* text, u32 len) {
     *this = recurse_parse(tokens, 0);
     // TODO:
     // - Add SQL generator method, use in the search bar for testing
+
+void sqlgen_value(const tag_expression::value& val, bool is_negated, std::string& sql_out) {
+    if (val.tag.data == nullptr) {
+        return; // No valid expression or text here
+    }
+
+    if (val.recursive) {
+        sql_out.append("SELECT * FROM (");
+        sqlgen_expression(*val.expr, sql_out);
+        sql_out.append(")");
+    } else if (val.tag.data) {
+        if (is_negated) {
+            sql_out.append("SELECT hash FROM songs EXCEPT ");
+        }
+        LOG_MSG(debug, "Hashing tag %d chars from \"%*s\"\n", val.tag.length, val.tag.length, val.tag.data);
+        search_tag(val.tag.data, sql_out, false, val.tag.length);
+    }
+}
+
+void sqlgen_expression(const tag_expression& expr, std::string& sql_out) {
+    static u32 recurse_depth = 0;
+    if (recurse_depth == 0) {
+        sql_out.append("SELECT hash FROM songs INTERSECT\n");
+    }
+    recurse_depth++;
+
+
+    sqlgen_value(expr.lhs, (expr.op == tag_op::NOT), sql_out);
+
+    if (expr.op == tag_op::AND) {
+        sql_out.append("\nINTERSECT ");
+    } else if (expr.op == tag_op::OR) {
+        sql_out.append("\nUNION ");
+    }
+    sqlgen_value(expr.rhs, false, sql_out);
+
+    recurse_depth--;
+
+    if (recurse_depth == 0) {
+        // Terminate statement
+        sql_out.append(";\n");
+    }
 }
