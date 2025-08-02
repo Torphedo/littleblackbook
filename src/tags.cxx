@@ -58,8 +58,10 @@ tag_hash_t create_tag_sql(sqlite3* db, const char* tag, tag_hash_t hash, unsigne
         if (ns_stmt != nullptr) {
             sql_bind(ns_stmt, 1, tag, namespace_len, encoding);
             sql_bind(ns_stmt, 2, namespace_hash);
-            sqlite3_step(ns_stmt);
-            sqlite3_finalize(ns_stmt);
+            int result = sqlite3_step(ns_stmt);
+            sql_handle_error("Failed to create tag namespace", db, result);
+            result = sqlite3_finalize(ns_stmt);
+            sql_handle_error("Failed to finalize creating tag namespace", db, result);
         }
 
         // Make sure tag string doesn't include the namespace
@@ -71,8 +73,10 @@ tag_hash_t create_tag_sql(sqlite3* db, const char* tag, tag_hash_t hash, unsigne
     sql_bind(tag_stmt, 1, tag, strlen(tag), encoding);
     sql_bind(tag_stmt, 2, hash);
 
-    sqlite3_step(tag_stmt);
-    sqlite3_finalize(tag_stmt);
+    int result = sqlite3_step(tag_stmt);
+    sql_handle_error("Failed to create tag", db, result);
+    result = sqlite3_finalize(tag_stmt);
+    sql_handle_error("Failed to finalize creating tag", db, result);
     return hash;
 }
 
