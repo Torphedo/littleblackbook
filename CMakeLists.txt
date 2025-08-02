@@ -83,6 +83,7 @@ add_executable(blackbook
     src/nativegui/nativegui.cxx
     src/nativegui/thumbnails.cxx
     src/nativegui/nfde_wrapper.cxx
+    src/nativegui/imgui_utils.cxx
 
     src/cli/cli_main.cxx
 
