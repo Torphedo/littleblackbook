@@ -21,77 +21,9 @@
 #include <scope_timer.hxx>
 #include "thumbnails.hxx"
 #include "nfde_wrapper.hxx"
+#include "imgui_utils.hxx"
 
 // Autocomplete callback for ImGui::InputText() and related functions.
-static int autocomplete_update_selection(ImGuiInputTextCallbackData* data) {
-    auto tac = (tag_autocomplete*) data->UserData;
-    if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) {
-        if (tac->cur_idx != 0) {
-            // User edited a different buffer, it should become the new main buffer
-            tac->need_apply = true;
-        }
-        tac->need_refresh = true; // Need to refresh results
-        return 0;
-    }
-
-    if (data->EventFlag != ImGuiInputTextFlags_CallbackHistory) {
-        return 0;
-    }
-
-    // 1 if down, -1 if up, 0 if both.
-    const s8 diff = (data->EventKey == ImGuiKey_DownArrow) - (data->EventKey == ImGuiKey_UpArrow);
-    const bool prefix_minus = data->Buf[0] == '-';
-
-    tac->update_selection(diff);
-    tac->need_refocus = true;
-
-    return 0;
-}
-
-bool nativegui::InputTagAutocompleted(const char* label, const char* hint, ImGuiInputTextFlags flags, tag_autocomplete& tac) {
-    bool result = false;
-    const auto old_idx = tac.cur_idx;
-    // ImGui will try to save pointers internally, under the assumption that
-    // inputs with the same label are the same std::string* every time.
-    //
-    // If we change that pointer between calls, it can cause autocomplete results
-    // to be overwritten with the current user input. We work around this by
-    // giving a unique label to each result.
-    // P.S. This might be a bug on ImGui's side, I'm not sure. - torph
-    //
-    // TODO: Handle dynamic strings manually in a custom callback to avoid extra custom labels.
-    const std::string real_label = label + std::to_string(tac.cur_idx);
-
-    // We need a callback to make this work. History == up/down keys
-    flags |= ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackEdit;
-    if (ImGui::InputTextWithHint(real_label.c_str(), hint, &tac.current(), flags, autocomplete_update_selection, &tac)) {
-        result = true;
-        tac.need_refocus = true;
-    }
-
-    // This is done via flag since it can invalidate pointers, which is a problem
-    // in callbacks.
-    if (tac.need_apply) {
-        tac.apply_selection();
-        tac.need_apply = false;
-    }
-
-    // This is done via flag so we have the db ptr and access to timer output
-    if (tac.need_refresh) {
-        const scope_timer main_timer(core.timer_map, "tag_autocomplete");
-        tac.update_results(core.db);
-        tac.need_refresh = false;
-    }
-
-    // Draw results
-    for (const std::string& candidate : tac.candidates) {
-        ImGui::Text("%s", candidate.c_str());
-    }
-    ImGui::Separator();
-
-    return result;
-}
-
 void nativegui::draw_song_info(const runtime_song& song) noexcept {
     ImGui::Text("Title: %s", song.name.c_str());
     ImGui::Text("Released: %u", song.release_year);
@@ -128,7 +60,7 @@ bool nativegui::window_song_editor(runtime_song& song) {
 
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
     snprintf(win_title_buf, sizeof(win_title_buf), "##editor_input%d", song.hash);
-    if (InputTagAutocompleted(win_title_buf, "Input a tag", flags, song.tac)) {
+    if (ImGui::InputTagAutocompleted(win_title_buf, "Input a tag", flags, song.tac, core)) {
         const std::string& tag = song.tac.current();
         const tag_hash_t tag_hash = crc32fast((const u8*)tag.c_str() + (tag[0] == '-'), tag.size());
 
@@ -219,7 +151,7 @@ bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noex
 
         // Input for next tag
         ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
-        if (InputTagAutocompleted("##tag", "Input a tag", flags, search.tac)) {
+        if (ImGui::InputTagAutocompleted("##tag", "Input a tag", flags, search.tac, core)) {
             const scope_timer main_timer(core.timer_map, "last_search");
             search.update_results(core.db);
             search.tac.reset();
@@ -232,8 +164,8 @@ bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noex
 
         // Display results
         draw_songs(search.result_hashes);
+        ImGui::End();
     }
-    ImGui::End();
     return open;
 }
 
@@ -400,7 +332,7 @@ bool nativegui::window_tag_parents() noexcept {
     }
 
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
-    if (InputTagAutocompleted("##c", "Child tag", flags, core.tac_child)) {
+    if (ImGui::InputTagAutocompleted("##c", "Child tag", flags, core.tac_child, core)) {
         // Child is done, focus next box
         core.tac_child.need_refocus = false;
         core.tac_parent.need_refocus = true;
@@ -410,7 +342,7 @@ bool nativegui::window_tag_parents() noexcept {
         core.tac_parent.need_refocus = false;
         ImGui::SetKeyboardFocusHere();
     }
-    bool apply = InputTagAutocompleted("##p", "Parent tag", flags, core.tac_parent);
+    bool apply = ImGui::InputTagAutocompleted("##p", "Parent tag", flags, core.tac_parent, core);
     // Let user apply by hitting Enter or using the button
     apply |= ImGui::Button("Apply");
     if (apply) {
