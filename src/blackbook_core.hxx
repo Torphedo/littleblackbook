@@ -56,6 +56,8 @@ struct tag_autocomplete {
     /// The only reason this isn't const is that it returns a mutable reference.
     std::string& current() noexcept;
 
+    const std::string& const_current() const noexcept;
+
     /// @brief Update the autocomplete candidates using the contents of @ref [user_str].
     /// @param db The database to query for results. The database won't be modified.
     bool update_results(sqlite3* db) noexcept;

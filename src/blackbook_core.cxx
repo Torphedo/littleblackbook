@@ -244,7 +244,7 @@ void tag_autocomplete::apply_selection() noexcept {
     cur_idx = 0;
 }
 
-std::string& tag_autocomplete::current() noexcept {
+const std::string& tag_autocomplete::const_current() const noexcept {
     assert(cur_idx <= candidates.size() && cur_idx >= 0 && "Autocomplete index out of bounds!");
 
     if (cur_idx == 0) {
@@ -252,6 +252,11 @@ std::string& tag_autocomplete::current() noexcept {
     } else {
         return candidates[cur_idx - 1];
     }
+}
+
+std::string& tag_autocomplete::current() noexcept {
+    // This is just to avoid duplicating the const method.
+    return const_cast<std::string&>(const_current());
 }
 
 void tag_autocomplete::reset() noexcept {

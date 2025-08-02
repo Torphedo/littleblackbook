@@ -13,10 +13,15 @@ enum class tag_op : u8 {
     PAREN, // Internal to the parser, will never show up in a tree
 };
 
-typedef struct {
+struct substr_t {
     const char* data;
     u32 length;
-}substr_t;
+
+    // Implicit conversion
+    operator std::string_view() {
+        return std::string_view(data, length);
+    }
+};
 
 // Recursive expression structure used for complex queries like:
 // (artist:beastie boys OR artist:a tribe called quest) AND (year:1990s OR year:1980s) AND -year:1992
