@@ -38,7 +38,7 @@ tag_hash_t create_tag_sql(sqlite3* db, const char* tag, tag_hash_t hash, unsigne
         // No hash provided, calculate it
         hash = crc32fast((const u8*)tag, strlen(tag));
     }
-    const char tag_insert[] = "INSERT INTO tags (tag, hash, namespace_hash) VALUES (?, ?, ?);";
+    const char tag_insert[] = "INSERT OR IGNORE INTO tags (tag, hash, namespace_hash) VALUES (?, ?, ?);";
     sqlite3_stmt* tag_stmt = compile_sql(tag_insert, sizeof(tag_insert), db);
     if (tag_stmt == nullptr) {
         return 0;
