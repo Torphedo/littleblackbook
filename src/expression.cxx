@@ -2,7 +2,6 @@
 #include <cctype>
 #include <cstring>
 #include <cassert>
-#include <cstdlib>
 
 #include <exception>
 #include <queue>
@@ -10,22 +9,7 @@
 
 #include <common/int.h>
 #include <common/logging.h>
-#include "blackbook_core.hxx"
 #include "tags.hxx"
-
-tag_expression::value::value(const tag_expression& other_ex) {
-    if (other_ex.op == tag_op::NONE) {
-        // Trivial expression, we can "inline" it as an immediate value
-        tag = other_ex.lhs.tag;
-    } else {
-        // This requires its own expression
-        recursive = true;
-        expr = (tag_expression*)calloc(1, sizeof(*expr));
-        if (expr) {
-            *expr = other_ex;
-        }
-    }
-}
 
 // Operators for use in Pratt parsing.
 // See the following articles for details:
@@ -60,8 +44,8 @@ const operator_t pratt_ops[] = {
         .right_binding = 5,
     },
 
-    // Making parens an operator stops the tokenizer from trying to merge it with
-    // nearby tokens.
+    // We make parens an operator to stop the tokenizer from trying to merge it
+    // with nearby tokens. Binding power is unused.
     {   .token = "(",
         .op_enum = tag_op::PAREN,
     },
@@ -86,7 +70,7 @@ operator_t op_from_token(const substr_t& str) {
     return op_from_token(str.data, str.length);
 }
 
-static const char reserved_chars[] = "()-";
+static const char reserved_chars[] = "(-)";
 
 std::queue<substr_t> shatter_str(const char* text, s64 len) {
     // Remove trailing whitespace
@@ -181,7 +165,7 @@ tag_expression parse_head_tokens(substr_t cur_tok, std::queue<substr_t>& lex) {
         lex.pop();
         // fallthrough
     default:
-        result.lhs.tag = cur_tok;
+        result.lhs = cur_tok;
         break;
     }
 
@@ -194,11 +178,11 @@ void parse_tail_tokens(const substr_t& cur_tok, std::queue<substr_t>& lex, tag_e
     if (cur_op.op_enum != tag_op::NONE) {
         // Build a new expression with the previous and next expression as children
         tag_expression temp = {};
-        temp.lhs = tag_expression::value(partial_expr);
-        temp.rhs = tag_expression::value(next_expr);
+        temp.lhs = partial_expr;
+        temp.rhs = next_expr;
         partial_expr = temp;
     } else {
-        partial_expr.rhs.tag = next_expr.lhs.tag;
+        partial_expr.rhs = next_expr.lhs;
     }
     partial_expr.op = cur_op.op_enum;
 }
@@ -238,20 +222,21 @@ tag_expression::tag_expression(const char* text, u64 len) {
 }
 
 void sqlgen_value(const tag_expression::value& val, bool is_negated, std::string& sql_out) {
-    if (val.tag.data == nullptr) {
+    if (VAL_IS_EMPTY_EXPR(val) || VAL_IS_EMPTY_IMM(val) || val.valueless_by_exception()) {
         return; // No valid expression or text here
     }
 
-    if (val.recursive) {
+    if (VAL_IS_EXPR(val)) {
         sql_out.append("SELECT * FROM (");
-        sqlgen_expression(*val.expr, sql_out);
+        sqlgen_expression(*std::get<tag_expression*>(val), sql_out);
         sql_out.append(")");
-    } else if (val.tag.data) {
+    } else if (VAL_IS_IMM(val)) {
         if (is_negated) {
             sql_out.append("SELECT hash FROM songs EXCEPT ");
         }
-        LOG_MSG(debug, "Hashing tag %d chars from \"%*s\"\n", val.tag.length, val.tag.length, val.tag.data);
-        search_tag(val.tag.data, sql_out, false, val.tag.length);
+        const std::string& tag = std::get<std::string>(val);
+        LOG_MSG(debug, "Hashing tag %d chars from \"%*s\"\n", tag.length(), tag.length(), tag.c_str());
+        search_tag(tag.c_str(), sql_out, false, tag.length());
     }
 }
 
