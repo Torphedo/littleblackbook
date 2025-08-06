@@ -1,15 +1,16 @@
 #pragma once
-#include <string_view>
+#include <string>
+#include <variant>
 #include <queue>
 #include <cstring>
 
 #include <common/int.h>
 
 enum class tag_op : u8 {
-    NONE, // Not an operator
-    AND, // SQL INTERSECT
-    OR,  // SQL UNION
-    NOT, // SQL EXCEPT
+    NONE,  // Not an operator
+    AND,   // SQL INTERSECT
+    OR,    // SQL UNION
+    NOT,   // SQL EXCEPT
     PAREN, // Internal to the parser, will never show up in a tree
 };
 
@@ -18,8 +19,8 @@ struct substr_t {
     u32 length;
 
     // Implicit conversion
-    operator std::string_view() {
-        return std::string_view(data, length);
+    operator std::string() {
+        return std::string(data, length);
     }
 };
 
@@ -28,22 +29,29 @@ struct substr_t {
 //
 // That would get songs from the 80s or 90s (except 1992) by the Beastie Boys or A Tribe Called Quest.
 struct tag_expression {
-    struct value {
-        union {
-            tag_expression* expr;
-            substr_t tag;
-        };
-        bool recursive = false;
-        value(const char* text, u32 len) : tag(text, len) {}
-        value(const tag_expression& other_ex);
-        value() : expr(nullptr) {}
-    };
+    using value = std::variant<tag_expression*, std::string>;
+
+    #define VAL_IS_EXPR(val) std::holds_alternative<tag_expression*>(val)
+    #define VAL_IS_IMM(val) std::holds_alternative<std::string>(val)
+    #define VAL_IS_EMPTY_EXPR(val) (VAL_IS_EXPR(val) && std::get<tag_expression*>(val) == nullptr)
+    #define VAL_IS_EMPTY_IMM(val) (VAL_IS_IMM(val) && std::get<std::string>(val).size() == 0)
 
     // Left/right hand side
     value lhs;
     value rhs;
 
     tag_op op;
+
+    operator value() {
+        tag_expression expr;
+        if (op == tag_op::NONE) {
+            // Trivial expression, we can "inline" it as an immediate value
+            return lhs;
+        } else {
+            // This requires its own expression
+            return new tag_expression;
+        }
+    }
 
     tag_expression(const char* text, u32 len);
     tag_expression(const char* text) : tag_expression(text, strlen(text)) {}
