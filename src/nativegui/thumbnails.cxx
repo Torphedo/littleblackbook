@@ -185,7 +185,7 @@ bool thumbnail_storage::image_from_mp3(song_hash_t song_hash, texture_entry* ima
     }
 
     *image_out = {
-        .tex = (texture){
+        .tex = {
             .data = decoded_data,
             .width = (u16)x,
             .height = (u16)y,

@@ -3,6 +3,10 @@ project(blackbook
     VERSION 1.0.0
     LANGUAGES CXX C
 )
+
+# We care about the exact library name when loading the CRC32 extension for SQLite
+set(CMAKE_SHARED_LIBRARY_PREFIX "")
+
 # We need compile_commands.json for the include paths in some editors
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 # Enable LTO
@@ -27,6 +31,7 @@ include_directories(
     lib/cglm/include
     lib/imgui
     lib/glad/include
+    lib/sqlite
     lib/glfw/include
     lib/raudio/src
     lib/nfde/src/include
@@ -104,7 +109,14 @@ target_link_libraries(blackbook PUBLIC
     bobtail
     sqlite_crc32 # We link with this at runtime, so this ensures it gets built
     sqlite3-static glfw imgui nfd raudio stb_image
-# For some reason linking on Clang requires explicitly adding "stdc++"...
-    stdc++
-    ${ICU_LIBRARIES}
 )
+
+if (ICU_FOUND)
+    target_link_libraries(blackbook PUBLIC ${ICU_LIBRARIES})
+    add_compile_definitions(HAVE_ICU)
+endif()
+
+if (WIN32)
+    # SQLite needs this to generate UUIDs
+    target_link_libraries(blackbook PUBLIC Rpcrt4)
+endif()

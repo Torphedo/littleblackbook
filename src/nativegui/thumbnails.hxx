@@ -66,7 +66,7 @@ public:
     /// on the OpenGL thread to upload textures from the work queue to OpenGL.
     template<typename T>
     void load_many_mp3s_many_threads(const T& hashes, thumbnail_storage* t) noexcept {
-        std::thread th(&thumbnail_storage::load_many_mp3s<typeof(hashes)>, t, hashes);
+        std::thread th(&thumbnail_storage::load_many_mp3s<T>, t, hashes);
         th.detach();
     }
 

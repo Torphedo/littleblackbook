@@ -1,10 +1,12 @@
 #include "text_i8n.hxx"
 #include <algorithm>
 
+#ifdef HAVE_ICU
 #include <unicode/translit.h>
 #include <unicode/unistr.h>
 #include <unicode/utrans.h>
 #include <unicode/utypes.h>
+#endif
 
 #include <common/logging.h>
 #include <common/int.h>
@@ -33,6 +35,7 @@ std::string str_tolower_copy(const char* str) {
 }
 
 void run_transliterator(std::string& str, const char* translit_rules) {
+#ifdef HAVE_ICU
     UErrorCode status = UErrorCode::U_ZERO_ERROR;
     icu::Transliterator* trans = icu::Transliterator::createInstance(translit_rules, UTRANS_FORWARD, status);
     if (U_FAILURE(status)) {
@@ -46,9 +49,11 @@ void run_transliterator(std::string& str, const char* translit_rules) {
 
     str.clear();
     unistr.toUTF8String(str);
+#endif
 }
 
 std::string run_transliterator(const char* str, const char* translit_rules) {
+#ifdef HAVE_ICU
     UErrorCode status = UErrorCode::U_ZERO_ERROR;
     icu::Transliterator* trans = icu::Transliterator::createInstance(translit_rules, UTRANS_FORWARD, status);
     if (U_FAILURE(status)) {
@@ -63,6 +68,9 @@ std::string run_transliterator(const char* str, const char* translit_rules) {
     unistr.toUTF8String(stdstr);
 
     return stdstr;
+#else
+    return str;
+#endif
 }
 
 std::string romanize_japanese(const char* str) {

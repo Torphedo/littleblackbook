@@ -362,7 +362,7 @@ bool blackbook_core::load_from_db() {
         const tag_hash_t child_hash = sqlite3_column_int(fetchtagparents, 1);
 
         // Our tag query handles parents up to 3 layers deep, no need to handle here.
-        parent_pairs.push_back((linked_tags){parent_hash, child_hash});
+        parent_pairs.push_back({parent_hash, child_hash});
     }
     sql_handle_error("Error while loading tag parents:", db, exec_result);
 
@@ -397,7 +397,7 @@ bool blackbook_core::load_songs_by_query(sqlite3* db) {
         const time_t time = sqlite3_column_int(fetchsongs, 4);
 
         // Construct in-place to encourage use of the move ctor, to avoid cloning strings
-        song_map[hash] = (runtime_song) {
+        song_map[hash] = {
             .name = (char*)title,
             .import_timestamp = time,
             .hash = hash,

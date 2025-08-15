@@ -29,8 +29,8 @@ sqlite3_stmt* compile_sql(const char* sql, s32 sql_len, sqlite3* db);
 bool sql_handle_error(const char* msg_prefix, sqlite3* db, int errcode);
 
 // Function overloads for most SQLite statement binding functions
-#define DEF_SQL_BIND(args...) static int sql_bind(sqlite3_stmt* stmt, int pos, args) noexcept
-#define CALL_SQL_BIND(funcT, args...) sqlite3_bind_##funcT(stmt, pos, args)
+#define DEF_SQL_BIND(...) static int sql_bind(sqlite3_stmt* stmt, int pos, __VA_ARGS__) noexcept
+#define CALL_SQL_BIND(funcT, ...) sqlite3_bind_##funcT(stmt, pos, __VA_ARGS__)
 
 // SQL bind wrappers for primitive values (int/float)
 #define VALUE_BIND_TYPE(funcT, inT)   \
@@ -52,8 +52,6 @@ VALUE_BIND_TYPE(value, const sqlite3_value*)
 VALUE_BIND_TYPE(int64, sqlite3_int64)
 BUF_BIND_TYPE(text, const char*, int)
 BUF_BIND_TYPE(text16, const c16*, int)
-BUF_BIND_TYPE(blob, const void*, int)
-BUF_BIND_TYPE(blob64, const void*, sqlite_uint64)
 
 // Overload for sqlite3_bind_text64 which takes encoding as a param
 DEF_SQL_BIND(const char* buf, sqlite_uint64 size, unsigned char encoding) {
