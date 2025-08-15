@@ -37,14 +37,14 @@ static void crc32Func( sqlite3_context *context, const int argc, sqlite3_value *
 		const void *pData = sqlite3_value_blob(argv[0]);
 		const int nData = sqlite3_value_bytes(argv[0]);
 
-		const u32 crc = crc32buf(pData, nData);
+		const u32 crc = crc32fast(pData, nData);
 
 		sqlite3_result_int(context, crc);
 	}
 	else if (sqlite3_value_type(argv[0]) == SQLITE_INTEGER) {
 		const int val = sqlite3_value_int(argv[0]);
 
-		const u32 crc = crc32buf((u8*)&val, sizeof(val));
+		const u32 crc = crc32fast((u8*)&val, sizeof(val));
 
 		sqlite3_result_int(context, crc);
 
