@@ -20,13 +20,13 @@ nfdresult_t NFD_OpenDialogMultipleAutoFree(std::vector<std::string>& output, con
 
     output.reserve(numPaths);
     for (u32 i = 0; i < numPaths; i++) {
-        char* path = nullptr;
-        if (NFD_PathSet_GetPathN(pathset, i, &path) != NFD_OKAY) {
+        nfdu8char_t* path = nullptr;
+        if (NFD_PathSet_GetPathU8(pathset, i, &path) != NFD_OKAY) {
             continue; // Invalid path or something
         }
 
-        output.push_back(path);
-        NFD_PathSet_FreePathN(path);
+        output.emplace_back((char*)path);
+        NFD_PathSet_FreePathU8(path);
     }
 
     // Free NFD's stuff
