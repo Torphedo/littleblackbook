@@ -88,7 +88,7 @@ operator_t op_from_token(const substr_t& str) {
 
 static const char reserved_chars[] = "()-";
 
-std::queue<substr_t> shatter_str(const char* text, s32 len) {
+std::queue<substr_t> shatter_str(const char* text, s64 len) {
     // Remove trailing whitespace
     while (isspace(text[MAX(0, len - 1)]) && len > 0) {
         len--;
@@ -228,11 +228,11 @@ tag_expression recurse_parse(std::queue<substr_t>& lex, u8 subexpr_precedence) {
     return processed_left;
 }
 
-tag_expression::tag_expression(const char* text, u32 len) {
+tag_expression::tag_expression(const char* text, u64 len) {
     auto tokens = shatter_str(text, len);
     try {
         *this = recurse_parse(tokens, 0);
-    } catch (std::exception& e) {
+    } catch (...) {
         return;
     }
 }

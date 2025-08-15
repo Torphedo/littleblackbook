@@ -54,4 +54,4 @@ void search_tag(const char* tag, std::string& sql_out, bool standalone_query = t
 /// @param tags An array of tags a song must have
 /// @param num_tags Size of the tag array
 /// @param sql_out The buffer to store the generated SQL in
-void search_many_tags_and(const char* const* tags, u32 num_tags, std::string& sql_out);
+void search_many_tags_and(const char* const* tags, u64 num_tags, std::string& sql_out);

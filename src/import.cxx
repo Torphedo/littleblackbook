@@ -34,7 +34,7 @@ song_record::song_record(u8* mp3, u32 size, u16 path_idx) : mp3(mp3), path_idx(p
     while (!vfile_eof(id3)) {
         auto frame = VFILE_READ(id3::frame_header, &id3);
         ENDIAN_FLIP(u32, frame.size);
-        const u32 next_pos = id3.pos + frame.size;
+        const u64 next_pos = id3.pos + frame.size;
         switch (frame.id) {
         case id3::FRAME_YEAR: {
             auto encoding = VFILE_READ(u8, &id3); // We read this just to skip it
@@ -117,10 +117,10 @@ u32 copy_id3(u8* mp3, u32 size, std::vector<u8>& id3_out) {
 
     u32 id3_size = id3.size;
     while (!vfile_eof(id3)) {
-        u32 frame_start = id3.pos;
+        const u64 frame_start = id3.pos;
         auto frame = VFILE_READ(id3::frame_header, &id3);
         ENDIAN_FLIP(u32, frame.size);
-        const u32 next_pos = id3.pos + frame.size;
+        const u64 next_pos = id3.pos + frame.size;
         if (frame.id == id3::FRAME_PICTURE) {
             id3_size = frame_start;
             break;

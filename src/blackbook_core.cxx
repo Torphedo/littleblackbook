@@ -13,16 +13,16 @@
 #include "scope_timer.hxx"
 #include "defaults.hxx"
 
-void blackbook_core::add_to_playlist(const song_hash_t* songs, u32 num_songs, playlist_add_type type) {
+void blackbook_core::add_to_playlist(const song_hash_t* songs, u64 num_songs, playlist_add_type type) {
     std::lock_guard lock(playlist_lock);
     if (num_songs == 0) {
         return;
     }
 
-    u32 pos = 0;
+    s32 pos = 0;
     switch (type) {
     case PLAYLIST_APPEND:
-        pos = playlist.size();
+        pos = (s32)playlist.size();
         break;
     case PLAYLIST_PREPEND:
         pos = 0;
@@ -32,13 +32,13 @@ void blackbook_core::add_to_playlist(const song_hash_t* songs, u32 num_songs, pl
         break;
     }
     // Keep in range
-    pos = CLAMP(0, pos, playlist.size());
+    pos = CLAMP(0, pos, (s32)playlist.size());
 
     const bool need_init = playlist.empty();
 
     // Append results to playlist
     playlist.reserve(playlist.size() + num_songs);
-    for (u32 i = 0; i < num_songs; i++) {
+    for (s32 i = 0; i < num_songs; i++) {
         playlist.insert(playlist.begin() + pos + i, songs[i]);
         if (pos + i <= playlist_pos) {
             playlist_pos++;
@@ -53,7 +53,8 @@ void blackbook_core::add_to_playlist(const song_hash_t* songs, u32 num_songs, pl
 
 void blackbook_core::playlist_change_song(s8 diff) noexcept {
     std::lock_guard lock(playlist_lock);
-    if (playlist.size() <= 0) {
+    const s32 size = (s32)playlist.size();
+    if (size <= 0) {
         playlist_pos = 0;
         return;
     }
@@ -65,10 +66,10 @@ void blackbook_core::playlist_change_song(s8 diff) noexcept {
         playlist_pos += diff;
         // Get back in range
         while (playlist_pos < 0) {
-            playlist_pos += playlist.size() - 1;
+            playlist_pos += size - 1;
         }
 
-        playlist_pos %= playlist.size();
+        playlist_pos %= size;
     }
 
     const song_hash_t cur_hash = playlist.at(playlist_pos);
@@ -189,9 +190,9 @@ void tag_search::update_results(sqlite3* db) noexcept {
     }
 
     // Generate SQL query
-    search_many_tags_and(tags_temp.data(), tags.size(), sql);
+    search_many_tags_and(tags_temp.data(), (u32)tags.size(), sql);
 
-    sqlite3_stmt* query = compile_sql(sql.c_str(), sql.size(), db);
+    sqlite3_stmt* query = compile_sql(sql.c_str(), (s32)sql.size(), db);
     if (!query) {
         return; // Error printed for us
     }
@@ -228,7 +229,7 @@ bool tag_autocomplete::update_results(sqlite3* db) noexcept {
     if (stmt == nullptr) {
         return false; // Error printed for us
     }
-    sql_bind(stmt, 1, search_val.c_str(), search_val.size());
+    sql_bind(stmt, 1, search_val.c_str(), (s32)search_val.size());
     sql_bind(stmt, 2, AUTOCOMPLETE_SIZE);
 
     int res = SQLITE_OK;
@@ -252,12 +253,13 @@ bool tag_autocomplete::update_results(sqlite3* db) noexcept {
 void tag_autocomplete::update_selection(s8 diff) noexcept {
     cur_idx += diff / abs(diff); // Add value clamped to -1 or 1
 
+    const s32 size = (s32)candidates.size();
     if (cur_idx < 0) {
         // Wrap negatives around
-        cur_idx = candidates.size();
+        cur_idx = size;
     } else {
         // Wrap overflows around
-        cur_idx %= candidates.size() + 1;
+        cur_idx %= size + 1;
     }
 }
 

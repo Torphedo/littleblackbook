@@ -162,7 +162,7 @@ void search_tag(const char* tag, std::string& sql_out, bool standalone_query, s3
     }
 }
 
-void search_many_tags_and(const char* const* tags, u32 num_tags, std::string& sql_out) {
+void search_many_tags_and(const char* const* tags, u64 num_tags, std::string& sql_out) {
     // TODO: Parent search optimization:
     // If we search for 2 tags where 1 is parented to the other, we could skip
     // one of them. e.g. "mos def AND rap" can be simplified to "rap", since the
@@ -174,7 +174,7 @@ void search_many_tags_and(const char* const* tags, u32 num_tags, std::string& sq
     // work correctly.
     sql_out.append("SELECT hash FROM songs\n");
 
-    for (u32 i = 0; i < num_tags; i++) {
+    for (u64 i = 0; i < num_tags; i++) {
         // If the tag starts with "-", we interpret that as "AND NOT [tag]".
         const bool invert_tag = tags[i][0] == '-';
 

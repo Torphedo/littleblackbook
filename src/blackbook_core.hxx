@@ -151,7 +151,7 @@ struct blackbook_core {
     };
 
     // Add the results of a search to the current playlist
-    void add_to_playlist(const song_hash_t* songs, u32 num_songs, playlist_add_type type = PLAYLIST_APPEND);
+    void add_to_playlist(const song_hash_t* songs, u64 num_songs, playlist_add_type type = PLAYLIST_APPEND);
 
     // Skip forward or back in the playlist, (wraps in both directions)
     void playlist_change_song(s8 diff) noexcept;

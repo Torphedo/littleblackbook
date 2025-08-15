@@ -42,7 +42,7 @@ struct nativegui {
     // Draw read-only song metadata using ImGui::Text()
     void draw_song_info(const runtime_song& song) noexcept;
 
-    bool draw_song_row(song_hash_t hash, u32 thumb_size = 100) noexcept;
+    bool draw_song_row(song_hash_t hash, float thumb_size = 100.0f) noexcept;
 
     bool draw_search_menu(const char* win_title, tag_search& search) noexcept;
 
@@ -131,12 +131,12 @@ struct nativegui {
             // On my system w/ 1381 song entries, this reduced draw time from
             // ~1-1.2ms to ~0.1-0.2ms, and reduced CPU usage a lot.
             ImGuiListClipper clipper;
-            clipper.Begin(hashes.size());
+            clipper.Begin((u32)hashes.size());
             while (clipper.Step()) {
                 // I'd love to use operator[] here and not have to iterate over
                 // things that are skipped, but some (like map key iterators)
                 // don't implement operator[].
-                u32 i = 0;
+                s32 i = 0;
                 for (song_hash_t hash : hashes) {
                     if (i < clipper.DisplayStart) {
                         i++;

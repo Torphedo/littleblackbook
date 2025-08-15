@@ -38,9 +38,9 @@ struct tag_expression {
     value lhs;
     value rhs;
 
-    tag_op op;
+    tag_op op = tag_op::NONE;
 
-    tag_expression(const char* text, u32 len);
+    tag_expression(const char* text, u64 len);
     tag_expression(const char* text) : tag_expression(text, strlen(text)) {}
     tag_expression() = default;
 private:

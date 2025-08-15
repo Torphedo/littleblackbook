@@ -156,11 +156,8 @@ bool nativegui::window_song_editor(runtime_song& song) {
     return true;
 }
 
-bool nativegui::draw_song_row(song_hash_t hash, u32 thumb_size) noexcept {
+bool nativegui::draw_song_row(song_hash_t hash, float thumb_size) noexcept {
     bool result = false;
-    if (!ImGui::IsItemVisible()) {
-        // return result;
-    }
 
     ImGui::TableNextRow(0, thumb_size);
     ImGui::TableSetColumnIndex(0);
@@ -314,7 +311,7 @@ bool nativegui::window_playlist() noexcept {
 }
 
 bool nativegui::toolbar_player() noexcept {
-    u32 cur_hash = 0;
+    song_hash_t cur_hash = 0;
     if (!core.playlist.empty()) {
         cur_hash = core.playlist.at(core.playlist_pos);
     }
@@ -322,13 +319,13 @@ bool nativegui::toolbar_player() noexcept {
     const bool ctrl = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl);
     const bool shift = ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift);
     bool toggle_play = ImGui::IsKeyPressed(ImGuiKey_Space, false);
-    s8 skip_song = (shift && ImGui::IsKeyPressed(ImGuiKey_N, false)) || ImGui::IsKeyPressed(ImGuiKey_J, false);
-    s8 prev_song = (shift && ImGui::IsKeyPressed(ImGuiKey_P, false)) || ImGui::IsKeyPressed(ImGuiKey_K, false);
-    s8 seek_ahead = ImGui::IsKeyPressed(ImGuiKey_RightArrow, true)   || ImGui::IsKeyPressed(ImGuiKey_L, true);
-    s8 seek_back  = ImGui::IsKeyPressed(ImGuiKey_LeftArrow, true)    || ImGui::IsKeyPressed(ImGuiKey_H, true);
+    s32 skip_song = (shift && ImGui::IsKeyPressed(ImGuiKey_N, false)) || ImGui::IsKeyPressed(ImGuiKey_J, false);
+    s32 prev_song = (shift && ImGui::IsKeyPressed(ImGuiKey_P, false)) || ImGui::IsKeyPressed(ImGuiKey_K, false);
+    s32 seek_ahead = ImGui::IsKeyPressed(ImGuiKey_RightArrow, true)   || ImGui::IsKeyPressed(ImGuiKey_L, true);
+    s32 seek_back  = ImGui::IsKeyPressed(ImGuiKey_LeftArrow, true)    || ImGui::IsKeyPressed(ImGuiKey_H, true);
 
     // Disable everything when ImGui is using the keyboard
-    const bool disable_shortcuts = ImGui::GetIO().WantTextInput;
+    const u8 disable_shortcuts = ImGui::GetIO().WantTextInput;
     toggle_play *= !disable_shortcuts;
     prev_song *= !disable_shortcuts;
     skip_song *= !disable_shortcuts;
@@ -356,10 +353,10 @@ bool nativegui::toolbar_player() noexcept {
             }
 
             ImGui::Text("[%d / %ld]", core.playlist_pos, core.playlist.size());
-            prev_song |= ImGui::Button("<");
+            prev_song += ImGui::Button("<");
             const char* button_label = playing ? "Pause" : "Play";
             toggle_play |= ImGui::Button(button_label);
-            skip_song |= ImGui::Button(">");
+            skip_song += ImGui::Button(">");
 
             if (core.song_map.count(cur_hash)) {
                 const runtime_song& song = core.song_map[cur_hash];
@@ -531,7 +528,7 @@ bool nativegui::toolbar_main() noexcept {
 
         if (res == NFD_OKAY && import_path_ptrs.size() > 0) {
             const char* const* paths = import_path_ptrs.data();
-            const u32 num_paths = import_path_ptrs.size();
+            const u32 num_paths = (u32)import_path_ptrs.size();
             // Run imports on another thread so UI doesn't lock up
             import_thread = std::thread(import_many_files_many_threads, paths, num_paths, core.files_dir, core.db, &import_stats);
             import_thread.detach(); // Otherwise dtor will try to kill it later and crash
@@ -697,5 +694,5 @@ nativegui::~nativegui() noexcept {
     for (const auto& pair : thumbnails.thumbnails) {
         textures.push_back(pair.second);
     }
-    glDeleteTextures(textures.size(), textures.data());
+    glDeleteTextures((u32)textures.size(), textures.data());
 }
