@@ -14,6 +14,7 @@
 #include "defaults.hxx"
 
 void blackbook_core::add_to_playlist(const song_hash_t* songs, u32 num_songs, playlist_add_type type) {
+    std::lock_guard lock(playlist_lock);
     if (num_songs == 0) {
         return;
     }
@@ -51,6 +52,7 @@ void blackbook_core::add_to_playlist(const song_hash_t* songs, u32 num_songs, pl
 }
 
 void blackbook_core::playlist_change_song(s8 diff) noexcept {
+    std::lock_guard lock(playlist_lock);
     if (playlist.size() <= 0) {
         playlist_pos = 0;
         return;
@@ -80,6 +82,7 @@ void blackbook_core::playlist_change_song(s8 diff) noexcept {
 }
 
 void blackbook_core::playlist_move_song(u32 source, u32 target) noexcept {
+    std::lock_guard lock(playlist_lock);
     const song_hash_t source_hash = playlist[source];
     // Delete the song we're moving, and insert its hash at the target location
     playlist.erase(playlist.begin() + source);
@@ -94,6 +97,21 @@ void blackbook_core::playlist_move_song(u32 source, u32 target) noexcept {
     // We moved the current song, and need to keep the state consistent
     if (playlist_pos == source) {
         playlist_pos = (s32)target;
+    }
+}
+
+void blackbook_core::playlist_update_stream() noexcept {
+    std::lock_guard lock(playlist_lock);
+    const float total = GetMusicTimeLength(audio_stream);
+    const float progress = GetMusicTimePlayed(audio_stream);
+
+    // Automatically change songs
+    if (total - progress < 0.1f) {
+        playlist_change_song(1);
+    }
+
+    if (IsMusicStreamPlaying(audio_stream)) {
+        UpdateMusicStream(audio_stream);
     }
 }
 

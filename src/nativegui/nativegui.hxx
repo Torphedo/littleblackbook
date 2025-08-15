@@ -17,6 +17,7 @@ struct nativegui {
     bool initialized = false;
 
     blackbook_core core;
+    std::thread music_thread;
     thumbnail_storage thumbnails;
     // This default is what makes us load thumbnails on start
     bool need_thumbnail_reload = true;

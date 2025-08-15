@@ -18,6 +18,7 @@
 
 #include <common/int.h>
 #include <schema.hxx>
+#include <mutex>
 
 // Implementation for a tag input box with autocomplete.
 // Often abbreviated as "TAC" / "tac" (looks a lot like "tag", sorry... - torph)
@@ -125,9 +126,10 @@ struct blackbook_core {
     std::vector<tag_search> searches;
 
     // State for music player features
-    Music audio_stream = {0};
+    Music audio_stream = {};
     std::vector<song_hash_t> playlist;
     s32 playlist_pos = 0;
+    std::recursive_mutex playlist_lock; // Lock for audio stream and playlist state
 
     // Tag parent input / display
     std::vector<linked_tags> parent_pairs;
@@ -156,6 +158,8 @@ struct blackbook_core {
 
     // Move a song from one location to another in the playlist
     void playlist_move_song(u32 source, u32 target) noexcept;
+
+    void playlist_update_stream() noexcept;
 
     // Apply the current tags in the parent/child inputs as a pair in the DB
     bool apply_tag_pair() noexcept;

@@ -373,10 +373,6 @@ bool nativegui::toolbar_player() noexcept {
                 SeekMusicStream(core.audio_stream, progress);
             }
 
-            // Automatically change songs
-            if (total - progress < 0.1f) {
-                core.playlist_change_song(1);
-            }
             ImGui::EndMenuBar();
         }
 
@@ -402,7 +398,6 @@ bool nativegui::toolbar_player() noexcept {
         }
     }
 
-    UpdateMusicStream(core.audio_stream);
     return true;
 }
 
@@ -677,10 +672,20 @@ bool nativegui::gui_main(GLFWwindow *window) noexcept {
     return true;
 }
 
+static void music_loop(blackbook_core* core) {
+    while (true) {
+        core->playlist_update_stream();
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+}
+
 nativegui::nativegui(sqlite3* db, const char* files_dir) noexcept
     : core(blackbook_core(db, files_dir)), thumbnails(thumbnail_storage(files_dir))
 {
     InitAudioDevice();
+    // On Windows, minimizing stops all rendering and gui_main() won't run, so
+    // we need to handle playback on another thread
+    music_thread = std::thread(music_loop, &core);
     initialized = core.initialized;
 }
 
