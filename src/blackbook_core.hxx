@@ -20,51 +20,11 @@
 #include <schema.hxx>
 #include <mutex>
 
+#include "expression.hxx"
+#include "autocomplete.hxx"
+
 // Implementation for a tag input box with autocomplete.
 // Often abbreviated as "TAC" / "tac" (looks a lot like "tag", sorry... - torph)
-struct tag_autocomplete {
-    // Number of results we show
-    static const u8 AUTOCOMPLETE_SIZE = 5;
-
-    // A hint to the UI that it should refocus the text box
-    bool need_refocus = false;
-
-    // A hint to call apply_selection() ASAP
-    bool need_apply = false;
-
-    // A hint to update the results ASAP
-    bool need_refresh = false;
-
-    s32 cur_idx = 0;
-    // String the user typed into the text box
-    std::string user_str;
-
-    // Autocomplete results
-    std::vector<std::string> candidates;
-
-    /// @brief Change the selected result
-    ///
-    /// @param diff The direction the index should change in. Only the sign is
-    /// kept, so any positive value adds 1, and any negative value subtracts 1.
-    /// Automatically keeps the index in range for you.
-    void update_selection(s8 diff) noexcept;
-
-    // @brief Method for when the user confirms they want to use the autocomplete result
-    void apply_selection() noexcept;
-
-    /// @brief Get the current string that should be in the text box
-    ///
-    /// The only reason this isn't const is that it returns a mutable reference.
-    std::string& current() noexcept;
-
-    /// @brief Update the autocomplete candidates using the contents of @ref [user_str].
-    /// @param db The database to query for results. The database won't be modified.
-    bool update_results(sqlite3* db) noexcept;
-
-    // Wipe all text/state
-    void reset() noexcept;
-};
-
 struct runtime_song {
     std::string name; // Song name
     time_t import_timestamp = 0;
@@ -78,32 +38,25 @@ struct runtime_song {
     std::set<tag_hash_t> tags;
 
     // Text input for the user to add tags to a song
-    tag_autocomplete tac;
+    std::string input_buf;
+    tag_autocomplete tac = tag_autocomplete(input_buf);
 };
 
 // A headless search menu
 struct tag_search {
-    // The tags currently being searched for
-    // TODO: Can we make this a set of hashes? How do we deal with negated tags?
-    std::vector<std::string> tags;
+    // The expression the user is currently searching for
+    tag_expression expr;
 
     // Autocomplete results and tag input buffer
-    tag_autocomplete tac;
+    tag_autocomplete tac = tag_autocomplete(std::get<std::string>(expr.lhs));
 
     std::vector<song_hash_t> result_hashes;
-
-    /// @brief Add the current tag to the list of tags, or delete it if already there
-    ///
-    /// This should run after the user hits Enter (or equivalent) on the text
-    /// input for the current tag. The string is added to the list of tags, or if
-    /// it's already in the list, removed. Either way, the current tag is cleared.
-    void finalize_current_tag(sqlite3* db) noexcept;
 
     /// @brief Run a query against the database and update the search results
     ///
     /// The database is not modified by this method.
     /// Clears the search results, then searches the database using the current
-    /// list of tags. The "current tag" (text input state) is ignored.
+    /// expression.
     void update_results(sqlite3* db) noexcept;
 };
 
@@ -135,8 +88,10 @@ struct blackbook_core {
     std::vector<linked_tags> parent_pairs;
 
     // Tag input fields the user will submit
-    tag_autocomplete tac_child;
-    tag_autocomplete tac_parent;
+    std::string child_input;
+    tag_autocomplete tac_child = tag_autocomplete(child_input);
+    std::string parent_input;
+    tag_autocomplete tac_parent = tag_autocomplete(parent_input);
 
     // Debug performance timers
     std::unordered_map<const char*, float> timer_map;

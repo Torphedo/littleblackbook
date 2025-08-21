@@ -211,11 +211,6 @@ bool nativegui::draw_song_row(song_hash_t hash, float thumb_size) noexcept {
 bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noexcept {
     bool open = true;
     if (ImGui::Begin(win_title, &open)) {
-        // Show current tags and input box
-        for (const std::string& tag : search.tags) {
-            ImGui::Text("%s", tag.c_str());
-        }
-
         // Focus text input so user can keep typing
         if (search.tac.need_refocus) {
             search.tac.need_refocus = false; // Reset flag
@@ -226,8 +221,7 @@ bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noex
         ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
         if (InputTagAutocompleted("##tag", "Input a tag", flags, search.tac)) {
             const scope_timer main_timer(core.timer_map, "last_search");
-            // This also executes the search and updates our state
-            search.finalize_current_tag(core.db);
+            search.update_results(core.db);
             search.tac.reset();
         }
 

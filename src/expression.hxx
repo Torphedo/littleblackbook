@@ -37,19 +37,20 @@ struct tag_expression {
     #define VAL_IS_EMPTY_IMM(val) (VAL_IS_IMM(val) && std::get<std::string>(val).size() == 0)
 
     // Left/right hand side
-    value lhs;
+    value lhs = "";
     value rhs;
 
     tag_op op = tag_op::NONE;
 
     operator value() {
-        tag_expression expr;
         if (op == tag_op::NONE) {
             // Trivial expression, we can "inline" it as an immediate value
             return lhs;
         } else {
             // This requires its own expression
-            return new tag_expression;
+            tag_expression* expr = new tag_expression;
+            *expr = *this;
+            return expr;
         }
     }
 

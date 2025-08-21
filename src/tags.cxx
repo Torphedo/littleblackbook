@@ -190,3 +190,47 @@ void search_many_tags_and(const char* const* tags, u64 num_tags, std::string& sq
     // Terminate statement
     sql_out.append(";\n");
 }
+
+bool autocomplete_tag(sqlite3* db, const std::string& user_str, std::vector<std::string>& candidates) {
+    // Wipe previous results
+    candidates.clear();
+
+    // We use this to skip the minus sign in the generated SQL
+    const bool minus = user_str[0] == '-';
+    // '"[user_str] *"'. Quotes and '*' are required by FTS5 table.
+    const std::string search_val = "\"" + std::string(user_str.c_str() + minus) + "\" *";
+
+    // This searches the tag table, then uses the result to find the namespace.
+    // Both of the results are strings.
+    const char sql[] = R"(
+        SELECT ns.namespace, t.tag FROM
+        (SELECT * FROM tag_search(?) ORDER BY rank LIMIT ?) result
+        JOIN tags t ON t.hash = result.hash
+        LEFT JOIN namespaces ns ON ns.hash = t.namespace_hash;
+    )";
+
+    sqlite3_stmt* stmt = compile_sql(sql, sizeof(sql), db);
+    if (stmt == nullptr) {
+        return false; // Error printed for us
+    }
+    sql_bind(stmt, 1, search_val.c_str(), (s32)search_val.size());
+    sql_bind(stmt, 2, AUTOCOMPLETE_SIZE);
+
+    int res = SQLITE_OK;
+    while ((res = sqlite3_step(stmt)) == SQLITE_ROW) {
+        std::string result = minus ? "-" : ""; // Use - prefix if needed
+        const char* nspace = (const char*)sqlite3_column_text(stmt, 0);
+        const char* tag = (const char*)sqlite3_column_text(stmt, 1);
+
+        if (nspace) {
+            result += nspace + std::string(":");
+        }
+        result += tag;
+        candidates.push_back(result);
+    }
+
+    bool result = sql_handle_error("Error running tag autocomplete", db, res);
+    result &= sqlite3_finalize(stmt) == SQLITE_OK;
+
+    return result;
+}

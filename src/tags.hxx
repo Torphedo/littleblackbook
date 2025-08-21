@@ -55,3 +55,9 @@ void search_tag(const char* tag, std::string& sql_out, bool standalone_query = t
 /// @param num_tags Size of the tag array
 /// @param sql_out The buffer to store the generated SQL in
 void search_many_tags_and(const char* const* tags, u64 num_tags, std::string& sql_out);
+
+static const u8 AUTOCOMPLETE_SIZE = 5;
+
+/// @brief Update the autocomplete candidates using the contents of @ref [user_str].
+/// @param db The database to query for results. The database won't be modified.
+bool autocomplete_tag(sqlite3* db, const std::string& user_str, std::vector<std::string>& candidates);

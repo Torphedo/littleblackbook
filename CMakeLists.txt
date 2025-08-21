@@ -97,6 +97,7 @@ add_executable(blackbook
     src/text_i8n.cxx
 
     lib/glad/src/glad.c # Can't be bothered to make this its own target
+    src/autocomplete.cxx
 )
 
 # We dynamically load this in SQLite to add CRC32 support for SQL code

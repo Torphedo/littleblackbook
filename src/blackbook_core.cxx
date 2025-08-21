@@ -139,58 +139,12 @@ bool blackbook_core::apply_tag_pair() noexcept {
     return (sql_res == SQLITE_OK);
 }
 
-void tag_search::finalize_current_tag(sqlite3* db) noexcept {
-    std::string& tag = tac.current();
-
-    // Allows user to refresh by hitting enter in the text box. Otherwise, we'd
-    // try to add an empty string to our list of tags.
-    if (tag.empty()) {
-        update_results(db);
-        return;
-    }
-
-    // Go to lowercase to make it case-insensitive
-    str_tolower(tag);
-
-    bool is_negated = tag.c_str()[0] == '-';
-
-    bool found = false;
-    const char* user_tag = tag.c_str() + is_negated;
-    for (auto iter = tags.begin(); iter != tags.end(); iter++) {
-        // Ignore leading minus signs if present
-        const char* entry = iter->c_str() + (iter->c_str()[0] == '-');
-        found = strcmp(user_tag, entry) == 0;
-        if (found) {
-            tags.erase(iter);
-            break; // We're done here (and iterator is now invalidated anyway)
-        }
-    }
-
-    // Tag wasn't in the list, add it.
-    if (!found) {
-        tags.push_back(tag);
-    }
-
-    tac.reset();
-    update_results(db);
-}
-
 void tag_search::update_results(sqlite3* db) noexcept {
-    std::string sql;
-
     // Clear existing results
     result_hashes.clear();
 
-    // Get a pointer array for underlying function to use
-    std::vector<const char*> tags_temp;
-    tags_temp.reserve(tags.size());
-
-    for (const std::string& tag : tags) {
-        tags_temp.push_back(tag.c_str());
-    }
-
-    // Generate SQL query
-    search_many_tags_and(tags_temp.data(), (u32)tags.size(), sql);
+    std::string sql;
+    sqlgen_expression(expr, sql);
 
     sqlite3_stmt* query = compile_sql(sql.c_str(), (s32)sql.size(), db);
     if (!query) {
@@ -206,86 +160,6 @@ void tag_search::update_results(sqlite3* db) noexcept {
 
     sqlite3_finalize(query);
 }
-
-bool tag_autocomplete::update_results(sqlite3* db) noexcept {
-    // Wipe previous results
-    candidates.clear();
-
-    // We use this to skip the minus sign in the generated SQL
-    const bool minus = user_str.c_str()[0] == '-';
-    // '"[user_str] *"'. Quotes and '*' are required by FTS5 table.
-    const std::string search_val = "\"" + std::string(user_str.c_str() + minus) + "\" *";
-
-    // This searches the tag table, then uses the result to find the namespace.
-    // Both of the results are strings.
-    const char sql[] = R"(
-        SELECT ns.namespace, t.tag FROM
-        (SELECT * FROM tag_search(?) ORDER BY rank LIMIT ?) result
-        JOIN tags t ON t.hash = result.hash
-        LEFT JOIN namespaces ns ON ns.hash = t.namespace_hash;
-    )";
-
-    sqlite3_stmt* stmt = compile_sql(sql, sizeof(sql), db);
-    if (stmt == nullptr) {
-        return false; // Error printed for us
-    }
-    sql_bind(stmt, 1, search_val.c_str(), (s32)search_val.size());
-    sql_bind(stmt, 2, AUTOCOMPLETE_SIZE);
-
-    int res = SQLITE_OK;
-    while ((res = sqlite3_step(stmt)) == SQLITE_ROW) {
-        std::string result = minus ? "-" : ""; // Use - prefix if needed
-        const char* nspace = (const char*)sqlite3_column_text(stmt, 0);
-        const char* tag = (const char*)sqlite3_column_text(stmt, 1);
-
-        if (nspace) {
-            result += nspace + std::string(":");
-        }
-        result += tag;
-        candidates.push_back(result);
-    }
-    sql_handle_error("Error running tag autocomplete", db, res);
-
-    sqlite3_finalize(stmt);
-    return true;
-}
-
-void tag_autocomplete::update_selection(s8 diff) noexcept {
-    cur_idx += diff / abs(diff); // Add value clamped to -1 or 1
-
-    const s32 size = (s32)candidates.size();
-    if (cur_idx < 0) {
-        // Wrap negatives around
-        cur_idx = size;
-    } else {
-        // Wrap overflows around
-        cur_idx %= size + 1;
-    }
-}
-
-void tag_autocomplete::apply_selection() noexcept {
-    // User selected a result. Copy to user buffer and wipe results.
-    user_str = current();
-    candidates.clear();
-    cur_idx = 0;
-}
-
-std::string& tag_autocomplete::current() noexcept {
-    assert(cur_idx <= candidates.size() && cur_idx >= 0 && "Autocomplete index out of bounds!");
-
-    if (cur_idx == 0) {
-        return user_str;
-    } else {
-        return candidates[cur_idx - 1];
-    }
-}
-
-void tag_autocomplete::reset() noexcept {
-    candidates.clear();
-    user_str = "";
-    cur_idx = 0;
-}
-
 
 bool blackbook_core::apply_defaults() noexcept {
     const scope_timer defaults_timer(timer_map, "apply_tag_defaults");
@@ -417,6 +291,7 @@ bool blackbook_core::load_songs_by_query(sqlite3* db) {
         const time_t time = sqlite3_column_int(fetchsongs, 4);
 
         // Construct in-place to encourage use of the move ctor, to avoid cloning strings
+
         song_map[hash] = {
             .name = (char*)title,
             .import_timestamp = time,
@@ -435,7 +310,7 @@ blackbook_core::blackbook_core(sqlite3* db, const char* files_dir) : files_dir(f
 
     bool result = true;
     if (!load_from_db()) {
-        db = nullptr;
+        this->db = nullptr;
         result = false;
     }
 
