@@ -81,7 +81,7 @@ namespace ImGui {
         ImGui::PushID("opCombo");
         int flags = ImGuiComboFlags_WidthFitPreview;
         if (ImGui::BeginCombo("", tag_op_strs[(u8)op], flags)) {
-            for (u8 i = (u8)tag_op::AND; i < (u8)tag_op::PAREN; i++) {
+            for (u8 i = (u8)tag_op::AND; i < (u8)tag_op::NOT; i++) {
                 const std::string id = "opComboOption" + std::to_string(i);
                 ImGui::PushID(id.c_str());
                 if (ImGui::Selectable(tag_op_strs[i], i == (u8)op)) {
@@ -101,7 +101,7 @@ namespace ImGui {
         } else if (VAL_IS_IMM(val)) {
             auto& str = std::get<std::string>(val);
             const char* hint = "Input a tag (expression)";
-            const std::string label = "Tag ##" + std::to_string((uintptr_t)&str);
+            const std::string label = "##" + std::to_string((uintptr_t)&str);
 
             // Since the user can only focus & type in 1 box at a time, we only
             // have 1 TAC. A TAC input looks/acts just like a normal one when
