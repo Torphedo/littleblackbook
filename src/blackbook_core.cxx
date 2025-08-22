@@ -308,9 +308,8 @@ bool blackbook_core::load_songs_by_query(sqlite3* db) {
     return true;
 }
 
-blackbook_core::blackbook_core(sqlite3* db, const char* files_dir) : files_dir(files_dir) {
-    this->db = db;
-
+blackbook_core::blackbook_core(sqlite3* db, const char* files_dir) : files_dir(files_dir), db(db)
+{
     bool result = true;
     if (!load_from_db()) {
         this->db = nullptr;

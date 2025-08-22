@@ -44,6 +44,9 @@ struct tag_autocomplete {
 
     // Wipe all text/state
     void reset() noexcept;
+
+    tag_autocomplete() = default;
+    explicit tag_autocomplete(std::string* user_str) : user_str(user_str) {}
 };
 
 

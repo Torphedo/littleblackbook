@@ -101,13 +101,8 @@ bool nativegui::draw_song_row(song_hash_t hash, float thumb_size) noexcept {
     if (ImGui::Selectable(s.name.c_str(), false, 0, ImVec2(0, thumb_size))) {
         result = true;
     }
-    s32 cur_row = ImGui::TableGetRowIndex();
+    const s32 cur_row = ImGui::TableGetRowIndex();
 
-    enum class playlist_add_type {
-        APPEND,
-        NEXT,
-        PREPEND,
-    };
     blackbook_core::playlist_add_type type = blackbook_core::PLAYLIST_APPEND;
     bool playlist_add = false;
     char popup_name[128] = {0};
@@ -442,7 +437,7 @@ bool nativegui::toolbar_main() noexcept {
             import_path_ptrs.push_back(path.c_str());
         }
 
-        if (res == NFD_OKAY && import_path_ptrs.size() > 0) {
+        if (res == NFD_OKAY && !import_path_ptrs.empty()) {
             const char* const* paths = import_path_ptrs.data();
             const u32 num_paths = (u32)import_path_ptrs.size();
             // Run imports on another thread so UI doesn't lock up
