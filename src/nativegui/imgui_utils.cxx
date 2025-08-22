@@ -1,3 +1,4 @@
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui_utils.hxx"
 #include <misc/cpp/imgui_stdlib.h>
 #include "blackbook_core.hxx"
@@ -5,6 +6,12 @@
 #include "common/logging.h"
 
 namespace ImGui {
+    void Indent(u32 tab_num) {
+        for (u32 i = 0; i < tab_num; i++) {
+            ImGui::Text("\t"); ImGui::SameLine();
+        }
+    }
+
     static int autocomplete_update_selection(ImGuiInputTextCallbackData* data) {
         auto tac = (tag_autocomplete*) data->UserData;
         if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) {
@@ -78,7 +85,10 @@ namespace ImGui {
     }
 
     void TagOpDropDown(tag_op& op) {
-        ImGui::PushID("opCombo");
+        char idbuf[64] = {0};
+        snprintf(idbuf, sizeof(idbuf) - 1, "opCombo%p", &op);
+
+        ImGui::PushID(idbuf);
         int flags = ImGuiComboFlags_WidthFitPreview;
         if (ImGui::BeginCombo("", tag_op_strs[(u8)op], flags)) {
             for (u8 i = (u8)tag_op::AND; i < (u8)tag_op::NOT; i++) {
@@ -95,10 +105,11 @@ namespace ImGui {
         ImGui::PopID();
     }
 
-    bool EditExpressionValue(tag_expression::value& val, tag_autocomplete& tac, blackbook_core& core) {
+    bool EditExpressionValue(tag_expression::value& val, tag_autocomplete& tac, blackbook_core& core, u32 indent) {
         if (VAL_IS_EXPR(val)) {
-            return EditExpression(*std::get<tag_expression*>(val), tac, core);
+            return EditExpression(*std::get<tag_expression*>(val), tac, core, indent + 1);
         } else if (VAL_IS_IMM(val)) {
+            Indent(indent);
             auto& str = std::get<std::string>(val);
             const char* hint = "Input a tag (expression)";
             const std::string label = "##" + std::to_string((uintptr_t)&str);
@@ -123,6 +134,18 @@ namespace ImGui {
                 }
             }
 
+            if (result) {
+                if (ImGui::IsKeyDown(ImGuiKey_ModShift)) {
+                    // add a new tag input by turning immediate into an expression
+                    const std::string tag = str;
+                    val = tag_expression(tag.c_str());
+                    // TODO: Make the child value inherit the parent's operator
+                } else {
+                    // This causes focus to move to the next box
+                    tac.user_str = nullptr;
+                }
+            }
+
             return result;
         } else {
             LOG_MSG(error, "Expression node value is in an invalid state!\n");
@@ -130,11 +153,14 @@ namespace ImGui {
         }
     }
 
-    bool EditExpression(tag_expression& expr, tag_autocomplete& tac, blackbook_core& core) {
+    bool EditExpression(tag_expression& expr, tag_autocomplete& tac, blackbook_core& core, u32 indent) {
         bool result = false;
+
+        Indent(indent);
         TagOpDropDown(expr.op);
-        result = EditExpressionValue(expr.lhs, tac, core);
-        result |= EditExpressionValue(expr.rhs, tac, core);
+        result = EditExpressionValue(expr.lhs, tac, core, indent);
+        result |= EditExpressionValue(expr.rhs, tac, core, indent);
+
         return result;
     }
 } // namespace ImGui
