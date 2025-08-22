@@ -293,14 +293,9 @@ bool blackbook_core::load_songs_by_query(sqlite3* db) {
         const song_hash_t hash = sqlite3_column_int(fetchsongs, 3);
         const time_t time = sqlite3_column_int(fetchsongs, 4);
 
-        // Construct in-place to encourage use of the move ctor, to avoid cloning strings
-
-        song_map[hash] = {
-            .name = (char*)title,
-            .import_timestamp = time,
-            .hash = hash,
-            .release_year = year,
-        };
+        song_map[hash] = runtime_song((const char*)title, time, hash, year);
+        // This is not ideal but way easier than making all the right ctors
+        song_map[hash].fix_ptr();
     }
     sql_handle_error("Error while loading songs", db, exec_result);
 

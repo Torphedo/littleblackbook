@@ -40,6 +40,21 @@ struct runtime_song {
     // Text input for the user to add tags to a song
     std::string input_buf;
     tag_autocomplete tac = tag_autocomplete(&input_buf);
+
+    void fix_ptr() {
+        tac.user_str = &this->input_buf; // Fix pointer
+    }
+
+    runtime_song() = default;
+    runtime_song(const char* title, time_t time, song_hash_t hash, u32 year) :
+        runtime_song()
+    {
+        // Can't use initializer list with default ctor
+        name = title;
+        import_timestamp = time;
+        this->hash = hash;
+        release_year = year;
+    }
 };
 
 // A headless search menu
