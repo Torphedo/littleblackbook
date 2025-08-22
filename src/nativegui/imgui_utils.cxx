@@ -69,7 +69,10 @@ namespace ImGui {
         for (const std::string& candidate : tac.candidates) {
             ImGui::Text("%s", candidate.c_str());
         }
-        ImGui::Separator();
+
+        if (!tac.candidates.empty()) {
+            ImGui::Separator();
+        }
 
         return result;
     }

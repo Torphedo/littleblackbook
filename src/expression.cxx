@@ -236,7 +236,7 @@ void sqlgen_value(const tag_expression::value& val, bool is_negated, std::string
             sql_out.append("SELECT hash FROM songs EXCEPT ");
         }
         const std::string& tag = std::get<std::string>(val);
-        LOG_MSG(debug, "Hashing tag %d chars from \"%*s\"\n", tag.length(), tag.length(), tag.c_str());
+        LOG_MSG(debug, "Hashing %d chars from tag \"%*s\"\n", tag.length(), tag.length(), tag.c_str());
         if (tag.empty()) {
             if (op == tag_op::AND) {
                 // Empty tag selects all
@@ -244,7 +244,7 @@ void sqlgen_value(const tag_expression::value& val, bool is_negated, std::string
                 return;
             } else if (op == tag_op::OR) {
                 // Empty tag selects none
-                sqlgen(sql_out, "SELECT song_hash FROM " RESOLVED_TAG_SONG_TABLE " WHERE 1 <> 1");
+                sqlgen(sql_out, "SELECT hash FROM songs WHERE 1 <> 1");
                 return;
             }
         }
@@ -274,6 +274,6 @@ void sqlgen_expression(const tag_expression& expr, std::string& sql_out) {
     if (recurse_depth == 0) {
         // Terminate statement
         sql_out.append(";\n");
-        LOG_MSG(debug, "%s\n", sql_out.c_str());
+        LOG_MSG(debug, "Generated SQL query from a recursive expression tree: \n%s\n", sql_out.c_str());
     }
 }
