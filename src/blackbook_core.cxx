@@ -173,6 +173,9 @@ bool blackbook_core::apply_defaults() noexcept {
     const int result = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
     if (result != SQLITE_OK) {
         LOG_MSG(error, "Failed to apply defaults because: %s\n", errmsg);
+    } else {
+        load_from_db();
+        LOG_MSG(info, "Applied tag defaults!\n");
     }
 
     return (result == SQLITE_OK);

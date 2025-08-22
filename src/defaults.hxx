@@ -77,7 +77,7 @@ static constexpr default_tag_pair default_tag_parents[] = {
     ARTIST_LINK("wu tang clan", "inspectah deck"),
     ARTIST_LINK("wu tang clan", "masta killa"),
     // TODO: Once we do proper escaping or parameterized queries, unncomment this.
-    // ARTIST_LINK("wu tang clan",  "ol' dirty bastard"),
+    ARTIST_LINK("wu tang clan",  "ol' dirty bastard"),
 
     ARTIST_LINK("the roots",  "black thought"),
 
@@ -90,5 +90,4 @@ static constexpr default_tag_pair default_tag_parents[] = {
     ARTIST_LINK("onemanarmy", "one be lo"),
     ARTIST_LINK("binary star", "one be lo"),
     ARTIST_LINK("binary star", "senim silla"),
-
 };
