@@ -7,7 +7,7 @@
 
 struct tag_autocomplete {
     // String the user typed into the text box
-    std::string& user_str;
+    std::string* user_str = nullptr;
 
     // Autocomplete results
     std::vector<std::string> candidates;
@@ -18,7 +18,7 @@ struct tag_autocomplete {
     // A hint to call apply_selection() ASAP
     bool need_apply = false;
 
-    // A hint to update the results ASAP
+    // A hint to update the TAC results ASAP
     bool need_refresh = false;
 
     s32 cur_idx = 0;
@@ -44,21 +44,6 @@ struct tag_autocomplete {
 
     // Wipe all text/state
     void reset() noexcept;
-
-    explicit tag_autocomplete(std::string& user_str) : user_str(user_str) {}
-    tag_autocomplete& operator=(const tag_autocomplete& other) {
-        need_apply = other.need_apply;
-        need_refocus = other.need_refocus;
-        need_refresh = other.need_refresh;
-        cur_idx = other.cur_idx;
-        candidates = other.candidates;
-        user_str = other.user_str;
-        return *this;
-    }
-
-    tag_autocomplete(const tag_autocomplete& other) : user_str(other.user_str) {
-        *this = other;
-    }
 };
 
 

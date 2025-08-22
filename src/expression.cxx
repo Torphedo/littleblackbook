@@ -10,6 +10,7 @@
 #include <common/int.h>
 #include <common/logging.h>
 #include "tags.hxx"
+#include "sqlgen.hxx"
 
 // Operators for use in Pratt parsing.
 // See the following articles for details:
@@ -221,8 +222,8 @@ tag_expression::tag_expression(const char* text, u64 len) {
     }
 }
 
-void sqlgen_value(const tag_expression::value& val, bool is_negated, std::string& sql_out) {
-    if (VAL_IS_EMPTY_EXPR(val) || VAL_IS_EMPTY_IMM(val) || val.valueless_by_exception()) {
+void sqlgen_value(const tag_expression::value& val, bool is_negated, std::string& sql_out, tag_op op) {
+    if (VAL_IS_EMPTY_EXPR(val) || val.valueless_by_exception()) {
         return; // No valid expression or text here
     }
 
@@ -236,6 +237,17 @@ void sqlgen_value(const tag_expression::value& val, bool is_negated, std::string
         }
         const std::string& tag = std::get<std::string>(val);
         LOG_MSG(debug, "Hashing tag %d chars from \"%*s\"\n", tag.length(), tag.length(), tag.c_str());
+        if (tag.empty()) {
+            if (op == tag_op::AND) {
+                // Empty tag selects all
+                sqlgen(sql_out, "SELECT song_hash FROM " RESOLVED_TAG_SONG_TABLE);
+                return;
+            } else if (op == tag_op::OR) {
+                // Empty tag selects none
+                sqlgen(sql_out, "SELECT song_hash FROM " RESOLVED_TAG_SONG_TABLE " WHERE 1 <> 1");
+                return;
+            }
+        }
         search_tag(tag.c_str(), sql_out, false, tag.length());
     }
 }
@@ -248,19 +260,20 @@ void sqlgen_expression(const tag_expression& expr, std::string& sql_out) {
     recurse_depth++;
 
 
-    sqlgen_value(expr.lhs, (expr.op == tag_op::NOT), sql_out);
+    sqlgen_value(expr.lhs, (expr.op == tag_op::NOT), sql_out, expr.op);
 
     if (expr.op == tag_op::AND) {
         sql_out.append("\nINTERSECT ");
     } else if (expr.op == tag_op::OR) {
         sql_out.append("\nUNION ");
     }
-    sqlgen_value(expr.rhs, false, sql_out);
+    sqlgen_value(expr.rhs, false, sql_out, expr.op);
 
     recurse_depth--;
 
     if (recurse_depth == 0) {
         // Terminate statement
         sql_out.append(";\n");
+        LOG_MSG(debug, "%s\n", sql_out.c_str());
     }
 }

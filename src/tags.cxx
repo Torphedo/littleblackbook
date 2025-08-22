@@ -121,12 +121,12 @@ void search_tag(const char* tag, std::string& sql_out, bool standalone_query, s3
     if (tag_len < 0) {
         tag_len = strlen(tag);
     }
+
     const char* colon = strnchr(tag, ':', tag_len);
     const ptrdiff_t namespace_len = ptrdiff_t(colon) - ptrdiff_t(tag);
 
     bool is_year = false;
     if (colon != nullptr) {
-        // This tag has a namespace, split it up.
         if (strncmp(tag, "year", namespace_len) == 0) {
             is_year = true;
         }

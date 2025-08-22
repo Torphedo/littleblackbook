@@ -14,6 +14,10 @@ enum class tag_op : u8 {
     PAREN, // Internal to the parser, will never show up in a tree
 };
 
+static const char* tag_op_strs[] = {
+    "", "AND", "OR", "NOT", "PAREN",
+};
+
 struct substr_t {
     const char* data;
     u32 length;
@@ -34,13 +38,13 @@ struct tag_expression {
     #define VAL_IS_EXPR(val) std::holds_alternative<tag_expression*>(val)
     #define VAL_IS_IMM(val) std::holds_alternative<std::string>(val)
     #define VAL_IS_EMPTY_EXPR(val) (VAL_IS_EXPR(val) && std::get<tag_expression*>(val) == nullptr)
-    #define VAL_IS_EMPTY_IMM(val) (VAL_IS_IMM(val) && std::get<std::string>(val).size() == 0)
+    #define VAL_IS_EMPTY_IMM(val) (VAL_IS_IMM(val) && std::get<std::string>(val).empty())
 
     // Left/right hand side
     value lhs = "";
-    value rhs;
+    value rhs = "";
 
-    tag_op op = tag_op::NONE;
+    tag_op op = tag_op::AND;
 
     operator value() {
         if (op == tag_op::NONE) {

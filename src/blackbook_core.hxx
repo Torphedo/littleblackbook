@@ -39,7 +39,7 @@ struct runtime_song {
 
     // Text input for the user to add tags to a song
     std::string input_buf;
-    tag_autocomplete tac = tag_autocomplete(input_buf);
+    tag_autocomplete tac = tag_autocomplete(&input_buf);
 };
 
 // A headless search menu
@@ -48,7 +48,8 @@ struct tag_search {
     tag_expression expr;
 
     // Autocomplete results and tag input buffer
-    tag_autocomplete tac = tag_autocomplete(std::get<std::string>(expr.lhs));
+    std::string unused;
+    tag_autocomplete tac;
 
     std::vector<song_hash_t> result_hashes;
 
@@ -89,9 +90,9 @@ struct blackbook_core {
 
     // Tag input fields the user will submit
     std::string child_input;
-    tag_autocomplete tac_child = tag_autocomplete(child_input);
+    tag_autocomplete tac_child = tag_autocomplete(&child_input);
     std::string parent_input;
-    tag_autocomplete tac_parent = tag_autocomplete(parent_input);
+    tag_autocomplete tac_parent = tag_autocomplete(&parent_input);
 
     // Debug performance timers
     std::unordered_map<const char*, float> timer_map;

@@ -143,18 +143,8 @@ bool nativegui::draw_song_row(song_hash_t hash, float thumb_size) noexcept {
 bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noexcept {
     bool open = true;
     if (ImGui::Begin(win_title, &open)) {
-        // Focus text input so user can keep typing
-        if (search.tac.need_refocus) {
-            search.tac.need_refocus = false; // Reset flag
-            ImGui::SetKeyboardFocusHere();
-        }
-
-        // Input for next tag
-        ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
-        if (ImGui::InputTagAutocompleted("##tag", "Input a tag", flags, search.tac, core)) {
-            const scope_timer main_timer(core.timer_map, "last_search");
+        if (ImGui::EditExpression(search.expr, search.tac, core)) {
             search.update_results(core.db);
-            search.tac.reset();
         }
 
         if (ImGui::Button("Add to playlist")) {
@@ -290,7 +280,7 @@ bool nativegui::toolbar_player() noexcept {
             }
 
             char tmpbuf[128] = {0};
-            snprintf(tmpbuf, sizeof(tmpbuf), "%d:%02d / %d:%02d", u32(progress) / 60, u32(progress) % 60, u32(total) / 60, u32(total) % 60);
+            snprintf(tmpbuf, sizeof(tmpbuf) - 1, "%d:%02d / %d:%02d", u32(progress) / 60, u32(progress) % 60, u32(total) / 60, u32(total) % 60);
 
             if (ImGui::SliderFloat("##progress", &progress, 0.0f, total, tmpbuf)) {
                 SeekMusicStream(core.audio_stream, progress);
@@ -434,7 +424,7 @@ bool nativegui::toolbar_main() noexcept {
     }
 
     if (new_search) {
-        core.searches.push_back(tag_search());
+        core.searches.emplace_back();
     }
 
     // This should probably be its own method, right? - torph

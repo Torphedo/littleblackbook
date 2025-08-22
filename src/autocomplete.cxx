@@ -4,7 +4,7 @@
 #include "tags.hxx"
 
 bool tag_autocomplete::update_results(sqlite3* db) noexcept {
-    return autocomplete_tag(db, user_str, candidates);
+    return autocomplete_tag(db, *user_str, candidates);
 }
 
 void tag_autocomplete::update_selection(s8 diff) noexcept {
@@ -22,16 +22,17 @@ void tag_autocomplete::update_selection(s8 diff) noexcept {
 
 void tag_autocomplete::apply_selection() noexcept {
     // User selected a result. Copy to user buffer and wipe results.
-    user_str = current();
+    *user_str = current();
     candidates.clear();
     cur_idx = 0;
 }
 
 std::string& tag_autocomplete::current() noexcept {
-    assert(cur_idx <= candidates.size() && cur_idx >= 0 && "Autocomplete index out of bounds!");
+    // Keep in bounds
+    cur_idx = CLAMP(0, cur_idx, candidates.size());
 
     if (cur_idx == 0) {
-        return user_str;
+        return *user_str;
     } else {
         return candidates[cur_idx - 1];
     }
@@ -39,6 +40,6 @@ std::string& tag_autocomplete::current() noexcept {
 
 void tag_autocomplete::reset() noexcept {
     candidates.clear();
-    user_str = "";
+    *user_str = "";
     cur_idx = 0;
 }
