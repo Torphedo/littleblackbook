@@ -189,6 +189,10 @@ void parse_tail_tokens(const substr_t& cur_tok, std::queue<substr_t>& lex, tag_e
 }
 
 tag_expression recurse_parse(std::queue<substr_t>& lex, u8 subexpr_precedence) {
+    if (lex.empty()) {
+        return {};
+    }
+
     substr_t& cur_tok = lex.front();
     lex.pop();
     tag_expression processed_left;
