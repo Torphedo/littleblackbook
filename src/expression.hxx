@@ -65,7 +65,5 @@ private:
     tag_expression(std::queue<substr_t> tokens);
 };
 
-tag_expression recurse_parse(std::queue<substr_t>& lex, u8 subexpr_precedence);
-void parse_tail_tokens(const substr_t& cur_tok, std::queue<substr_t>& lex, tag_expression& partial_expr);
-
+// Generate a SQL query that implements the expression.
 void sqlgen_expression(const tag_expression& expr, std::string& sql_out);

@@ -3,7 +3,6 @@
 #include <cstring>
 #include <cassert>
 
-#include <exception>
 #include <queue>
 #include <string>
 
@@ -19,6 +18,9 @@
 typedef struct {
     const char* token;
     tag_op op_enum;
+    // Binding is how strongly the operator pulls values on each side, used to
+    // implement operator precedence. For example '*' has higher binding power
+    // than '+'.
     u8 left_binding;
     u8 right_binding;
 }operator_t;
@@ -73,6 +75,7 @@ operator_t op_from_token(const substr_t& str) {
 
 static const char reserved_chars[] = "(-)";
 
+// Shatter text into a set of tokens
 std::queue<substr_t> shatter_str(const char* text, s64 len) {
     // Remove trailing whitespace
     while (isspace(text[MAX(0, len - 1)]) && len > 0) {
@@ -155,6 +158,11 @@ std::queue<substr_t> shatter_str(const char* text, s64 len) {
     return out;
 }
 
+// Forward declarations to allow for mutual recursion
+tag_expression recurse_parse(std::queue<substr_t>& lex, u8 subexpr_precedence);
+void parse_tail_tokens(const substr_t& cur_tok, std::queue<substr_t>& lex, tag_expression& partial_expr);
+
+// A callback for tokens on the left side ("head" side) of an operator
 tag_expression parse_head_tokens(substr_t cur_tok, std::queue<substr_t>& lex) {
     tag_expression result = {};
     const operator_t cur_op = op_from_token(cur_tok);
@@ -173,6 +181,7 @@ tag_expression parse_head_tokens(substr_t cur_tok, std::queue<substr_t>& lex) {
     return result;
 }
 
+// A callback for tokens on the right side ("tail" side) of an operator
 void parse_tail_tokens(const substr_t& cur_tok, std::queue<substr_t>& lex, tag_expression& partial_expr) {
     const operator_t cur_op = op_from_token(cur_tok);
     tag_expression next_expr = recurse_parse(lex, cur_op.left_binding);
@@ -200,7 +209,7 @@ tag_expression recurse_parse(std::queue<substr_t>& lex, u8 subexpr_precedence) {
         // Treat everything inside parens as a totally independent expression
         processed_left = recurse_parse(lex, 0);
 
-        substr_t& closing_tok = lex.front();
+        substr_t closing_tok = lex.front();
         lex.pop();
         // TODO: Do safe error handling (here and throughout parsing)
         assert(closing_tok.data[0] == ')');
@@ -226,6 +235,7 @@ tag_expression::tag_expression(const char* text, u64 len) {
     }
 }
 
+/// @param op The operator of the expression where this value comes from
 void sqlgen_value(const tag_expression::value& val, bool is_negated, std::string& sql_out, tag_op op) {
     if (VAL_IS_EMPTY_EXPR(val) || val.valueless_by_exception()) {
         return; // No valid expression or text here
@@ -244,11 +254,11 @@ void sqlgen_value(const tag_expression::value& val, bool is_negated, std::string
         if (tag.empty()) {
             if (op == tag_op::AND) {
                 // Empty tag selects all
-                sqlgen(sql_out, "SELECT song_hash FROM " RESOLVED_TAG_SONG_TABLE);
+                sql_out.append("SELECT song_hash FROM songs");
                 return;
             } else if (op == tag_op::OR) {
                 // Empty tag selects none
-                sqlgen(sql_out, "SELECT hash FROM songs WHERE 1 <> 1");
+                sql_out.append("SELECT hash FROM songs WHERE 1 <> 1");
                 return;
             }
         }
