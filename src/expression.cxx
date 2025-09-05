@@ -254,7 +254,7 @@ void sqlgen_value(const tag_expression::value& val, bool is_negated, std::string
         if (tag.empty()) {
             if (op == tag_op::AND) {
                 // Empty tag selects all
-                sql_out.append("SELECT song_hash FROM songs");
+                sql_out.append("SELECT hash FROM songs");
                 return;
             } else if (op == tag_op::OR) {
                 // Empty tag selects none
