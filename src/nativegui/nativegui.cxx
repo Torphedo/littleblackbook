@@ -138,7 +138,10 @@ bool nativegui::draw_song_row(song_hash_t hash, float thumb_size) noexcept {
 bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noexcept {
     bool open = true;
     if (ImGui::Begin(win_title, &open)) {
-        if (ImGui::EditExpression(search.expr, search.tac, core)) {
+        const bool edited = ImGui::EditExpression(search.expr, search.tac, core);
+        const bool refresh = ImGui::Button("Search");
+        if (edited || refresh) {
+            const scope_timer timer(this->core.timer_map, "do_search");
             search.update_results(core.db);
         }
 
