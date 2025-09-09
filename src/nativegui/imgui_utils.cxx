@@ -172,9 +172,9 @@ namespace ImGui {
     bool EditExpression(tag_expression& expr, tag_autocomplete& tac, blackbook_core& core, u32 indent) {
         bool result = false;
 
+        result = EditExpressionValue(expr.lhs, tac, core, indent);
         Indent(indent);
         TagOpDropDown(expr.op);
-        result = EditExpressionValue(expr.lhs, tac, core, indent);
         result |= EditExpressionValue(expr.rhs, tac, core, indent);
 
         return result;
