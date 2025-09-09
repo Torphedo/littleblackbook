@@ -57,17 +57,15 @@ struct tag_expression {
             return lhs;
         } else {
             // This requires its own expression
-            tag_expression* expr = new tag_expression;
-            *expr = *this;
-            return expr;
+            return new tag_expression(*this);
         }
     }
 
     tag_expression(const char* text, u64 len);
-    tag_expression(const char* text) : tag_expression(text, strlen(text)) {}
-    tag_expression() = default;
+    explicit tag_expression(const char* text) : tag_expression(text, strlen(text)) {}
+    explicit tag_expression(std::queue<substr_t> tokens);
 
-    tag_expression(std::queue<substr_t> tokens);
+    tag_expression() = default;
 };
 
 // Shatter text into a set of tokens

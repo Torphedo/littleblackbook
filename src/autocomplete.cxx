@@ -5,7 +5,8 @@
 
 std::string_view tag_autocomplete::tac_substr() const noexcept {
     std::queue<substr_t> tokens = shatter_str(user_str->c_str(), user_str->length());
-    const std::string_view tok = tokens.empty() ? std::string_view ("") : tokens.back();
+    const std::string_view empty(user_str->c_str(), 0);
+    const std::string_view tok = tokens.empty() ? empty : tokens.back();
     return tok;
 }
 
@@ -33,9 +34,12 @@ void tag_autocomplete::apply_selection() noexcept {
     }
 
     // User selected a result. Copy to user buffer and wipe results.
-
     const std::string_view tok = tac_substr();
-    const s64 pos = tok.data() - user_str->data();
+    s64 pos = tok.data() - user_str->data();
+
+    if (pos < 0) {
+        return; // Wrong pointer or something
+    }
 
     user_str->replace(pos, tok.length(), current());
     candidates.clear();
