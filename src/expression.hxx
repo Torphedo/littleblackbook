@@ -26,6 +26,10 @@ struct substr_t {
     operator std::string() {
         return std::string(data, length);
     }
+
+    operator std::string_view() {
+        return std::string_view(data, length);
+    }
 };
 
 // Recursive expression structure used for complex queries like:
@@ -61,9 +65,12 @@ struct tag_expression {
     tag_expression(const char* text, u64 len);
     tag_expression(const char* text) : tag_expression(text, strlen(text)) {}
     tag_expression() = default;
-private:
+
     tag_expression(std::queue<substr_t> tokens);
 };
+
+// Shatter text into a set of tokens
+std::queue<substr_t> shatter_str(const char* text, s64 len);
 
 // Generate a SQL query that implements the expression.
 void sqlgen_expression(const tag_expression& expr, std::string& sql_out);

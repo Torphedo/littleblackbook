@@ -42,6 +42,11 @@ struct tag_autocomplete {
     /// @param db The database to query for results. The database won't be modified.
     bool update_results(sqlite3* db) noexcept;
 
+    /// @brief Find the substring that should be auto-completed
+    ///
+    /// This is generally where the user is currently typing.
+    [[nodiscard]] std::string_view tac_substr() const noexcept;
+
     // Wipe all text/state
     void reset() noexcept;
 

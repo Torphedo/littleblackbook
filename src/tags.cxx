@@ -191,14 +191,20 @@ void search_many_tags_and(const char* const* tags, u64 num_tags, std::string& sq
     sql_out.append(";\n");
 }
 
-bool autocomplete_tag(sqlite3* db, const std::string& user_str, std::vector<std::string>& candidates) {
+bool autocomplete_tag(sqlite3* db, const std::string_view& user_str, std::vector<std::string>& candidates) {
     // Wipe previous results
     candidates.clear();
 
     // We use this to skip the minus sign in the generated SQL
-    const bool minus = user_str[0] == '-';
+    bool minus = false;
+    if (!user_str.empty()) {
+        minus = user_str[0] == '-';
+    }
+    std::string_view temp = user_str;
+    temp.remove_prefix(minus);
+
     // '"[user_str] *"'. Quotes and '*' are required by FTS5 table.
-    const std::string search_val = "\"" + std::string(user_str.c_str() + minus) + "\" *";
+    const std::string search_val = "\"" + std::string(user_str) + "\" *";
 
     // This searches the tag table, then uses the result to find the namespace.
     // Both of the results are strings.

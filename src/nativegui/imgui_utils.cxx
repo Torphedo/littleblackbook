@@ -52,11 +52,13 @@ namespace ImGui {
 
         // We need a callback to make this work. History == up/down keys
         flags |= ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackEdit | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
-        if (ImGui::InputTextWithHint(real_label.c_str(), hint, &tac.current(), flags, autocomplete_update_selection, &tac)) {
+        if (ImGui::InputTextWithHint(real_label.c_str(), hint, tac.user_str, flags, autocomplete_update_selection, &tac)) {
             result = true;
             tac.need_refocus = true;
             tac.need_apply = true;
         }
+
+        result |= tac.need_apply;
 
         // This is done via flag since it can invalidate pointers, which is a problem
         // in callbacks.
@@ -73,8 +75,13 @@ namespace ImGui {
         }
 
         // Draw results
-        for (const std::string& candidate : tac.candidates) {
-            ImGui::Text("%s", candidate.c_str());
+        for (u32 i = 0; i < tac.candidates.size(); i++) {
+            const std::string& candidate = tac.candidates[i];
+            const ImVec4 green = ImVec4(0, 255, 0, 255);
+            const ImVec4 white = ImVec4(255, 255, 255, 255);
+            const ImVec4 color = ((i + 1) == tac.cur_idx) ? green : white;
+
+            ImGui::TextColored(color, "%s", candidate.c_str());
         }
 
         if (!tac.candidates.empty()) {
@@ -125,6 +132,15 @@ namespace ImGui {
                     tac.need_refocus = false;
                 }
                 result = InputTagAutocompleted(label.c_str(), hint, 0, tac, core);
+
+                if (result) {
+                    std::queue<substr_t> tokens = shatter_str(tac.user_str->c_str(), tac.user_str->length());
+                    if (tokens.size() > 1) {
+                        // This is an actual expression and not a tag, run it through the parser
+                        tag_expression* expr = new tag_expression(tokens);
+                        val = expr;
+                    }
+                }
             } else {
                 InputTextWithHint(label.c_str(), hint, &str);
                 if (ImGui::IsItemFocused() || tac.user_str == nullptr) {

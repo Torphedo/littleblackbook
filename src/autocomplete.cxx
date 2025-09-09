@@ -1,10 +1,16 @@
 #include "autocomplete.hxx"
-#include <cassert>
 
 #include "tags.hxx"
+#include "expression.hxx"
+
+std::string_view tag_autocomplete::tac_substr() const noexcept {
+    std::queue<substr_t> tokens = shatter_str(user_str->c_str(), user_str->length());
+    const std::string_view tok = tokens.empty() ? std::string_view ("") : tokens.back();
+    return tok;
+}
 
 bool tag_autocomplete::update_results(sqlite3* db) noexcept {
-    return autocomplete_tag(db, *user_str, candidates);
+    return autocomplete_tag(db, tac_substr(), candidates);
 }
 
 void tag_autocomplete::update_selection(s8 diff) noexcept {
@@ -21,8 +27,17 @@ void tag_autocomplete::update_selection(s8 diff) noexcept {
 }
 
 void tag_autocomplete::apply_selection() noexcept {
+    if (cur_idx == 0) {
+        // No suggestion selected, nothing to apply.
+        return;
+    }
+
     // User selected a result. Copy to user buffer and wipe results.
-    *user_str = current();
+
+    const std::string_view tok = tac_substr();
+    const s64 pos = tok.data() - user_str->data();
+
+    user_str->replace(pos, tok.length(), current());
     candidates.clear();
     cur_idx = 0;
 }
