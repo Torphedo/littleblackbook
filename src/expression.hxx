@@ -43,6 +43,7 @@ struct tag_expression {
     #define VAL_IS_IMM(val) std::holds_alternative<std::string>(val)
     #define VAL_IS_EMPTY_EXPR(val) (VAL_IS_EXPR(val) && std::get<tag_expression*>(val) == nullptr)
     #define VAL_IS_EMPTY_IMM(val) (VAL_IS_IMM(val) && std::get<std::string>(val).empty())
+    #define VAL_IS_EMPTY(val) (VAL_IS_EMPTY_IMM(val) || VAL_IS_EMPTY_EXPR(val))
 
     // Left/right hand side
     value lhs = "";
@@ -51,8 +52,8 @@ struct tag_expression {
     tag_op op = tag_op::AND;
 
     operator value() {
-        if (op == tag_op::NONE) {
-            // Trivial expression, we can "inline" it as an immediate value
+        if (op == tag_op::NONE || VAL_IS_EMPTY(rhs)) {
+            // Trivial expression, we can inline it as an immediate value
             return lhs;
         } else {
             // This requires its own expression
