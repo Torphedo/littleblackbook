@@ -31,7 +31,8 @@ void blackbook_core::add_to_playlist(const song_hash_t* songs, u64 num_songs, pl
         pos = playlist_pos + 1;
         break;
     }
-    // Keep in range
+    // Keep in range. We clamp to size() and not size() -1 because in append
+    // mode we want to write after the last element
     pos = CLAMP(0, pos, (s32)playlist.size());
 
     const bool need_init = playlist.empty();
@@ -49,6 +50,21 @@ void blackbook_core::add_to_playlist(const song_hash_t* songs, u64 num_songs, pl
     if (need_init) {
         playlist_change_song(0);
     }
+}
+
+void blackbook_core::del_in_playlist(s32 pos) {
+    std::lock_guard lock(playlist_lock);
+    s32 upper_limit = MAX(0, (s32)playlist.size() - 1);
+    pos = CLAMP(0, pos, upper_limit);
+
+    playlist.erase(playlist.begin() + pos);
+    if (pos <= playlist_pos) {
+        playlist_pos--;
+    }
+
+    // Need to recalculate since we edited the vector. Could just -1 but this is fine
+    upper_limit = MAX(0, (s32)playlist.size() - 1);
+    playlist_pos = CLAMP(0, playlist_pos, upper_limit);
 }
 
 void blackbook_core::playlist_change_song(s8 diff) noexcept {

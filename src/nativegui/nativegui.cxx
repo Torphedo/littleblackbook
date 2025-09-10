@@ -115,6 +115,9 @@ bool nativegui::draw_song_row(song_hash_t hash, float thumb_size) noexcept {
             playlist_add = true;
             type = blackbook_core::PLAYLIST_PREPEND;
         }
+        if (ImGui::MenuItem("Remove from playlist")) {
+            core.del_in_playlist(cur_row - 1);
+        }
         if (ImGui::MenuItem("Play next")) {
             playlist_add = true;
             type = blackbook_core::PLAYLIST_NEXT;
