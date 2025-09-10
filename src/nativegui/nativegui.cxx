@@ -93,15 +93,17 @@ bool nativegui::draw_song_row(song_hash_t hash, float thumb_size) noexcept {
 
     ImGui::TableNextRow(0, thumb_size);
     ImGui::TableSetColumnIndex(0);
+    const u32 cur_row = ImGui::TableGetRowIndex();
 
     const runtime_song& s = core.song_map.at(hash);
+    const std::string label = s.name + "##" + std::to_string(cur_row);
+
     ImGui::Image(thumbnails.at(s.hash), ImVec2(thumb_size, thumb_size));
     ImGui::SameLine();
     // The 2nd arg is whether the row is selected (for highlighting)
-    if (ImGui::Selectable(s.name.c_str(), false, 0, ImVec2(0, thumb_size))) {
+    if (ImGui::Selectable(label.c_str(), false, 0, ImVec2(0, thumb_size))) {
         result = true;
     }
-    const s32 cur_row = ImGui::TableGetRowIndex();
 
     blackbook_core::playlist_add_type type = blackbook_core::PLAYLIST_APPEND;
     bool playlist_add = false;
