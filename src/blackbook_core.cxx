@@ -66,7 +66,7 @@ void blackbook_core::playlist_change_song(s8 diff) noexcept {
         playlist_pos += diff;
         // Get back in range
         while (playlist_pos < 0) {
-            playlist_pos += size - 1;
+            playlist_pos += size;
         }
 
         playlist_pos %= size;
