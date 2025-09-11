@@ -4,9 +4,6 @@ project(blackbook
     LANGUAGES CXX C
 )
 
-# We care about the exact library name when loading the CRC32 extension for SQLite
-set(CMAKE_SHARED_LIBRARY_PREFIX "")
-
 # We need compile_commands.json for the include paths in some editors
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 # Enable LTO
@@ -15,11 +12,12 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 
-find_package(ICU COMPONENTS i18n io uc)
-
-message("Was ICU found? ${ICU_FOUND} (v${ICU_VERSION})")
-message("ICU libraries: ${ICU_LIBRARIES}")
-message("ICU include dir is: ${ICU_INCLUDE_DIRS}")
+# We're not using ICU for now because it creates a runtime dependency that's
+# annoying to resolve when set up like this.
+# find_package(ICU COMPONENTS i18n io uc)
+# message("Was ICU found? ${ICU_FOUND} (v${ICU_VERSION})")
+# message("ICU libraries: ${ICU_LIBRARIES}")
+# message("ICU include dir is: ${ICU_INCLUDE_DIRS}")
 
 include_directories(
     src
@@ -107,11 +105,6 @@ target_link_libraries(blackbook PUBLIC
     bobtail
     sqlite3-static glfw imgui nfd raudio stb_image
 )
-
-if (ICU_FOUND)
-    target_link_libraries(blackbook PUBLIC ${ICU_LIBRARIES})
-    add_compile_definitions(HAVE_ICU)
-endif()
 
 if (WIN32)
     # SQLite needs this to generate UUIDs
