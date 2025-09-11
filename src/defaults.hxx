@@ -8,9 +8,43 @@ typedef struct {
 #define ARTIST_LINK(child, parent) { "artist:" child, "artist:" parent }
 #define HIPHOP_ARTIST(str) { "artist:" str, "hip hop" }
 #define IRISH_ARTIST(str) { "artist:" str, "irish" }
+#define DNB_ARTIST(str) { "artist:" str, "drum and bass" }
+#define HYPERPOP_ARTIST(str) { "artist:" str, "hyperpop" }
+#define ELECTRONIC_ARTIST(str) { "artist:" str, "electronic" }
+#define PUNK_ARTIST(str) { "artist:" str, "punk" }
 
 static constexpr default_tag_pair default_tag_parents[] = {
+// Genre parents
+    {"drum and bass", "electronic"},
+    {"dubstep", "electronic"},
+    {"hyperpop", "electronic"},
+    {"classic rock", "rock"},
+    {"punk", "rock"},
+    {"ska", "punk"},
+    {"metal", "rock"},
+
 // Genres
+    {"less than jake", "ska"},
+    {"skanatra", "ska"},
+    {"streetlight manifesto", "ska"},
+    PUNK_ARTIST("jerry big's world famous band"),
+    PUNK_ARTIST("leaking head"),
+    PUNK_ARTIST("street hassle"),
+    PUNK_ARTIST("bikini kill"),
+    PUNK_ARTIST("goldfinger"),
+    PUNK_ARTIST("the presidents of the united states of america"),
+    PUNK_ARTIST("the frumpies"),
+    PUNK_ARTIST("sum 41"),
+    PUNK_ARTIST("the clash"),
+    PUNK_ARTIST("l7"),
+    PUNK_ARTIST("adolescents"),
+    PUNK_ARTIST("sonic youth"),
+    PUNK_ARTIST("propagandhi"),
+    PUNK_ARTIST("pinkshift"),
+    PUNK_ARTIST("paramore"),
+    {"paramore", "metal"},
+    {"rainbow", "metal"},
+
     HIPHOP_ARTIST("mos def"),
     HIPHOP_ARTIST("talib kweli"),
     HIPHOP_ARTIST("a tribe called quest"),
@@ -39,7 +73,6 @@ static constexpr default_tag_pair default_tag_parents[] = {
     HIPHOP_ARTIST("grandmaster caz"),
     HIPHOP_ARTIST("young mc"),
     HIPHOP_ARTIST("nas"),
-    // TODO: Once we do proper escaping or parameterized queries, unncomment this.
     HIPHOP_ARTIST("royce da 5'9\""),
     HIPHOP_ARTIST("ol' dirty bastard"),
     HIPHOP_ARTIST("rza"),
@@ -58,6 +91,56 @@ static constexpr default_tag_pair default_tag_parents[] = {
     IRISH_ARTIST("flogging molly"),
     IRISH_ARTIST("1916"),
     IRISH_ARTIST("dropkick murphys"),
+
+    DNB_ARTIST("frequency"),
+    DNB_ARTIST("glitchrode"),
+    DNB_ARTIST("kettleonwater"),
+    DNB_ARTIST("kubazx"),
+    DNB_ARTIST("eightiesheadachetape"),
+
+    HYPERPOP_ARTIST("golemm"),
+    HYPERPOP_ARTIST("marshall4"),
+    HYPERPOP_ARTIST("food house"),
+    HYPERPOP_ARTIST("gupi"),
+    HYPERPOP_ARTIST("fraxiom"),
+    HYPERPOP_ARTIST("underscores"),
+    HYPERPOP_ARTIST("cmten"),
+    HYPERPOP_ARTIST("glitch gum"),
+    HYPERPOP_ARTIST("100 gecs"),
+    HYPERPOP_ARTIST("frost children"),
+    HYPERPOP_ARTIST("saoirse dream"),
+    HYPERPOP_ARTIST("jane remover"),
+    HYPERPOP_ARTIST("webcage"),
+    HYPERPOP_ARTIST("laura les"),
+
+    ELECTRONIC_ARTIST("federation"),
+    ELECTRONIC_ARTIST("home"),
+    ELECTRONIC_ARTIST("no mana"),
+    ELECTRONIC_ARTIST("ascension"),
+    ELECTRONIC_ARTIST("toriena"),
+    ELECTRONIC_ARTIST("adolf nomura"),
+    ELECTRONIC_ARTIST("paul oakenfold"),
+    ELECTRONIC_ARTIST("morch kovalski"),
+    ELECTRONIC_ARTIST("holy fuck"),
+    ELECTRONIC_ARTIST("emancipator"),
+    ELECTRONIC_ARTIST("danger"),
+    ELECTRONIC_ARTIST("waveshaper"),
+    ELECTRONIC_ARTIST("the toxic avenger"),
+    ELECTRONIC_ARTIST("scattle"),
+    {"album:furi (original game soundtrack)", "electronic"},
+    {"album:pinout (original soundtrack)", "electronic"},
+    ELECTRONIC_ARTIST("fred v & grafx"),
+    ELECTRONIC_ARTIST("hooverphonic"),
+    ELECTRONIC_ARTIST("flashygoodness"),
+    ELECTRONIC_ARTIST("chemical brothers"),
+    ELECTRONIC_ARTIST("bachelors of science"),
+    ELECTRONIC_ARTIST("new order"),
+    ELECTRONIC_ARTIST("gereon"),
+    {"skrillex", "dubstep"},
+    ELECTRONIC_ARTIST("meganeko"),
+    ELECTRONIC_ARTIST("ex-lyd"),
+    ELECTRONIC_ARTIST("power glove"),
+    ELECTRONIC_ARTIST("bignic"),
 
 // Artist aliases/groups
     ARTIST_LINK("yasiin bey", "mos def"),
@@ -90,4 +173,5 @@ static constexpr default_tag_pair default_tag_parents[] = {
     ARTIST_LINK("onemanarmy", "one be lo"),
     ARTIST_LINK("binary star", "one be lo"),
     ARTIST_LINK("binary star", "senim silla"),
+
 };
