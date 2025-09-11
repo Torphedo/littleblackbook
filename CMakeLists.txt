@@ -24,9 +24,6 @@ include_directories(
     lib
     lib/bobtail
 
-    # We don't actually need this, but bobtail::setup_opengl() relies on input.h,
-    # which uses vector types.
-    lib/cglm/include
     lib/imgui
     lib/glad/include
     lib/sqlite
