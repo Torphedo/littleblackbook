@@ -119,6 +119,10 @@ bool nativegui::draw_song_row(song_hash_t hash, bool highlight, float thumb_size
     char popup_name[128] = {0};
     snprintf(popup_name, sizeof(popup_name), "song popup [%d] [%d]", hash, cur_row);
     if (ImGui::BeginPopupContextItem(popup_name)) {
+        if (ImGui::MenuItem("Play next")) {
+            playlist_add = true;
+            type = blackbook_core::PLAYLIST_NEXT;
+        }
         if (ImGui::MenuItem("Append to playlist")) {
             playlist_add = true;
         }
@@ -128,10 +132,6 @@ bool nativegui::draw_song_row(song_hash_t hash, bool highlight, float thumb_size
         }
         if (ImGui::MenuItem("Remove from playlist")) {
             core.del_in_playlist(cur_row - 1);
-        }
-        if (ImGui::MenuItem("Play next")) {
-            playlist_add = true;
-            type = blackbook_core::PLAYLIST_NEXT;
         }
         if (ImGui::MenuItem("Open editor")) {
             result = true;
