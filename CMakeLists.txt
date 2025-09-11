@@ -97,19 +97,14 @@ add_executable(blackbook
     src/scope_timer.cxx
     src/text_i8n.cxx
 
+    src/sqlite-crc32.c
+
     lib/glad/src/glad.c # Can't be bothered to make this its own target
     src/autocomplete.cxx
 )
 
-# We dynamically load this in SQLite to add CRC32 support for SQL code
-add_library(sqlite_crc32 SHARED
-    lib/sqlite-crc32.c
-)
-target_link_libraries(sqlite_crc32 PUBLIC bobtail)
-
 target_link_libraries(blackbook PUBLIC
     bobtail
-    sqlite_crc32 # We link with this at runtime, so this ensures it gets built
     sqlite3-static glfw imgui nfd raudio stb_image
 )
 

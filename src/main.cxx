@@ -4,11 +4,13 @@
 #include <common/logging.h>
 #include <common/path.h>
 
-#include "expression.hxx"
+#include "cli/cli_main.hxx"
 #include "nativegui/nativegui.hxx"
 #include "nativegui/gui_bootstrap.hxx"
-#include "cli/cli_main.hxx"
+
+#include "expression.hxx"
 #include "arguments.hxx"
+#include "sqlite-crc32.h"
 
 int main(int argc, char** argv) {
     // Enable ANSI escape codes (for printing in color) on Windows
@@ -39,9 +41,19 @@ int main(int argc, char** argv) {
     const tag_expression expr("  NOT foo chop suey  AND (bar fight OR -baz)");
 
     sqlite3_initialize();
+    char* errmsg = nullptr;
+    if (sqlite3_auto_extension((void(*)())sqlite3_sqlitecrc_init) != SQLITE_OK) {
+        if (errmsg) {
+            LOG_MSG(error, "Unabled to load CRC32 extension because: %s\n", errmsg);
+        }
+        result = EXIT_FAILURE;
+        return result;
+    } else {
+        LOG_MSG(info, "Successfully loaded CRC32 extension.\n");
+    }
+
     sqlite3* db = nullptr;
     int res = sqlite3_open(db_path, &db);
-    char* errmsg = nullptr;
     if (res != SQLITE_OK) {
         const char* msg = sqlite3_errmsg(db);
         LOG_MSG(error, "Failed to open database \"%s\" (reason: \"%s\")!\n", db_path, msg);
@@ -60,18 +72,6 @@ int main(int argc, char** argv) {
         goto exit;
     } else {
         LOG_MSG(info, "Enabled foreign keys\n");
-    }
-
-    // Enable extension loading (from C only, not SQL) and try to load CRC32 module
-    sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, nullptr);
-    if (sqlite3_load_extension(db, "./sqlite_crc32", nullptr, &errmsg) != SQLITE_OK) {
-        if (errmsg) {
-            LOG_MSG(error, "Unabled to load CRC32 extension because: %s\n", errmsg);
-        }
-        result = EXIT_FAILURE;
-        goto exit;
-    } else {
-        LOG_MSG(info, "Successfully loaded CRC32 extension.\n");
     }
 
     if (args.cli_mode) {

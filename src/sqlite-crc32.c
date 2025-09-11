@@ -54,9 +54,6 @@ static void crc32Func( sqlite3_context *context, const int argc, sqlite3_value *
 	}
 }
 
-#ifdef _WIN32
-__declspec(dllexport)
-#endif
 int sqlite3_sqlitecrc_init(sqlite3 *const db, char **const pzErrMsg, const sqlite3_api_routines *pApi) {
 	SQLITE_EXTENSION_INIT2(pApi);
 
