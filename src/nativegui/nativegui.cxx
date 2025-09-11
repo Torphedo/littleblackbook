@@ -173,6 +173,7 @@ bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noex
 
 bool nativegui::window_songs() noexcept {
     if (ImGui::Button("Add to playlist")) {
+        std::lock_guard lock(core.playlist_lock);
         // TODO: Have the playlist append function take a generic C++ iterator/collection to reduce duplication
         const bool need_init = core.playlist.empty();
         core.playlist.reserve(core.playlist.size() + core.song_map.size());
@@ -337,7 +338,13 @@ bool nativegui::toolbar_player() noexcept {
         }
     }
     if (prev_song || skip_song) {
-        core.playlist_change_song(skip_song - prev_song);
+        const float progress_ratio = progress / total;
+        if (prev_song && progress_ratio < 0.05f) {
+            progress = 0.1f;
+            SeekMusicStream(core.audio_stream, progress);
+        } else {
+            core.playlist_change_song(skip_song - prev_song);
+        }
     }
 
     if (seek_ahead || seek_back) {
