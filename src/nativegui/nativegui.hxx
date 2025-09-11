@@ -20,8 +20,6 @@ struct nativegui {
     bool music_thread_stop_flag = false;
     std::thread music_thread;
     thumbnail_storage thumbnails;
-    // This default is what makes us load thumbnails on start
-    bool need_thumbnail_reload = true;
 
     // All song hashes that need their editing window drawn
     std::set<song_hash_t> song_editors;
