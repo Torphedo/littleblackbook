@@ -91,11 +91,16 @@ void blackbook_core::playlist_change_song(s8 diff) noexcept {
     const song_hash_t cur_hash = playlist.at(playlist_pos);
     char pathbuf[512] = {0};
     snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s/%d.mp3", files_dir, cur_hash);
-    if (IsMusicReady(audio_stream)) {
-        UnloadMusicStream(audio_stream);
+    if (file_exists(pathbuf)) {
+        if (IsMusicReady(audio_stream)) {
+            UnloadMusicStream(audio_stream);
+
+            audio_stream = LoadMusicStream(pathbuf);
+            PlayMusicStream(audio_stream);
+        }
+    } else {
+        LOG_MSG(error, "File we assume exists is missing (%s)!\n", pathbuf);
     }
-    audio_stream = LoadMusicStream(pathbuf);
-    PlayMusicStream(audio_stream);
 }
 
 void blackbook_core::playlist_move_song(u32 source, u32 target) noexcept {
