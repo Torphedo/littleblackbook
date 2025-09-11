@@ -604,11 +604,12 @@ bool nativegui::gui_main(GLFWwindow *window) noexcept {
     return true;
 }
 
-static void music_loop(blackbook_core* core) {
-    while (true) {
+static void music_loop(blackbook_core* core, nativegui* gui) {
+    while (!gui->music_thread_stop_flag) {
         core->playlist_update_stream();
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+    LOG_MSG(debug, "Music playback thread stopping!\n");
 }
 
 nativegui::nativegui(sqlite3* db, const char* files_dir) noexcept
@@ -617,11 +618,12 @@ nativegui::nativegui(sqlite3* db, const char* files_dir) noexcept
     InitAudioDevice();
     // On Windows, minimizing stops all rendering and gui_main() won't run, so
     // we need to handle playback on another thread
-    music_thread = std::thread(music_loop, &core);
+    music_thread = std::thread(music_loop, &core, this);
     initialized = core.initialized;
 }
 
 nativegui::~nativegui() noexcept {
+    music_thread_stop_flag = true;
     thumbnails.thread_stop_flag = true;
     // Gather up texture IDs to be deleted in 1 call
     // TODO: Should this be done in a thumbnail object dtor?
@@ -630,4 +632,5 @@ nativegui::~nativegui() noexcept {
         textures.push_back(pair.second);
     }
     glDeleteTextures((u32)textures.size(), textures.data());
+    music_thread.join();
 }
