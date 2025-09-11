@@ -42,7 +42,7 @@ struct nativegui {
     // Draw read-only song metadata using ImGui::Text()
     void draw_song_info(const runtime_song& song) noexcept;
 
-    bool draw_song_row(song_hash_t hash, float thumb_size = 100.0f) noexcept;
+    bool draw_song_row(song_hash_t hash, bool highlight, float thumb_size = 100.0f) noexcept;
 
     bool draw_search_menu(const char* win_title, tag_search& search) noexcept;
 
@@ -146,7 +146,7 @@ struct nativegui {
                         i++;
                         continue;
                     }
-                    if (draw_song_row(hash)) {
+                    if (draw_song_row(hash, false)) {
                         song_editors.insert(hash);
                     }
                     i++;

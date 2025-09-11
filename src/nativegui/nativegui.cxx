@@ -88,7 +88,7 @@ bool nativegui::window_song_editor(runtime_song& song) {
     return true;
 }
 
-bool nativegui::draw_song_row(song_hash_t hash, float thumb_size) noexcept {
+bool nativegui::draw_song_row(song_hash_t hash, bool highlight, float thumb_size) noexcept {
     bool result = false;
 
     ImGui::TableNextRow(0, thumb_size);
@@ -100,10 +100,19 @@ bool nativegui::draw_song_row(song_hash_t hash, float thumb_size) noexcept {
 
     ImGui::Image(thumbnails.at(s.hash), ImVec2(thumb_size, thumb_size));
     ImGui::SameLine();
-    // The 2nd arg is whether the row is selected (for highlighting)
-    if (ImGui::Selectable(label.c_str(), false, 0, ImVec2(0, thumb_size))) {
+
+    // We make the selectable an invisible string, then draw normal colored 
+    // text on top
+    const std::string selectable_str_id = "##" + s.name + std::to_string(cur_row);
+    int flags = ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap;
+    if (ImGui::Selectable(selectable_str_id.c_str(), false, flags, ImVec2(0, thumb_size))) {
         result = true;
     }
+    const ImVec4 green = ImVec4(0, 255, 0, 255);
+    const ImVec4 white = ImVec4(255, 255, 255, 255);
+    ImGui::SameLine();
+    ImGui::TextColored(highlight ? green : white, "%s", s.name.c_str());
+
 
     blackbook_core::playlist_add_type type = blackbook_core::PLAYLIST_APPEND;
     bool playlist_add = false;
@@ -199,7 +208,9 @@ bool nativegui::window_playlist() noexcept {
 
         for (u32 i = 0; i < core.playlist.size(); i++) {
             const song_hash_t hash = core.playlist[i];
-            if (draw_song_row(hash)) {
+            bool is_cur_song = (i == core.playlist_pos);
+
+            if (draw_song_row(hash, is_cur_song)) {
                 song_editors.insert(hash);
             }
 
