@@ -23,8 +23,6 @@
 #include "expression.hxx"
 #include "autocomplete.hxx"
 
-// Implementation for a tag input box with autocomplete.
-// Often abbreviated as "TAC" / "tac" (looks a lot like "tag", sorry... - torph)
 struct runtime_song {
     std::string name; // Song name
     time_t import_timestamp = 0;
@@ -110,9 +108,9 @@ struct blackbook_core {
     tag_autocomplete tac_parent = tag_autocomplete(&parent_input);
 
     // Debug performance timers
-    std::unordered_map<const char*, float> timer_map;
+    mutable std::unordered_map<const char*, float> timer_map;
 
-    // Set this flag to trigger a reload at the start of the next frame
+    // Set this flag to trigger a database reload at the start of the next frame
     bool need_reload = false;
 
     enum playlist_add_type {

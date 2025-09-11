@@ -5,6 +5,8 @@
 #include <sqlite3.h>
 #include <common/int.h>
 
+// Implementation for a tag input box with autocomplete.
+// Often abbreviated as "TAC" / "tac" (looks a lot like "tag", sorry... - torph)
 struct tag_autocomplete {
     // String the user typed into the text box
     std::string* user_str = nullptr;

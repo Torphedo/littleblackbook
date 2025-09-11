@@ -24,7 +24,7 @@
 #include "imgui_utils.hxx"
 
 // Autocomplete callback for ImGui::InputText() and related functions.
-void nativegui::draw_song_info(const runtime_song& song) noexcept {
+void nativegui::draw_song_info(const runtime_song& song) const noexcept {
     ImGui::Text("Title: %s", song.name.c_str());
     ImGui::Text("Released: %u", song.release_year);
 

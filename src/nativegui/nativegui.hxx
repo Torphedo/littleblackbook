@@ -39,7 +39,7 @@ struct nativegui {
     };
 
     // Draw read-only song metadata using ImGui::Text()
-    void draw_song_info(const runtime_song& song) noexcept;
+    void draw_song_info(const runtime_song& song) const noexcept;
 
     bool draw_song_row(song_hash_t hash, bool highlight, float thumb_size = 100.0f) noexcept;
 
@@ -93,9 +93,6 @@ struct nativegui {
     std::vector<std::string> import_paths;
     // TODO: This is stupid and janky and shouldn't need to exist
     std::vector<const char*> import_path_ptrs;
-
-    // Text input wrapper that automatically handles/renders tag autocompletion
-    bool InputTagAutocompleted(const char* label, const char* hint, ImGuiInputTextFlags flags, tag_autocomplete& tac);
 
     /// @brief Load everything needed to start the GUI from the database
     nativegui(sqlite3* db, const char* files_dir) noexcept;
