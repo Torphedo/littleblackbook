@@ -157,8 +157,8 @@ bool nativegui::draw_search_menu(const char* win_title, tag_search& search) noex
 
         // Display results
         draw_songs(search.result_hashes);
-        ImGui::End();
     }
+    ImGui::End();
     return open;
 }
 
