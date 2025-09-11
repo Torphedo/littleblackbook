@@ -74,6 +74,16 @@ void update_gl_tex(texture img, gl_obj gl_tex) {
 }
 
 gl_obj thumbnail_storage::operator[](song_hash_t song_hash) noexcept {
+    // Load thumbnails on demand
+    // TODO: Put thumbnail loading and JPEG decoding on another async queue
+    if (!song_map.contains(song_hash)) {
+        texture_entry entry = {0};
+        if (this->image_from_mp3(song_hash, &entry)) {
+            std::lock_guard lock(texqueue_lock);
+            texqueue.push(entry);
+        } // else already loaded or failed
+    }
+
     return at(song_hash);
 }
 
@@ -87,22 +97,24 @@ gl_obj thumbnail_storage::at(song_hash_t song_hash) const noexcept {
 }
 
 void thumbnail_storage::clear() noexcept {
-    thumbnails.clear();
-    song_map.clear();
     std::lock_guard lock(texqueue_lock);
     while (!texqueue.empty()) {
         texture_entry entry = texqueue.front();
         texqueue.pop();
         free(entry.tex.data);
     }
+
+    for (auto& entry : thumbnails) {
+        image_hash_t ihash = entry.first;
+        gl_obj tex = entry.second;
+        glDeleteTextures(1, &tex);
+    }
+    thumbnails.clear();
+    song_map.clear();
 }
 
-bool thumbnail_storage::image_from_mp3(song_hash_t song_hash, texture_entry* image_out) const noexcept {
-    if (song_map.count(song_hash)) {
-        // Somehow we got a song hash whose thumbnail is already loaded, skip it
-        return true;
-    }
-
+// This is the standalone function
+bool image_from_mp3(song_hash_t song_hash, const char* files_dir, texture_entry* image_out) {
     char pathbuf[512] = {0};
     snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s/%d.mp3", files_dir, song_hash);
 
@@ -198,6 +210,16 @@ bool thumbnail_storage::image_from_mp3(song_hash_t song_hash, texture_entry* ima
     return true;
 }
 
+// This is the class method which wraps the standalong function of the same name
+bool thumbnail_storage::image_from_mp3(song_hash_t song_hash, texture_entry* image_out) const noexcept {
+    if (song_map.count(song_hash)) {
+        // Somehow we got a song hash whose thumbnail is already loaded, skip it
+        return false;
+    }
+
+    return ::image_from_mp3(song_hash, files_dir, image_out);
+}
+
 void thumbnail_storage::upload_deferred_textures() noexcept {
     std::lock_guard lock(texqueue_lock);
     while (!texqueue.empty()) {
@@ -220,6 +242,7 @@ void thumbnail_storage::upload_deferred_textures() noexcept {
 
         update_gl_tex(entry.tex, gl_tex);
         free(entry.tex.data);
+        entry.tex.data = nullptr;
 
         this->song_map[entry.song_hash] = entry.ihash;
         this->thumbnails[entry.ihash] = gl_tex;

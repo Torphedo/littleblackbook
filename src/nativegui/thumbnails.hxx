@@ -19,6 +19,18 @@ struct texture_entry {
     song_hash_t song_hash;
 };
 
+/// @brief Decode a thumbnail from an MP3 file
+///
+/// This function is intended for internal use, but you can use it if you
+/// like. The MP3 file is loaded from "[files_dir]/[song_hash].mp3". Remember
+/// that song hashes are *signed* values.
+/// @param song_hash The hash of the MP3. This is used to find the file, and
+///                  to look up the thumbnail later.
+/// @param image_out An output variable for the decoded texture buffer and
+///                  texture+song hash.
+/// @return Whether the texture successfully loaded.
+bool image_from_mp3(song_hash_t song_hash, const char* files_dir, texture_entry* image_out);
+
 class thumbnail_storage {
 public:
     std::map<image_hash_t, gl_obj> thumbnails;
@@ -51,24 +63,9 @@ public:
     ///                  to look up the thumbnail later.
     /// @param image_out An output variable for the decoded texture buffer and
     ///                  texture+song hash.
-    /// @return Whether the texture successfully loaded. The texture buffer may
-    ///         be null even on success (e.g. if an identical thumbnail was
-    ///         already loaded).
+    /// @return Whether a new texture was loaded. If true, you're responsible
+    ///         for freeing the memory in the texture entry.
     bool image_from_mp3(song_hash_t song_hash, texture_entry* image_out) const noexcept;
-
-    /// @brief Asynchronously decode thumbnails for all hashes in a collection
-    ///
-    /// This will *not* make thumbnails available on its own! Because OpenGL only
-    /// allows 1 thread at a time, we can't upload textures to be rendered
-    /// asynchronously. This method only decodes thumbnails from files, putting
-    /// the data into an internal work queue.
-    /// At the end of each frame, you can call @ref upload_deferred_textures()
-    /// on the OpenGL thread to upload textures from the work queue to OpenGL.
-    template<typename T>
-    void load_many_mp3s_many_threads(const T& hashes, thumbnail_storage* t) noexcept {
-        std::thread th(&thumbnail_storage::load_many_mp3s<T>, t, hashes);
-        th.detach();
-    }
 
     /// @brief Upload textures from the internal queue to OpenGL
     ///
@@ -77,20 +74,6 @@ public:
     void upload_deferred_textures() noexcept;
 
 private:
-    // Wrapper function for the multi-threaded version
-    template<typename T>
-    void load_many_mp3s(const T& hashes) noexcept {
-        for (song_hash_t hash : hashes) {
-            if (thread_stop_flag) {
-                break;
-            }
-            texture_entry entry = {0};
-            if (image_from_mp3(hash, &entry) && entry.tex.data) {
-                std::lock_guard lock(texqueue_lock);
-                texqueue.push(entry);
-            }
-        }
-    }
 
     std::queue<texture_entry> texqueue;
     std::mutex texqueue_lock;

@@ -98,7 +98,7 @@ bool nativegui::draw_song_row(song_hash_t hash, bool highlight, float thumb_size
     const runtime_song& s = core.song_map.at(hash);
     const std::string label = s.name + "##" + std::to_string(cur_row);
 
-    ImGui::Image(thumbnails.at(s.hash), ImVec2(thumb_size, thumb_size));
+    ImGui::Image(thumbnails[s.hash], ImVec2(thumb_size, thumb_size));
     ImGui::SameLine();
 
     // We make the selectable an invisible string, then draw normal colored 
@@ -194,7 +194,7 @@ bool nativegui::window_playlist() noexcept {
         core.playlist.clear();
     }
 
-    // Outer border gives a tiny bit of padding to make the year column more readable
+    // Mostly duplicated from draw_songs()
     const int flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable | ImGuiTableFlags_BordersOuterV;
     if (ImGui::BeginTable("song table", 2, flags)) {
         // Make header row that never scrolls away
@@ -206,42 +206,60 @@ bool nativegui::window_playlist() noexcept {
         ImGui::TableSetupColumn("Year", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableHeadersRow(); // Show headers
 
-        for (u32 i = 0; i < core.playlist.size(); i++) {
-            const song_hash_t hash = core.playlist[i];
-            bool is_cur_song = (i == core.playlist_pos);
-
-            if (draw_song_row(hash, is_cur_song)) {
-                song_editors.insert(hash);
-            }
-
-            const s32 hovered = ImGui::TableGetHoveredRow() - 1;
-            ImGui::TableSetColumnIndex(0);
-            if (i == hovered) {
-                // This shows where the song will end up during drag & drop
-                ImGui::Separator();
-            }
-
-            const bool m2 = ImGui::IsMouseClicked(ImGuiMouseButton_Right, true);
-            const bool esc = ImGui::IsKeyPressed(ImGuiKey_Escape, true);
-            if (m2 || esc) {
-                playlist_drag_start = -1; // User wants to cancel
-            }
-
-            const bool m1_click = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
-            const bool m1_down = ImGui::IsMouseDown(ImGuiMouseButton_Left);
-            if (m1_click) {
-                if (playlist_drag_start < 0) {
-                    playlist_drag_start = hovered;
+        // Clipper allows us to only draw rows that are visible, which is
+        // crucial since JPEGs are loaded and decoded on-demand when rendering
+        // a row.
+        ImGuiListClipper clipper;
+        clipper.Begin((u32)core.playlist.size());
+        while (clipper.Step()) {
+            s32 i = 0;
+            for (song_hash_t hash : core.playlist) {
+                if (i < clipper.DisplayStart) {
+                    i++;
+                    continue;
                 }
-            } else if (!m1_down && playlist_drag_start >= 0 && hovered >= 0) {
-                // User had been dragging, and just released.
-                core.playlist_move_song(playlist_drag_start, hovered);
-                playlist_drag_start = -1;
+                if (i >= clipper.DisplayEnd) {
+                    i++;
+                    continue;
+                }
+                const bool is_cur_song = i == core.playlist_pos;
+
+                if (draw_song_row(hash, is_cur_song)) {
+                    song_editors.insert(hash);
+                }
+
+                const s32 hovered = ImGui::TableGetHoveredRow() - 1;
+                ImGui::TableSetColumnIndex(0);
+                if (i == hovered) {
+                    // This shows where the song will end up during drag & drop
+                    ImGui::Separator();
+                }
+
+                const bool m2 = ImGui::IsMouseClicked(ImGuiMouseButton_Right, true);
+                const bool esc = ImGui::IsKeyPressed(ImGuiKey_Escape, true);
+                if (m2 || esc) {
+                    playlist_drag_start = -1; // User wants to cancel
+                }
+
+                const bool m1_click = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+                const bool m1_down = ImGui::IsMouseDown(ImGuiMouseButton_Left);
+                if (m1_click) {
+                    if (playlist_drag_start < 0) {
+                        playlist_drag_start = hovered;
+                    }
+                } else if (!m1_down && playlist_drag_start >= 0 && hovered >= 0) {
+                    // User had been dragging, and just released.
+                    core.playlist_move_song(playlist_drag_start, hovered);
+                    playlist_drag_start = -1;
+                }
+
+                i++;
             }
         }
-
+        clipper.End();
         ImGui::EndTable();
     }
+
     return true;
 }
 
@@ -417,7 +435,6 @@ bool nativegui::toolbar_main() noexcept {
             if (ImGui::BeginMenu("File")) {
                 import_files |= ImGui::MenuItem("Import files", "Ctrl-I");
                 core.need_reload |= ImGui::MenuItem("Reload from database", "F5 / Ctrl-R");
-                need_thumbnail_reload |= ImGui::MenuItem("Reload thumbnails");
                 if (ImGui::MenuItem("Apply default tag parents")) {
                     core.apply_defaults();
                 }
@@ -542,18 +559,8 @@ bool nativegui::gui_main(GLFWwindow *window) noexcept {
     const scope_timer main_timer(core.timer_map, "main_draw");
     if (core.need_reload) {
         core.load_from_db();
-        need_thumbnail_reload = true;
     }
 
-    // Load thumbnails only on first load. We can't do this in ctor since OpenGL
-    // may not be loaded yet
-    if (need_thumbnail_reload) {
-        const scope_timer thumb_load(core.timer_map, "load_thumbnails");
-        thumbnails.clear();
-        need_thumbnail_reload = false;
-        const auto& key_iter = std::views::keys(core.song_map);
-        thumbnails.load_many_mp3s_many_threads(key_iter, &thumbnails);
-    }
     thumbnails.upload_deferred_textures();
 
     toolbar_main();
@@ -625,12 +632,5 @@ nativegui::nativegui(sqlite3* db, const char* files_dir) noexcept
 nativegui::~nativegui() noexcept {
     music_thread_stop_flag = true;
     thumbnails.thread_stop_flag = true;
-    // Gather up texture IDs to be deleted in 1 call
-    // TODO: Should this be done in a thumbnail object dtor?
-    std::vector<gl_obj> textures(thumbnails.thumbnails.size());
-    for (const auto& pair : thumbnails.thumbnails) {
-        textures.push_back(pair.second);
-    }
-    glDeleteTextures((u32)textures.size(), textures.data());
     music_thread.join();
 }
