@@ -179,6 +179,11 @@ bool nativegui::window_songs() noexcept {
 
 bool nativegui::window_playlist() noexcept {
     ImGui::Text("%ld songs", core.playlist.size());
+    ImGui::SameLine();
+    if (ImGui::Button("Clear playlist")) {
+        std::lock_guard lock(core.playlist_lock);
+        core.playlist.clear();
+    }
 
     // Outer border gives a tiny bit of padding to make the year column more readable
     const int flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_Reorderable | ImGuiTableFlags_BordersOuterV;
