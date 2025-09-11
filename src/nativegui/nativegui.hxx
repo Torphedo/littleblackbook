@@ -60,9 +60,6 @@ struct nativegui {
 
     // Used to automatically draw windows, create window toggles in the toolbar, etc.
     static constexpr window_def windows[] = {
-        {   .window_name = "Import Progress",
-            .draw = &nativegui::window_draw_import_progress,
-        },
         {   .window_name = "Song List",
             .draw = &nativegui::window_songs,
         },
@@ -78,11 +75,14 @@ struct nativegui {
         {   .window_name = "Playlist",
             .draw = &nativegui::window_playlist,
         },
+        {   .window_name = "Import Progress",
+            .draw = &nativegui::window_draw_import_progress,
+        },
     };
     bool windows_active[ARRAY_SIZE(windows)] = {};
 
     // We need to toggle this window from another function, so need a constant for it
-    static constexpr u8 IMPORT_WINDOW_IDX = 0;
+    static constexpr u8 IMPORT_WINDOW_IDX = ARRAY_SIZE(windows) - 1;
 
     // File import state
     // TODO: Should this be on the core?
