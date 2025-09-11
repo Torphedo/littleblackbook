@@ -92,12 +92,9 @@ void blackbook_core::playlist_change_song(s8 diff) noexcept {
     char pathbuf[512] = {0};
     snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s/%d.mp3", files_dir, cur_hash);
     if (file_exists(pathbuf)) {
-        if (IsMusicReady(audio_stream)) {
-            UnloadMusicStream(audio_stream);
-
-            audio_stream = LoadMusicStream(pathbuf);
-            PlayMusicStream(audio_stream);
-        }
+        // This automatically tears down existing streams
+        audio_stream = LoadMusicStream(pathbuf);
+        PlayMusicStream(audio_stream);
     } else {
         LOG_MSG(error, "File we assume exists is missing (%s)!\n", pathbuf);
     }
