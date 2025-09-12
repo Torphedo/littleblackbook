@@ -106,7 +106,9 @@ std::queue<substr_t> shatter_str(const char* text, s64 len) {
             for (char c : reserved_chars) {
                 const bool is_reserved = (cur_ch == c || prev_ch == c);
                 if (is_reserved) {
-                    tag_op prev_op = tag_op::NONE;
+                    // This makes us default to ending the token, so an
+                    // expression can begin with '-' or '('.
+                    tag_op prev_op = tag_op::AND;
                     if (!out.empty()) {
                         prev_op = op_from_token(out.back()).op_enum;
                     }
@@ -288,10 +290,20 @@ void sqlgen_expression(const tag_expression& expr, std::string& sql_out) {
 
     sqlgen_value(expr.lhs, (expr.op == tag_op::NOT), sql_out, expr.op);
 
-    if (expr.op == tag_op::AND) {
+    switch (expr.op) {
+    case tag_op::AND:
         sql_out.append("\nINTERSECT ");
-    } else if (expr.op == tag_op::OR) {
+        break;
+    case tag_op::OR:
         sql_out.append("\nUNION ");
+        break;
+    case tag_op::NONE:
+    case tag_op::NOT:
+        // This is a unary operator or just a value, both of which don't use 
+        // the right hand side
+        return;
+    case tag_op::PAREN:
+        assert(false && "Parenthesis used as expression operator, this should never happen!");
     }
     sqlgen_value(expr.rhs, false, sql_out, expr.op);
 
