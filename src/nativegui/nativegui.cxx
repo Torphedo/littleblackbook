@@ -108,11 +108,6 @@ bool nativegui::draw_song_row(song_hash_t hash, bool highlight, float thumb_size
     if (ImGui::Selectable(selectable_str_id.c_str(), false, flags, ImVec2(0, thumb_size))) {
         result = true;
     }
-    const ImVec4 green = ImVec4(0, 255, 0, 255);
-    const ImVec4 white = ImVec4(255, 255, 255, 255);
-    ImGui::SameLine();
-    ImGui::TextColored(highlight ? green : white, "%s", s.name.c_str());
-
 
     blackbook_core::playlist_add_type type = blackbook_core::PLAYLIST_APPEND;
     bool playlist_add = false;
@@ -138,6 +133,14 @@ bool nativegui::draw_song_row(song_hash_t hash, bool highlight, float thumb_size
         }
         ImGui::EndPopup();
     }
+
+    // We have to draw this after the popup, so that the right click can happen
+    // anywhere on the selectable (which spans the whole row) rather than only
+    // on the text.
+    const ImVec4 green = ImVec4(0, 255, 0, 255);
+    const ImVec4 white = ImVec4(255, 255, 255, 255);
+    ImGui::SameLine();
+    ImGui::TextColored(highlight ? green : white, "%s", s.name.c_str());
 
     ImGui::TableSetColumnIndex(1);
     ImGui::Text("%d", s.release_year);
