@@ -232,8 +232,19 @@ bool nativegui::window_playlist() noexcept {
                     song_editors.insert(hash);
                 }
 
-                const s32 hovered = ImGui::TableGetHoveredRow() - 1;
-                ImGui::TableSetColumnIndex(0);
+                s32 hovered = ImGui::TableGetHoveredRow() - 1;
+
+                // We put the target position above the hovered song if the
+                // user is dragging a song up, and below if vice versa.
+                // This is meant to feel a bit more responsive, by getting them
+                // to the place they want slightly faster.
+                // It'd be better to have it move positions if we drag more
+                // than halfway over a song, but this is easier.
+                if (hovered >= playlist_drag_start) {
+                    hovered = MIN(hovered + 1, core.playlist.size() - 1);
+                }
+
+                ImGui::TableSetColumnIndex(0); // Don't move this, it's load bearing
                 if (i == hovered) {
                     // This shows where the song will end up during drag & drop
                     ImGui::Separator();
@@ -249,7 +260,8 @@ bool nativegui::window_playlist() noexcept {
                 const bool m1_down = ImGui::IsMouseDown(ImGuiMouseButton_Left);
                 if (m1_click) {
                     if (playlist_drag_start < 0) {
-                        playlist_drag_start = hovered;
+                        // Just get this freshly to avoid tampering from earlier
+                        playlist_drag_start = ImGui::TableGetHoveredRow() - 1;
                     }
                 } else if (!m1_down && playlist_drag_start >= 0 && hovered >= 0) {
                     // User had been dragging, and just released.
