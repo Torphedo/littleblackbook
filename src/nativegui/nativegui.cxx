@@ -342,7 +342,7 @@ bool nativegui::toolbar_player() noexcept {
     }
     if (prev_song || skip_song) {
         const float progress_ratio = progress / total;
-        if (prev_song && progress_ratio < 0.05f) {
+        if (prev_song && progress_ratio > 0.05f) {
             progress = 0.1f;
             SeekMusicStream(core.audio_stream, progress);
         } else {
