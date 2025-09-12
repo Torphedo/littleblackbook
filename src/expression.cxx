@@ -103,10 +103,21 @@ std::queue<substr_t> shatter_str(const char* text, s64 len) {
         } else {
             // Reserved characters always end the previous token, and form their
             // own 1-character tokens
-            // TODO: '-' might get used in normal text, should probably be handled another way
             for (char c : reserved_chars) {
-                if (cur_ch == c || prev_ch == c) {
-                    is_token_end = true;
+                const bool is_reserved = (cur_ch == c || prev_ch == c);
+                if (is_reserved) {
+                    tag_op prev_op = tag_op::NONE;
+                    if (!out.empty()) {
+                        prev_op = op_from_token(out.back()).op_enum;
+                    }
+
+                    // When the last token isn't an operator, it looks like one of these:
+                    //     artist1 (artist2) artist3
+                    //     artist1 -artist2 artist3
+                    // Obviously it doesn't make sense to treat '-' or '(' or
+                    // ')' as operators in this context, so they must be part
+                    // of the tag and should be part of the larger token.
+                    is_token_end = prev_op != tag_op::NONE;
                 }
             }
         }
