@@ -452,6 +452,12 @@ bool nativegui::toolbar_main() noexcept {
     core.need_reload |= ImGui::IsKeyPressed(ImGuiKey_F5, false);
     core.need_reload |= ctrl_pressed && ImGui::IsKeyPressed(ImGuiKey_R, false);
 
+    for (u32 i = 0; i < ARRAY_SIZE(windows); i++) {
+       if (ImGui::IsKeyChordPressed(window_keybinds[i])) {
+           windows_active[i] = !windows_active[i];
+       }
+    }
+
     if (ImGui::BeginViewportSideBar("MainMenu", viewport, ImGuiDir_Up, height, flags)) {
         if (ImGui::BeginMenuBar()) {
             if (ImGui::BeginMenu("File")) {
@@ -471,7 +477,7 @@ bool nativegui::toolbar_main() noexcept {
 
             if (ImGui::BeginMenu("Windows")) {
                 for (u32 i = 0; i < ARRAY_SIZE(windows); i++) {
-                   ImGui::MenuItem(windows[i].window_name, nullptr, &windows_active[i]);
+                   ImGui::MenuItem(windows[i].window_name, windows[i].shortcut_str, &windows_active[i]);
                 }
                 ImGui::EndMenu();
             }

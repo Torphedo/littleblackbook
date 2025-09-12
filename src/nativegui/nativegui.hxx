@@ -35,6 +35,7 @@ struct nativegui {
     // new ones without any other boilerplate.
     struct window_def {
         const char* window_name;
+        const char* shortcut_str;
         bool (nativegui::*draw)(); // Pointer to member function
     };
 
@@ -61,25 +62,36 @@ struct nativegui {
     // Used to automatically draw windows, create window toggles in the toolbar, etc.
     static constexpr window_def windows[] = {
         {   .window_name = "Song List",
+            .shortcut_str = "Ctrl-S",
             .draw = &nativegui::window_songs,
         },
         {   .window_name = "Tag Parents",
+            // C for "child" because P was taken for "playlist"
+            .shortcut_str = "Ctrl-C",
             .draw = &nativegui::window_tag_parents,
+        },
+        {   .window_name = "Playlist",
+            .shortcut_str = "Ctrl-P",
+            .draw = &nativegui::window_playlist,
+        },
+        {   .window_name = "Lyric Search",
+            .shortcut_str = "Ctrl-L",
+            .draw = &nativegui::window_lyric_search,
         },
         {   .window_name = "Performance Timers",
             .draw = &nativegui::window_timers,
-        },
-        {   .window_name = "Lyric Search",
-            .draw = &nativegui::window_lyric_search,
-        },
-        {   .window_name = "Playlist",
-            .draw = &nativegui::window_playlist,
         },
         {   .window_name = "Import Progress",
             .draw = &nativegui::window_draw_import_progress,
         },
     };
     bool windows_active[ARRAY_SIZE(windows)] = {};
+    int window_keybinds[ARRAY_SIZE(windows)] = {
+        ImGuiKey_S | ImGuiMod_Ctrl,
+        ImGuiKey_C | ImGuiMod_Ctrl,
+        ImGuiKey_P | ImGuiMod_Ctrl,
+        ImGuiKey_L | ImGuiMod_Ctrl,
+    };
 
     // We need to toggle this window from another function, so need a constant for it
     static constexpr u8 IMPORT_WINDOW_IDX = ARRAY_SIZE(windows) - 1;
