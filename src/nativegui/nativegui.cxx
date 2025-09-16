@@ -9,11 +9,9 @@
 #include <raudio.h>
 
 #include <common/logging.h>
-#include <common/vfile.h>
 #include <common/crc32.h>
 #include <common/int.h>
 
-#include <defaults.hxx>
 #include <blackbook_core.hxx>
 #include <schema.hxx>
 #include <tags.hxx>
@@ -56,32 +54,50 @@ bool nativegui::window_song_editor(runtime_song& song) {
         ImGui::End();
         return false;
     }
-    draw_song_info(song);
 
-    ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
-    snprintf(win_title_buf, sizeof(win_title_buf), "##editor_input%d", song.hash);
-    if (ImGui::InputTagAutocompleted(win_title_buf, "Input a tag", flags, song.tac, core)) {
-        const std::string& tag = song.tac.current();
-        const tag_hash_t tag_hash = crc32fast((const u8*)tag.c_str() + (tag[0] == '-'), tag.size());
+    ImGuiInputTextFlags text_flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
+    if (ImGui::BeginTabBar("editor tab bar")) {
+        if (ImGui::BeginTabItem("General")) {
+            draw_song_info(song);
 
-        bool found = false;
-        for (auto iter = song.tags.begin(); iter != song.tags.end(); iter++) {
-            found |= (*iter == tag_hash);
-            if (found) {
-                song.tags.erase(iter);
-                break; // We're done here (and iterator is now invalidated anyway)
+            snprintf(win_title_buf, sizeof(win_title_buf), "##editor_input%d", song.hash);
+            if (ImGui::InputTagAutocompleted(win_title_buf, "Input a tag", text_flags, song.tac, core)) {
+                const std::string& tag = song.tac.current();
+                const tag_hash_t tag_hash = crc32fast((const u8*)tag.c_str() + (tag[0] == '-'), tag.size());
+
+                bool found = false;
+                for (auto iter = song.tags.begin(); iter != song.tags.end(); iter++) {
+                    found |= (*iter == tag_hash);
+                    if (found) {
+                        song.tags.erase(iter);
+                        break; // We're done here (and iterator is now invalidated anyway)
+                    }
+                }
+
+                std::string sql;
+                if (found) {
+                    del_tag_from_song_sql(tag.c_str(), song.hash, sql);
+                } else {
+                    add_tag_to_song_sql(core.db, tag.c_str(), song.hash, sql);
+                }
+                int result = sqlite3_exec(core.db, sql.c_str(), nullptr, nullptr, nullptr);
+                sql_handle_error("Failed to add/remove tag", core.db, result);
+                core.load_from_db(); // Reload
             }
+            ImGui::EndTabItem();
         }
 
-        std::string sql;
-        if (found) {
-            del_tag_from_song_sql(tag.c_str(), song.hash, sql);
-        } else {
-            add_tag_to_song_sql(core.db, tag.c_str(), song.hash, sql);
+        snprintf(win_title_buf, sizeof(win_title_buf), "Lyrics##%d", song.hash);
+        if (ImGui::BeginTabItem(win_title_buf)) {
+            snprintf(win_title_buf, sizeof(win_title_buf), "##lyric_edit%d", song.hash);
+            ImVec2 size = ImGui::GetContentRegionAvail();
+            size.x *= 0.9f; // This clips into the scroll bar otherwise
+            if (ImGui::InputTextMultiline(win_title_buf, &song.lyrics, size)) {
+                update_lyrics(core.db, song.hash, song.lyrics.c_str());
+            }
+            ImGui::EndTabItem();
         }
-        int result = sqlite3_exec(core.db, sql.c_str(), nullptr, nullptr, nullptr);
-        sql_handle_error("Failed to add/remove tag", core.db, result);
-        core.load_from_db(); // Reload
+        ImGui::EndTabBar();
     }
 
     ImGui::End();
