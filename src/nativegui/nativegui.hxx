@@ -86,7 +86,7 @@ struct nativegui {
         },
     };
     bool windows_active[ARRAY_SIZE(windows)] = {};
-    int window_keybinds[ARRAY_SIZE(windows)] = {
+    const int window_keybinds[ARRAY_SIZE(windows)] = {
         ImGuiKey_S | ImGuiMod_Ctrl,
         ImGuiKey_C | ImGuiMod_Ctrl,
         ImGuiKey_P | ImGuiMod_Ctrl,

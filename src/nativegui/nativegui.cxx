@@ -453,7 +453,10 @@ bool nativegui::toolbar_main() noexcept {
     core.need_reload |= ctrl_pressed && ImGui::IsKeyPressed(ImGuiKey_R, false);
 
     for (u32 i = 0; i < ARRAY_SIZE(windows); i++) {
-       if (ImGui::IsKeyChordPressed(window_keybinds[i])) {
+        if (window_keybinds[i] == 0) {
+            continue;
+        }
+       if (ImGui::IsKeyChordPressed(window_keybinds[i]) && ctrl_pressed) {
            windows_active[i] = !windows_active[i];
        }
     }
