@@ -210,6 +210,7 @@ bool nativegui::window_playlist() noexcept {
         ImGui::TableSetupColumn("Year", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableHeadersRow(); // Show headers
 
+        s32 playlist_drag_end = -1;
         // Clipper allows us to only draw rows that are visible, which is
         // crucial since JPEGs are loaded and decoded on-demand when rendering
         // a row.
@@ -262,12 +263,17 @@ bool nativegui::window_playlist() noexcept {
                 if (m1_click) {
                     if (hovered > playlist_drag_start) {
                         // Just get this freshly to avoid tampering from earlier
-                        playlist_drag_start = hovered;
+                        playlist_drag_start = hovered - 1;
                     }
                 } else if (!m1_down && playlist_drag_start >= 0) {
                     // User had been dragging, and just released.
-                    core.playlist_move_song(playlist_drag_start, bar_pos + 1);
-                    playlist_drag_start = -1;
+
+                    // We don't directly move the song in the loop because the
+                    // ImGuiClipper always renders the first item, in which case
+                    // the bar position will be early in the list and the
+                    // behaviour is wrong. This method uses the last reported
+                    // position as the destination.
+                    playlist_drag_end = bar_pos;
                 }
 
                 i++;
@@ -275,6 +281,11 @@ bool nativegui::window_playlist() noexcept {
         }
         clipper.End();
         ImGui::EndTable();
+
+        if (playlist_drag_end > 0) {
+            core.playlist_move_song(playlist_drag_start, playlist_drag_end);
+            playlist_drag_start = -1;
+        }
     }
 
     return true;
