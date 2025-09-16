@@ -92,9 +92,24 @@ bool nativegui::window_song_editor(runtime_song& song) {
             snprintf(win_title_buf, sizeof(win_title_buf), "##lyric_edit%d", song.hash);
             ImVec2 size = ImGui::GetContentRegionAvail();
             size.x *= 0.9f; // This clips into the scroll bar otherwise
+            size.y -= ImGui::GetTextLineHeight() * 1.1f; // Need space for Genius link
             if (ImGui::InputTextMultiline(win_title_buf, &song.lyrics, size)) {
                 update_lyrics(core.db, song.hash, song.lyrics.c_str());
             }
+
+            const char* genius_search = "https://genius.com/search?q=";
+            char genius_url[256] = {};
+
+            // Look up first artist tag for search
+            const char* artist = "";
+            for (tag_hash_t tag : song.tags) {
+                if (core.tags[tag].starts_with("artist:")) {
+                    // Save artist name w/o the tag namespace part
+                    artist = core.tags[tag].c_str() + sizeof("artist");
+                }
+            }
+            snprintf(genius_url, sizeof(genius_url) - 1, "%s%s %s", genius_search, artist, song.name.c_str());
+            ImGui::TextLinkOpenURL("Search on Genius", genius_url);
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
