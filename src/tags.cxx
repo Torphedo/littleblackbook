@@ -240,3 +240,31 @@ bool autocomplete_tag(sqlite3* db, const std::string_view& user_str, std::vector
 
     return result;
 }
+
+bool update_lyrics(sqlite3* db, song_hash_t hash, const char* lyrics) {
+    const char sql[] = "UPDATE songs SET lyrics = ? WHERE hash = ?";
+    sqlite3_stmt* stmt = nullptr;
+    int res = sqlite3_prepare_v2(db, sql, sizeof(sql) - 1, &stmt, nullptr);
+    if (!sql_handle_error("Failed to update lyrics", db, res)) {
+        return false;
+    }
+
+    bool result = true;
+    res = sql_bind(stmt, 1, lyrics, strlen(lyrics));
+    if (!sql_handle_error("Failed to update lyrics", db, res)) {
+        result = false;
+    }
+
+    res = sql_bind(stmt, 2, hash);
+    if (!sql_handle_error("Failed to update lyrics", db, res)) {
+        result = false;
+    }
+
+    while ((res = sqlite3_step(stmt)) == SQLITE_ROW) {
+        continue;
+    }
+    result = sql_handle_error("Failed to update lyrics", db, res);
+
+    sqlite3_finalize(stmt);
+    return result;
+}

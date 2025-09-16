@@ -61,3 +61,5 @@ static const u8 AUTOCOMPLETE_SIZE = 5;
 /// @brief Update the autocomplete candidates using the contents of @ref [user_str].
 /// @param db The database to query for results. The database won't be modified.
 bool autocomplete_tag(sqlite3* db, const std::string_view& user_str, std::vector<std::string>& candidates);
+
+bool update_lyrics(sqlite3* db, song_hash_t hash, const char* lyrics);

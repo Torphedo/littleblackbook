@@ -25,6 +25,7 @@
 
 struct runtime_song {
     std::string name; // Song name
+    std::string lyrics;
     time_t import_timestamp = 0;
     song_hash_t hash = 0; // Hash of the underlying audio file
     u32 release_year = 0;
@@ -44,11 +45,12 @@ struct runtime_song {
     }
 
     runtime_song() = default;
-    runtime_song(const char* title, time_t time, song_hash_t hash, u32 year) :
+    runtime_song(const unsigned char* title, const unsigned char* lyrics, time_t time, song_hash_t hash, u32 year) :
         runtime_song()
     {
         // Can't use initializer list with default ctor
-        name = title;
+        name = (const char*)title;
+        this->lyrics = lyrics ? (const char*)lyrics : "";
         import_timestamp = time;
         this->hash = hash;
         release_year = year;
