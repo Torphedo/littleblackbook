@@ -111,7 +111,7 @@ struct nativegui {
 
     ~nativegui() noexcept;
 
-    /// @brief Main function for the native PC frontend
+    /// @brief Main render function for the native PC frontend
     bool gui_main(GLFWwindow* window) noexcept;
 
     /// This is a simple wrapper to be used as a C function pointer for

@@ -9,7 +9,7 @@
 #include <common/gl/gl_setup.h>
 #include <GLFW/glfw3.h>
 
-bool gui_loop(gui_callback callback, void* ctx) {
+bool gui_loop(gui_callback render_callback, void* ctx, const char* font_path) {
     // Create window with graphics context
     GLFWwindow* window = setup_opengl(1280, 720, "littleblackbook", ENABLE_DEBUG, GLFW_CURSOR_NORMAL, true);
     if (window == nullptr) {
@@ -52,6 +52,17 @@ bool gui_loop(gui_callback callback, void* ctx) {
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != nullptr);
+
+    if (font_path) {
+        LOG_MSG(debug, "Loading font from '%s'\n", font_path);
+        ImFontConfig cfg;
+        cfg.MergeMode = true;
+        io.Fonts->AddFontFromFileTTF(font_path, 15.0f);
+        io.Fonts->AddFontFromFileTTF(font_path, 15.0f, &cfg, io.Fonts->GetGlyphRangesJapanese());
+        io.Fonts->AddFontFromFileTTF(font_path, 15.0f, &cfg, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+        io.Fonts->AddFontFromFileTTF(font_path, 15.0f, &cfg, io.Fonts->GetGlyphRangesCyrillic());
+        io.Fonts->AddFontFromFileTTF(font_path, 15.0f, &cfg, io.Fonts->GetGlyphRangesKorean());
+    }
     io.FontGlobalScale = 2.0f;
 
     // Main loop
@@ -83,7 +94,7 @@ bool gui_loop(gui_callback callback, void* ctx) {
         ImGui::DockSpaceOverViewport();
 
         // The callback renders the actual UI and "drives" the program.
-        (callback)(ctx, window);
+        (render_callback)(ctx, window);
 
         // Rendering
         ImGui::Render();

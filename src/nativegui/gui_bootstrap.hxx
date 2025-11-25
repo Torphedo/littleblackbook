@@ -7,4 +7,4 @@ typedef bool (*gui_callback)(void* ctx, GLFWwindow* window);
 ///
 /// Handles the main loop and setup/teardown of ImGui & GLFW
 /// @return Returns false if unable to create the UI
-bool gui_loop(gui_callback callback, void* ctx);
+bool gui_loop(gui_callback render_callback, void* ctx, const char* font_path);

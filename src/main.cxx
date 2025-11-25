@@ -26,17 +26,19 @@ int main(int argc, char** argv) {
         db_path = args.values[VALUE_ARG_DB_PATH];
         LOG_MSG(debug, "Got database path \"%s\"\n", db_path);
     }
-    std::string db_files_folder;
+    std::string db_files_dir;
+    std::string db_dir;
     {
         // Move the C-allocated path to a dynamic string we can append to.
         // I don't know if .c_str() returns the actual backing string ptr. So
         // just to be safe, we truncate a clone before turning to a C++ string.
         char* db_folder_ptr = (char*)path_truncate_clone(db_path);
-        db_files_folder = db_folder_ptr;
-        db_files_folder += "files";
+        db_dir = db_folder_ptr;
+        db_files_dir = db_folder_ptr;
+        db_files_dir += "files";
         free(db_folder_ptr);
     }
-    LOG_MSG(debug, "DB files folder: %s\n", db_files_folder.c_str());
+    LOG_MSG(debug, "DB files folder: %s\n", db_files_dir.c_str());
 
     const tag_expression expr("  NOT foo chop suey  AND (bar fight OR -baz)");
 
@@ -75,17 +77,18 @@ int main(int argc, char** argv) {
     }
 
     if (args.cli_mode) {
-        result = cli_main(args, db, db_path, db_files_folder);
+        result = cli_main(args, db, db_path, db_files_dir);
     } else {
-        nativegui gui(db, db_files_folder.c_str());
+        nativegui gui(db, db_files_dir.c_str());
         if (!gui.initialized) {
             LOG_MSG(error, "Failed to start up the GUI!\n");
             result = EXIT_FAILURE;
             goto exit;
         }
 
+        const std::string font_path = db_dir + "/font.ttf";
         // We invert the return value since exit code 0 == false == EXIT_SUCCESS
-        result = !gui_loop(nativegui::gui_main_static, &gui);
+        result = !gui_loop(nativegui::gui_main_static, &gui, font_path.c_str());
     }
 
 exit:
