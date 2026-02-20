@@ -12,9 +12,6 @@
 **
 ******************************************************************************
 **
-** Utility functions sqlar_compress() and sqlar_uncompress(). Useful
-** for working with sqlar archives and used by the shell tool's built-in
-** sqlar support.
 */
 #include "sqlite3ext.h"
 SQLITE_EXTENSION_INIT1
