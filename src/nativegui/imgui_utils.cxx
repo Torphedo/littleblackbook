@@ -179,4 +179,8 @@ namespace ImGui {
 
         return result;
     }
+
+    void OffsetCursorY(float dist) {
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + dist);
+    }
 } // namespace ImGui

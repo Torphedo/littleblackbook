@@ -8,4 +8,14 @@ namespace ImGui {
 
     void TagOpDropDown(tag_op& op);
     bool EditExpression(tag_expression& expr, tag_autocomplete& tac, blackbook_core& core, u32 indent = 0);
+
+    void OffsetCursorY(float dist);
+
+    static float CharWidth(u32 num_chars = 1) {
+        return ImGui::CalcTextSize("x").x * float(num_chars);
+    }
+
+    static float CharHeight() {
+        return ImGui::CalcTextSize("I").y;
+    }
 } // namespace ImGui
