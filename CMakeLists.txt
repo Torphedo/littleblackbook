@@ -52,6 +52,10 @@ add_library(stb_image STATIC
 # Dependencies
 set(BOBTAIL_OPENGL ON)
 add_subdirectory(lib/bobtail)
+
+set(SUPPORT_FILEFORMAT_FLAC OFF)
+set(SUPPORT_FILEFORMAT_QOA OFF)
+set(SUPPORT_FILEFORMAT_OGG OFF)
 add_subdirectory(lib/raudio/projects/CMake)
 add_subdirectory(lib/nfde)
 
