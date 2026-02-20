@@ -89,8 +89,9 @@ void blackbook_core::playlist_change_song(s8 diff) noexcept {
     }
 
     const song_hash_t cur_hash = playlist.at(playlist_pos);
+    const std::string& extension = song_map[cur_hash].extension;
     char pathbuf[512] = {0};
-    snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s/%d.mp3", files_dir, cur_hash);
+    snprintf(pathbuf, ARRAY_SIZE(pathbuf), "%s/%d.%s", files_dir, cur_hash, extension.c_str());
     if (file_exists(pathbuf)) {
         // This automatically tears down existing streams
         audio_stream = LoadMusicStream(pathbuf);
@@ -296,7 +297,7 @@ bool blackbook_core::load_from_db() {
 
 bool blackbook_core::load_songs_by_query(sqlite3* db) {
     // We don't bother getting album/artist, since those are stored as tags.
-    static const char fetchsongs_sql[] = "SELECT title, year, lyrics, hash, import_timestamp, lyrics, duration_secs FROM songs";
+    static const char fetchsongs_sql[] = "SELECT title, year, lyrics, hash, import_timestamp, lyrics, duration_secs, extension FROM songs";
     sqlite3_stmt* fetchsongs = compile_sql(fetchsongs_sql, ARRAY_SIZE(fetchsongs_sql) + 1, db);
     if (!fetchsongs) {
         sqlite3_finalize(fetchsongs);
@@ -311,8 +312,9 @@ bool blackbook_core::load_songs_by_query(sqlite3* db) {
         const song_hash_t hash = sqlite3_column_int(fetchsongs, 3);
         const time_t time = sqlite3_column_int(fetchsongs, 4);
         const unsigned char* lyrics = sqlite3_column_text(fetchsongs, 5);
+        const unsigned char* extension = sqlite3_column_text(fetchsongs, 7);
 
-        song_map[hash] = runtime_song(title, lyrics, time, hash, year);
+        song_map[hash] = runtime_song(title, lyrics, time, hash, year, extension);
         // This is not ideal but way easier than making all the right ctors
         song_map[hash].fix_ptr();
     }
