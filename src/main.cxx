@@ -12,6 +12,43 @@
 #include "arguments.hxx"
 #include "sqlite-crc32.h"
 
+sqlite3* setup_sqlite(const char* db_path) {
+    sqlite3_initialize();
+    char* errmsg = nullptr;
+    if (sqlite3_auto_extension((void(*)())sqlite3_sqlitecrc_init) != SQLITE_OK) {
+        LOG_MSG(error, "Unable to load CRC32 extension because: %s\n", errmsg);
+        return nullptr;
+    } else {
+        LOG_MSG(info, "Successfully loaded CRC32 extension.\n");
+    }
+
+    sqlite3* db = nullptr;
+    int res = sqlite3_open(db_path, &db);
+    if (res != SQLITE_OK) {
+        const char* msg = sqlite3_errmsg(db);
+        LOG_MSG(error, "Failed to open database \"%s\" (reason: \"%s\")!\n", db_path, msg);
+        goto exit;
+    }
+    LOG_MSG(info, "Opened database \"%s\"\n", db_path);
+
+    // Always enable extended result codes for more detailed errors
+    sqlite3_extended_result_codes(db, true);
+
+    res = sqlite3_exec(db, "PRAGMA foreign_keys = ON", nullptr, nullptr, &errmsg);
+    if (res != SQLITE_OK) {
+        LOG_MSG(error, "Failed to enable foreign key constraints because: %s\n", errmsg);
+        goto exit;
+    } else {
+        LOG_MSG(info, "Enabled foreign keys\n");
+    }
+
+    return db;
+
+exit:
+    sqlite3_close(db);
+    return nullptr;
+}
+
 int main(int argc, char** argv) {
     // Enable ANSI escape codes (for printing in color) on Windows
     enable_win_ansi();
@@ -42,38 +79,9 @@ int main(int argc, char** argv) {
 
     const tag_expression expr("  NOT foo chop suey  AND (bar fight OR -baz)");
 
-    sqlite3_initialize();
-    char* errmsg = nullptr;
-    if (sqlite3_auto_extension((void(*)())sqlite3_sqlitecrc_init) != SQLITE_OK) {
-        if (errmsg) {
-            LOG_MSG(error, "Unabled to load CRC32 extension because: %s\n", errmsg);
-        }
-        result = EXIT_FAILURE;
-        return result;
-    } else {
-        LOG_MSG(info, "Successfully loaded CRC32 extension.\n");
-    }
-
-    sqlite3* db = nullptr;
-    int res = sqlite3_open(db_path, &db);
-    if (res != SQLITE_OK) {
-        const char* msg = sqlite3_errmsg(db);
-        LOG_MSG(error, "Failed to open database \"%s\" (reason: \"%s\")!\n", db_path, msg);
-        result = EXIT_FAILURE;
-        goto exit;
-    }
-    LOG_MSG(info, "Opened database \"%s\"\n", db_path);
-
-    // Always enable extended result codes for more detailed errors
-    sqlite3_extended_result_codes(db, true);
-
-    res = sqlite3_exec(db, "PRAGMA foreign_keys = ON", nullptr, nullptr, &errmsg);
-    if (res != SQLITE_OK) {
-        LOG_MSG(error, "Failed to enable foreign key constraints because: %s\n", errmsg);
-        result = EXIT_FAILURE;
-        goto exit;
-    } else {
-        LOG_MSG(info, "Enabled foreign keys\n");
+    sqlite3* db = setup_sqlite(db_path);
+    if (!db) {
+        return EXIT_FAILURE;
     }
 
     if (args.cli_mode) {
@@ -86,7 +94,7 @@ int main(int argc, char** argv) {
             goto exit;
         }
 
-        const std::string font_path = db_dir + "/font.ttf";
+        const std::string font_path = db_dir + "font.ttf";
         // We invert the return value since exit code 0 == false == EXIT_SUCCESS
         result = !gui_loop(nativegui::gui_main_static, &gui, font_path.c_str());
     }
