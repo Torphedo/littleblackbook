@@ -3,6 +3,8 @@ CREATE TABLE IF NOT EXISTS db_meta (
     version INTEGER NOT NULL UNIQUE DEFAULT 2
 )STRICT;
 
+INSERT INTO db_meta DEFAULT VALUES; -- Initialize version table
+
 CREATE TABLE IF NOT EXISTS songs (
     title  TEXT    NOT NULL,
     artist TEXT    NOT NULL,
