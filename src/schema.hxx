@@ -19,6 +19,8 @@
 // A view that's like TAG_SONG_TABLE, but with parents automatically applied
 #define RESOLVED_TAG_SONG_TABLE "resolved_tagmap"
 
+#define CURRENT_DB_VERSION 2
+
 // Typedefs in case we go back to unsigned eventually
 using song_hash_t = s32;
 using tag_hash_t = s32;

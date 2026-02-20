@@ -1,6 +1,6 @@
 -- Just a place to store a version number
 CREATE TABLE IF NOT EXISTS db_meta (
-    version INTEGER NOT NULL UNIQUE DEFAULT 1
+    version INTEGER NOT NULL UNIQUE DEFAULT 2
 )STRICT;
 
 CREATE TABLE IF NOT EXISTS songs (
@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS songs (
     -- TODO: Make NOT NULL once we can get this data from the MP3
     duration_secs    INTEGER,
     hash             INTEGER PRIMARY KEY NOT NULL UNIQUE, -- CRC32-C hash
-    import_timestamp INTEGER NOT NULL DEFAULT 0 -- Unix timestamp, set by a trigger
+    import_timestamp INTEGER NOT NULL DEFAULT 0, -- Unix timestamp, set by a trigger
+    extension TEXT NOT NULL DEFAULT 'mp3' -- Audio file extension
 )STRICT;
 
 -- Tags can have a namespace (denoted by a ':'), which helps handle conflicts.
@@ -66,6 +67,6 @@ CREATE TABLE IF NOT EXISTS tag_parents (
 CREATE TABLE IF NOT EXISTS tagmap (
     song_hash INTEGER NOT NULL,
     tag_hash INTEGER NOT NULL,
-    FOREIGN KEY(song_hash) REFERENCES songs(hash)
+    FOREIGN KEY(song_hash) REFERENCES songs(hash),
     FOREIGN KEY(tag_hash) REFERENCES tags(hash)
 )STRICT;
