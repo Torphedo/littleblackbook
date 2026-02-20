@@ -18,10 +18,10 @@
 #include "sqlgen.hxx"
 #include "tags.hxx"
 
-song_record::song_record(u8* mp3, u32 size, u16 path_idx) : mp3(mp3), path_idx(path_idx) {
+song_record::song_record(const u8* mp3, u32 size, u16 path_idx) : mp3(mp3), path_idx(path_idx) {
     assert(size >= sizeof(id3::header) && "MP3 file is impossibly small!");
 
-    vfile id3 = vfile_open(mp3, size);
+    vfile id3 = vfile_open((u8*)mp3, size);
     const id3::header header = VFILE_READ(id3::header, &id3);
     assert(header.correct_magic() && "File is not an MP3!");
     assert(header.size() <= size && "Metadata claims to be larger than the MP3!");
@@ -104,10 +104,10 @@ void song_record::adjust_offsets(u32 offset) noexcept {
     artist.ascii += offset;
 }
 
-u32 copy_id3(u8* mp3, u32 size, std::vector<u8>& id3_out) {
+u32 copy_id3(const u8* mp3, u32 size, std::vector<u8>& id3_out) {
     assert(size >= sizeof(id3::header) && "MP3 file is impossibly small!");
 
-    vfile id3 = vfile_open(mp3, size);
+    vfile id3 = vfile_open((u8*)mp3, size);
     const id3::header header = VFILE_READ(id3::header, &id3);
     assert(header.correct_magic() && "File is not an MP3!");
     assert(header.size() <= size && "Metadata claims to be larger than the MP3!");

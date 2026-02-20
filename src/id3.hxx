@@ -57,7 +57,7 @@ struct text {
     text(u8* frame_data, u32 frame_size, u32 frame_offset);
 
     /// @brief Convert UCS-2 text to UTF-8 if needed
-    std::string to_utf8(u8* frame_data) const noexcept;
+    std::string to_utf8(const u8* frame_data) const noexcept;
 };
 
 // All relevant metadata frame types

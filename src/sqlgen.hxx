@@ -59,7 +59,7 @@ DEF_SQL_BIND(const char* buf, sqlite_uint64 size, unsigned char encoding) {
 }
 
 // ID3 overload is too different to make a macro for
-int sql_bind(sqlite3_stmt* stmt, int pos, u8* frame_data, const id3::text& str) noexcept;
+int sql_bind(sqlite3_stmt* stmt, int pos, const u8* frame_data, const id3::text& str) noexcept;
 
 #undef VALUE_BIND_TYPE
 #undef VALUE_BIND

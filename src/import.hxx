@@ -12,7 +12,7 @@
 
 // Representation of a row in the song table used during metadata parsing
 struct song_record {
-    u8* mp3 = nullptr;
+    const u8* mp3 = nullptr;
     id3::text title; // Song title
     id3::text album;
     id3::text artist;
@@ -25,7 +25,7 @@ struct song_record {
     ///
     /// This structure stores pointers into the MP3 buffer, so make sure it's
     /// freed only once this structure is destroyed/unused.
-    song_record(u8* mp3, u32 size, u16 path_idx);
+    song_record(const u8* mp3, u32 size, u16 path_idx);
 
     /// @brief Generate an INSERT statement that will add the song to the database
     void insert_sql(sqlite3* db, sqlite3_stmt* stmt) const noexcept;

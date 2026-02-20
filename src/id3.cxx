@@ -27,7 +27,7 @@ text::text(u8* frame_data, u32 frame_size, u32 frame_offset) {
     }
 }
 
-std::string text::to_utf8(u8* frame_data) const noexcept {
+std::string text::to_utf8(const u8* frame_data) const noexcept {
     if (char_size_for_encoding(encoding) == 1) {
         return (char*)(frame_data + ascii);
     }
