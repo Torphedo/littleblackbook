@@ -11,9 +11,18 @@ upgrade_status get_upgrade_status(sqlite3* db, int* version_out) {
 
     int version = 0;
     int result = SQLITE_OK;
+    int rows_seen = 0;
     while ((result = sqlite3_step(query)) == SQLITE_ROW) {
         version = sqlite3_column_int(query, 0);
+        rows_seen++;
     }
+
+    if (result == SQLITE_DONE && rows_seen == 0 && version == 0) {
+        // Table had no rows, it must be a v1 database.
+        sqlgen_exec(db, "INSERT INTO db_meta (version) VALUES(1);");
+        version = 1;
+    }
+
     sql_handle_error("Failed to get DB version because: ", db, result);
     sqlite3_finalize(query);
 

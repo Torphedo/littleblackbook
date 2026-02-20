@@ -11,6 +11,7 @@
 #include "expression.hxx"
 #include "arguments.hxx"
 #include "sqlite-crc32.h"
+#include "db_versioning.hxx"
 
 sqlite3* setup_sqlite(const char* db_path) {
     sqlite3_initialize();
@@ -81,6 +82,11 @@ int main(int argc, char** argv) {
 
     sqlite3* db = setup_sqlite(db_path);
     if (!db) {
+        return EXIT_FAILURE;
+    }
+
+    // Make sure DB is up to date
+    if (!run_upgrade(db)) {
         return EXIT_FAILURE;
     }
 
