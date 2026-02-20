@@ -8,6 +8,7 @@
 #include <common/file.h>
 #include <common/endian.h>
 #include <common/vfile.h>
+#include <common/vmem.h>
 #include <common/crc32.h>
 #include <common/logging.h>
 #include <common/platform.h>
@@ -17,6 +18,7 @@
 #include "scope_timer.hxx"
 #include "sqlgen.hxx"
 #include "tags.hxx"
+#include "filecopy.hxx"
 
 song_record::song_record(const u8* mp3, u32 size, u16 path_idx) : mp3(mp3), path_idx(path_idx) {
     assert(size >= sizeof(id3::header) && "MP3 file is impossibly small!");
@@ -156,42 +158,45 @@ void import_many_files(const char* const* paths, u32 num_paths, const char* file
     std::vector<song_record> songs;
     songs.reserve(num_paths);
 
-    std::vector<u8> file_buf(32 * 1024 * 1024); // Buffer is reused for many files
     std::vector<u8> id3_buf;
     id3_buf.reserve(1 * 1024 * 1024);
 
     for (u32 i = 0; i < num_paths; i++) {
         // Early exit for simple errors
         if (!path_has_extension(paths[i], ".mp3")) {
-            LOG_MSG(debug, "Skipping \"%s\" (not an MP3)\n", paths[i]);
+            LOG_MSG(debug, "Skipping '%s' (not an MP3)\n", paths[i]);
             stats->num_skipped++;
             continue;
         }
         if (!file_exists(paths[i])) {
-            LOG_MSG(debug, "Skipping \"%s\" (it doesn't exist)\n", paths[i]);
+            LOG_MSG(debug, "Skipping '%s' (it doesn't exist)\n", paths[i]);
             stats->num_skipped++;
             continue;
         }
 
         // Load the file
         const u32 size = file_size(paths[i]);
-        if (size > file_buf.capacity()) {
-            file_buf.reserve(size + 1);
+        u8* file_data = (u8*)vmem_map_file(paths[i]);
+        if (!file_data) {
+            LOG_MSG(error, "Skipping '%s' (failed to load file)\n", paths[i]);
+            stats->num_failed++;
+            continue;
         }
-        file_load_existing(paths[i], file_buf.data(), size);
+
         stats->num_loaded++;
 
         // Extract metadata & hash the file
-        song_record song(file_buf.data(), size, i);
+        song_record song(file_data, size, i);
         stats->num_hashed++;
         stats->num_metadata_grabbed++;
 
-        // Copy ID3 data into our buffer and make the offsets relative to the
-        // whole ID3 buffer.
-        const u32 offset = copy_id3(file_buf.data(), size, id3_buf);
+        // Copy ID3 data into a new buffer buffer and adjust the offsets
+        // accordingly.
+        const u32 offset = copy_id3(file_data, size, id3_buf);
         song.adjust_offsets(offset);
 
         songs.push_back(song);
+        vmem_unmap_file(file_data, size);
     }
 
     sqlite3_stmt* song_stmt = song_record::prepare_sql(db);
@@ -222,7 +227,7 @@ void import_many_files(const char* const* paths, u32 num_paths, const char* file
             stats->num_skipped++;
             continue;
         } else {
-            std::filesystem::copy_file(paths[song.path_idx], destpath);
+            copy_file(paths[song.path_idx], destpath);
             stats->num_copied++;
         }
     }

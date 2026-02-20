@@ -101,6 +101,7 @@ add_executable(blackbook
     lib/glad/src/glad.c # Can't be bothered to make this its own target
     src/autocomplete.cxx
     src/db_versioning.cxx
+    src/filecopy.cxx
 )
 
 target_link_libraries(blackbook PUBLIC

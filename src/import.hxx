@@ -39,6 +39,7 @@ struct song_record {
 struct import_stats_t {
     std::atomic<u32> total_songs = 0;
     std::atomic<u32> num_skipped = 0;
+    std::atomic<u32> num_failed = 0;
     std::atomic<u32> num_loaded = 0;
     std::atomic<u32> num_metadata_grabbed = 0;
     std::atomic<u32> num_hashed = 0;
