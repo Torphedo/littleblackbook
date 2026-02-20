@@ -12,19 +12,34 @@ std::vector<std::string> parse_artists(const char* str);
 /// Create a tag, but don't add it to any songs
 ///
 /// @param db A database connection to use for the operation
-/// @param tag The name of the tag to add
+/// @param tag The name of the tag to add. No sanitization is needed.
 /// @param hash If you already know the tag's hash, you can provide it to prevent a redundant calculation
 /// @param encoding UTF8 or UTF16 encoding
 /// @return The newly calculated hash, or the hash you provided
 tag_hash_t create_tag_sql(sqlite3* db, const char* tag, tag_hash_t hash = 0, unsigned char encoding = SQLITE_UTF8);
 
-// Add a tag to a song, adding it to the tag table if needed
+/// @brief Add a tag to a song, creating the tag if needed
+///
+/// The output buffer receives SQL that you can execute at your convenience.
+/// However, the tag is created *immediately* when calling this function if it
+/// doesn't exist already.
+/// @param db A database connection to use for the operation
+/// @param tag The tag to attach to the song. No sanitization is needed.
+/// @param song_hash The hash of the song to attach the tag to
+/// @param sql_out Output buffer to receive SQL statement
 void add_tag_to_song_sql(sqlite3* db, const char* tag, song_hash_t song_hash, std::string& sql_out);
 
+/// @brief Remove a tag from a song
+/// @param tag The tag to remove. No sanitization is needed.
+/// @param song_hash The hash of the song to remove the tag from
+/// @param sql_out Output buffer to receive SQL statement
 void del_tag_from_song_sql(const char* tag, song_hash_t song_hash, std::string& sql_out);
 
-/// @brief Add a parent-child relationship between 2 tags
+/// @brief Add a parent-child relationship between 2 tags, creating both tags if needed
 ///
+/// The output buffer receives SQL that you can execute at your convenience.
+/// However, both tags are created *immediately* when calling this function if
+/// they don't exist already.
 /// If the child tag is added to a song, the parent will appear to be
 /// automatically added too. It'll also appear to be automatically removed if the
 /// relationship is deleted.
@@ -36,10 +51,11 @@ void unlink_tags_sql(const char* parent, const char* child, std::string& sql_out
 /// @brief Generate SQL to search for songs with a specific tag
 ///
 /// The generated SQL queries for a set of song hashes, not the whole record.
-/// @param tag The tag to search for
+/// @param tag The tag to search for (no sanitization is needed)
 /// @param sql_out The buffer to store the generated SQL in
 /// @param standalone_query Whether the generated SQL will be executed as its own
 ///        query (rather than being used to build a larger complex query).
+/// @param tag_len The length of the tag string, if you already know it.
 void search_tag(const char* tag, std::string& sql_out, bool standalone_query = true, s32 tag_len = -1);
 
 /// @brief Generate SQL to search for songs that have all the specified tags
@@ -51,7 +67,7 @@ void search_tag(const char* tag, std::string& sql_out, bool standalone_query = t
 /// If any tag starts with "-", the "-" will be skipped and the "AND" becomes an "AND NOT".
 /// e.g. "talib kweli AND -black star" -> "talib kweli AND NOT black star".
 ///
-/// @param tags An array of tags a song must have
+/// @param tags An array of tags a song must have. No sanitization is needed.
 /// @param num_tags Size of the tag array
 /// @param sql_out The buffer to store the generated SQL in
 void search_many_tags_and(const char* const* tags, u64 num_tags, std::string& sql_out);
@@ -62,4 +78,10 @@ static const u8 AUTOCOMPLETE_SIZE = 5;
 /// @param db The database to query for results. The database won't be modified.
 bool autocomplete_tag(sqlite3* db, const std::string_view& user_str, std::vector<std::string>& candidates);
 
+/// @brief Overwrite the lyrics for a specific song
+///
+/// This function executes the relevant SQL immediately.
+/// @param hash The hash of the song to update
+/// @param lyrics The new lyric string. No sanitization is needed.
+/// @return
 bool update_lyrics(sqlite3* db, song_hash_t hash, const char* lyrics);

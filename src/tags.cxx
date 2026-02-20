@@ -138,8 +138,7 @@ void search_tag(const char* tag, std::string& sql_out, bool standalone_query, s3
         sqlgen(sql_out, "SELECT song_hash FROM " RESOLVED_TAG_SONG_TABLE " WHERE tag_hash = %d", tag_hash);
 
         if (standalone_query) {
-            // Terminate the statement
-            sql_out.append(";\n");
+            sql_out.append(";\n"); // Terminate the statement
         }
         return;
     }
@@ -157,8 +156,7 @@ void search_tag(const char* tag, std::string& sql_out, bool standalone_query, s3
     }
 
     if (standalone_query) {
-        // Terminate the statement
-        sql_out.append(";\n");
+        sql_out.append(";\n"); // Terminate the statement
     }
 }
 
