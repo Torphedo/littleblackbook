@@ -8,10 +8,10 @@
 #include "nativegui/nativegui.hxx"
 #include "nativegui/gui_bootstrap.hxx"
 
-#include "expression.hxx"
-#include "arguments.hxx"
-#include "sqlite-crc32.h"
-#include "db_versioning.hxx"
+#include "core/expression.hxx"
+#include "core/arguments.hxx"
+#include "core/sqlite-crc32.h"
+#include "core/db_versioning.hxx"
 
 sqlite3* setup_sqlite(const char* db_path) {
     sqlite3_initialize();

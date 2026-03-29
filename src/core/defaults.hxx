@@ -23,6 +23,8 @@ static constexpr default_tag_pair default_tag_parents[] = {
     {"ska", "punk"},
     {"metal", "rock"},
 
+    {"西浦智仁", "professor layton"},
+
 // Genres
     {"less than jake", "ska"},
     {"skanatra", "ska"},
