@@ -1,6 +1,5 @@
 #include "scope_timer.hxx"
 
-#include <GLFW/glfw3.h>
 #include <chrono>
 #include <common/int.h>
 

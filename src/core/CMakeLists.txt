@@ -25,7 +25,6 @@ add_library(stb_image STATIC
 )
 
 # Dependencies
-set(BOBTAIL_OPENGL ON)
 add_subdirectory(../../lib/bobtail bobtail)
 
 set(SUPPORT_FILEFORMAT_FLAC OFF)

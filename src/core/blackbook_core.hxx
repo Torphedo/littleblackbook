@@ -12,14 +12,14 @@
 #include <set>
 #include <map>
 #include <unordered_map>
+#include <mutex>
 
 #include <sqlite3.h>
 #include <raudio.h>
 
 #include <common/int.h>
-#include <schema.hxx>
-#include <mutex>
 
+#include "schema.hxx"
 #include "expression.hxx"
 #include "autocomplete.hxx"
 
